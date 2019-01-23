@@ -37,6 +37,9 @@
 from PyQt5 import QtCore
 from PyQt5 import QtGui
 from PyQt5 import QtWidgets
+from PyQt5.QtCore import QRectF
+from PyQt5.QtGui import QPen, QBrush
+from PyQt5.QtWidgets import QGraphicsScene, QGraphicsView
 
 from eddy.core.functions.signals import connect, disconnect
 from eddy.core.plugin import AbstractPlugin
@@ -135,6 +138,7 @@ class BlackbirdPlugin(AbstractPlugin):
         connect(self.project.sgnDiagramRemoved, self.onDiagramRemoved)
         connect(self.project.sgnItemAdded, self.onProjectItemAdded)
         connect(self.project.sgnItemRemoved, self.onProjectItemRemoved)
+
         self.showMessage("Blackbird plugin initialized!")
 
     @QtCore.pyqtSlot(QtWidgets.QMdiSubWindow)
@@ -182,6 +186,16 @@ class BlackbirdPlugin(AbstractPlugin):
         menu = self.session.menu('view')
         menu.addAction(self.menuAction)
 
+        action = QtWidgets.QAction(
+            'Start', self,
+            objectName='start_blackbird',
+            statusTip='Start Blackbird', triggered=lambda: self.showDialog("BLACKBIRD STARTED"))
+        self.session.addAction(action)
+        menu = QtWidgets.QMenu('&Blackbird', objectName='blackbird')
+        menu.addAction(self.session.action('start_blackbird'))
+        self.session.addMenu(menu)
+        self.session.menuBar().addMenu(menu)
+
         # CONFIGURE SIGNAL/SLOTS
         self.debug('Connecting to active session')
         connect(self.session.sgnReady, self.onSessionReady)
@@ -213,3 +227,28 @@ class BlackbirdPlugin(AbstractPlugin):
         # Executes dialog event loop synchronously with the rest of the ui (locks until the dialog is dismissed)
         # use the `raise_()` method if you want the dialog to run its own event thread.
         dialog.exec_()
+
+    def showDialog(self, message):
+        """
+        Displays the given message in a new dialog.
+        :type message: str
+        """
+        scene = QGraphicsScene()
+        rect = QRectF(10, 10, 100, 100)
+        pen = QPen(QtCore.Qt.red)
+        brush = QBrush(QtCore.Qt.black)
+
+        scene.addRect(rect, pen, brush)
+        view = QGraphicsView(scene)
+        layout = QtWidgets.QVBoxLayout()
+        layout.addWidget(view)
+        dialog = QtWidgets.QDialog()
+        dialog.setWindowTitle("Blackbird Plugin")
+        dialog.setModal(False)
+        dialog.setLayout(layout)
+        dialog.show()
+
+        # Executes dialog event loop synchronously with the rest of the ui (locks until the dialog is dismissed)
+        # use the `raise_()` method if you want the dialog to run its own event thread.
+        dialog.exec_()
+
