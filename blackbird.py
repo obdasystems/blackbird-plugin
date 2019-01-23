@@ -35,12 +35,14 @@
 """Blackbird: Ontology to relational schema translator plugin."""
 
 from PyQt5 import QtCore
-from PyQt5 import QtGui
 from PyQt5 import QtWidgets
 from PyQt5.QtCore import QRectF
 from PyQt5.QtGui import QPen, QBrush
 from PyQt5.QtWidgets import QGraphicsScene, QGraphicsView
 
+from eddy import ORGANIZATION, APPNAME, WORKSPACE
+from eddy.core.functions.misc import first
+from eddy.core.functions.path import expandPath
 from eddy.core.functions.signals import connect, disconnect
 from eddy.core.plugin import AbstractPlugin
 
@@ -49,6 +51,7 @@ class BlackbirdPlugin(AbstractPlugin):
     """
     This plugin provides integration with Blackbird, a tool for translating an ontology into a relational schema.
     """
+
     def __init__(self, spec, session):
         """
         Initialises a new instance of the Blackbird plugin.
@@ -56,7 +59,52 @@ class BlackbirdPlugin(AbstractPlugin):
         :type session: Session
         """
         super().__init__(spec, session)
-        self.mdiSubWindow = None
+
+    def initActions(self):
+        #############################################
+        #   MenuBar Actions
+        #################################
+        self.addAction(QtWidgets.QAction('Open', objectName='open', triggered=self.doOpen))
+        self.addAction(QtWidgets.QAction('Save', objectName='save', triggered=self.doSave))
+        self.addAction(QtWidgets.QAction('Save as', objectName='save_as', triggered=self.doSaveAs))
+        self.addAction(QtWidgets.QAction('Settings', objectName='settings', triggered=self.doOpenSettings))
+        self.addAction(QtWidgets.QAction('Ontology Analysis', objectName='open_ontology_analysis',
+                                         triggered=self.doOpenOntologyAnalysis))
+        self.addAction(QtWidgets.QAction('Entity Filter', objectName='open_entity_filter',
+                                         triggered=self.doOpenEntityFilter))
+        self.addAction(QtWidgets.QAction('Recap Schema Selections', objectName='open_schema_selections',
+                                         triggered=self.doOpenSchemaSelections))
+        self.addAction(QtWidgets.QAction('Generate Preview Schema', objectName='generate_preview_schema',
+                                         triggered=self.doGeneratePreviewSchema))
+        self.addAction(QtWidgets.QAction('Export Mappings', objectName='export_mappings',
+                                         triggered=self.doExportMappings))
+        self.addAction(QtWidgets.QAction('Export SQL Script', objectName='export_sql',
+                                         triggered=self.doExportSQLScript))
+        self.addAction(QtWidgets.QAction('Export Schema Diagrams', objectName='export_schema_diagrams',
+                                         triggered=self.doExportSchemaDiagrams))
+
+    def initMenus(self):
+        #############################################
+        #   MenuBar QMenu
+        #################################
+        menu = QtWidgets.QMenu('&Blackbird', objectName='menubar_menu')
+        menu.addAction(self.action('open'))
+        menu.addAction(self.action('save'))
+        menu.addAction(self.action('save_as'))
+        menu.addSeparator()
+        menu.addAction(self.action('settings'))
+        menu.addSeparator()
+        menu.addAction(self.action('open_ontology_analysis'))
+        menu.addAction(self.action('open_entity_filter'))
+        menu.addAction(self.action('open_schema_selections'))
+        menu.addSeparator()
+        menu.addAction(self.action('generate_preview_schema'))
+        menu.addAction(self.action('export_mappings'))
+        menu.addAction(self.action('export_sql'))
+        menu.addAction(self.action('export_diagrams'))
+        self.addMenu(menu)
+        # Add blackbird menu to session's menu bar
+        self.session.menuBar().insertMenu(self.session.menu('tools').menuAction(), self.menu('menubar_menu'))
 
     #############################################
     #   EVENTS
@@ -83,6 +131,7 @@ class BlackbirdPlugin(AbstractPlugin):
         """
         Executed whenever a diagram is added to the active project.
         """
+        connect(diagram.sgnMenuCreated, self.onMenuCreated)
         self.showMessage("You have added a new diagram named: {}".format(diagram.name))
 
     @QtCore.pyqtSlot('QGraphicsScene')
@@ -90,6 +139,7 @@ class BlackbirdPlugin(AbstractPlugin):
         """
         Executed whenever a diagram is removed from the active project.
         """
+        disconnect(diagram.sgnMenuCreated, self.onMenuCreated)
         self.showMessage("You have deleted the diagram named: {}".format(diagram.name))
 
     @QtCore.pyqtSlot()
@@ -141,15 +191,95 @@ class BlackbirdPlugin(AbstractPlugin):
 
         self.showMessage("Blackbird plugin initialized!")
 
-    @QtCore.pyqtSlot(QtWidgets.QMdiSubWindow)
-    def onSubWindowActivated(self, subwindow):
+    @QtCore.pyqtSlot('QMenu', list, 'QPointF')
+    def onMenuCreated(self, menu, items, pos=None):
+        self.showMessage("Constructed menu {}".format(menu))
+
+    @QtCore.pyqtSlot()
+    def doOpen(self):
         """
-        Executed when the active subwindow changes.
-        :type subwindow: MdiSubWindow
+        Open a project in the current session.
         """
-        if subwindow and self.mdiSubWindow != subwindow:
-            self.mdiSubWindow = subwindow
-            self.showMessage("You have switched to the tab: {}".format(subwindow.windowTitle()))
+        settings = QtCore.QSettings(ORGANIZATION, APPNAME)
+        workspace = settings.value('workspace/home', WORKSPACE, str)
+        dialog = QtWidgets.QFileDialog(self.session)
+        dialog.setAcceptMode(QtWidgets.QFileDialog.AcceptOpen)
+        dialog.setDirectory(expandPath(workspace))
+        dialog.setFileMode(QtWidgets.QFileDialog.Directory)
+        dialog.setOption(QtWidgets.QFileDialog.ShowDirsOnly, True)
+        dialog.setViewMode(QtWidgets.QFileDialog.Detail)
+        if dialog.exec_() == QtWidgets.QFileDialog.Accepted:
+            self.debug('Open file requested: {}'.format(expandPath(first(dialog.selectedFiles()))))
+
+    @QtCore.pyqtSlot()
+    def doSave(self):
+        """
+        Save the current project.
+        """
+        pass
+
+    @QtCore.pyqtSlot()
+    def doSaveAs(self):
+        """
+        Save a copy of the current project.
+        """
+        pass
+
+    @QtCore.pyqtSlot()
+    def doOpenSettings(self):
+        """
+        Open plugin settings dialog.
+        """
+        pass
+
+    @QtCore.pyqtSlot()
+    def doOpenOntologyAnalysis(self):
+        """
+        Open ontology analysis dialog.
+        """
+        pass
+
+    @QtCore.pyqtSlot()
+    def doOpenEntityFilter(self):
+        """
+        Open entity filter dialog.
+        """
+        pass
+
+    @QtCore.pyqtSlot()
+    def doOpenSchemaSelections(self):
+        """
+        Open schema selections dialog.
+        """
+        pass
+
+    @QtCore.pyqtSlot()
+    def doGeneratePreviewSchema(self):
+        """
+        Generate a preview schema for the current project.
+        """
+        self.showDialog()
+
+    @QtCore.pyqtSlot()
+    def doExportMappings(self):
+        """
+        Export mappings for the current project.
+        """
+        pass
+
+    @QtCore.pyqtSlot()
+    def doExportSQLScript(self):
+        """
+        Export the SQL script generated for the current project.
+        """
+        pass
+
+    @QtCore.pyqtSlot()
+    def doExportSchemaDiagrams(self):
+        """
+        Export schema diagrams from the current project.
+        """
+        pass
 
     #############################################
     #   HOOKS
@@ -170,8 +300,6 @@ class BlackbirdPlugin(AbstractPlugin):
         # DISCONNECT FROM ACTIVE SESSION
         self.debug('Disconnecting from active session')
         disconnect(self.session.sgnReady, self.onSessionReady)
-        disconnect(self.session.mdi.subWindowActivated, self.onSubWindowActivated)
-        disconnect(self.menuAction.triggered)
 
     def start(self):
         """
@@ -180,27 +308,13 @@ class BlackbirdPlugin(AbstractPlugin):
         # INITIALIZE THE WIDGET
         self.debug('Starting Blackbird plugin')
 
-        # CREATE ENTRY IN VIEW MENU
-        self.debug('Creating docking area widget toggle in "view" menu')
-        self.menuAction = QtWidgets.QAction('Blackbird', self)
-        menu = self.session.menu('view')
-        menu.addAction(self.menuAction)
-
-        action = QtWidgets.QAction(
-            'Start', self,
-            objectName='start_blackbird',
-            statusTip='Start Blackbird', triggered=lambda: self.showDialog("BLACKBIRD STARTED"))
-        self.session.addAction(action)
-        menu = QtWidgets.QMenu('&Blackbird', objectName='blackbird')
-        menu.addAction(self.session.action('start_blackbird'))
-        self.session.addMenu(menu)
-        self.session.menuBar().addMenu(menu)
+        # INITIALIZE ACTIONS AND MENUS
+        self.initActions()
+        self.initMenus()
 
         # CONFIGURE SIGNAL/SLOTS
         self.debug('Connecting to active session')
         connect(self.session.sgnReady, self.onSessionReady)
-        connect(self.session.mdi.subWindowActivated, self.onSubWindowActivated)
-        connect(self.menuAction.triggered, lambda: self.showMessage('Blackbird Plugin version: {}'.format(self.spec.get('plugin', 'version'))))
 
     #############################################
     #   UTILITIES
@@ -223,12 +337,11 @@ class BlackbirdPlugin(AbstractPlugin):
         dialog.setLayout(layout)
         connect(confirmation.accepted, lambda: dialog.accept())
         dialog.show()
-
         # Executes dialog event loop synchronously with the rest of the ui (locks until the dialog is dismissed)
         # use the `raise_()` method if you want the dialog to run its own event thread.
         dialog.exec_()
 
-    def showDialog(self, message):
+    def showDialog(self):
         """
         Displays the given message in a new dialog.
         :type message: str
