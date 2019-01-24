@@ -41,8 +41,13 @@ from PyQt5.QtCore import QRectF
 from PyQt5.QtGui import QPen, QBrush
 from PyQt5.QtWidgets import QGraphicsScene, QGraphicsView
 
+from eddy.core.datatypes.misc import DiagramMode
+from eddy.core.diagram import Diagram
 from eddy.core.functions.signals import connect, disconnect
+from eddy.core.items.edges.inclusion import InclusionEdge
+from eddy.core.items.nodes.concept import ConceptNode
 from eddy.core.plugin import AbstractPlugin
+from eddy.core.project import Project
 
 
 class BlackbirdPlugin(AbstractPlugin):
@@ -233,12 +238,31 @@ class BlackbirdPlugin(AbstractPlugin):
         Displays the given message in a new dialog.
         :type message: str
         """
-        scene = QGraphicsScene()
+        #scene = QGraphicsScene()
+
+
         rect = QRectF(10, 10, 100, 100)
         pen = QPen(QtCore.Qt.red)
         brush = QBrush(QtCore.Qt.black)
 
-        scene.addRect(rect, pen, brush)
+        #scene.addRect(rect, pen, brush)
+
+
+        scene = Diagram("POllo", parent=self.session.project)
+        conc = ConceptNode(diagram=scene, id="pollo")
+        scene.mode = DiagramMode.Idle
+        scene.addItem(conc)
+
+        conc1 = ConceptNode(diagram=scene, id="pollo1")
+        conc1.setPos(QtCore.QPointF(0, 150))
+
+        scene.addItem(conc1)
+
+        edge = InclusionEdge(source=conc,target=conc1, diagram=scene)
+        print("Can draw edge ",edge.canDraw())
+
+        scene.addItem(edge)
+
         view = QGraphicsView(scene)
         layout = QtWidgets.QVBoxLayout()
         layout.addWidget(view)
