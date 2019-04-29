@@ -11,5 +11,6 @@ if __name__ == '__main__':
     mw = QMainWindow()
     spec = PluginSpec(PluginManager.spec(fread('./plugin.spec')))
     bbp = BlackbirdPlugin(spec, mw)
-    bbp.showDialog("Blackbird")
+    #bbp.showDialog("Blackbird")
+    bbp.showDialog()
     app.exec_()

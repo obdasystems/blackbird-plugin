@@ -66,6 +66,9 @@ from eddy.core.items.nodes.facet import FacetNode
 from eddy.core.plugin import AbstractPlugin
 from eddy.core.project import Project
 
+import requests
+import json
+
 from math import sin, cos, radians, pi as M_PI
 
 from eddy.core.functions.geometry import createArea, distance, projection
@@ -369,6 +372,31 @@ class BlackbirdPlugin(AbstractPlugin):
         dialog.exec_()
 
     def showDialog(self):
+
+        url = 'https://obdatest.dis.uniroma1.it:8080/BlackbirdEndpoint/rest/bbe/schema'
+        restResp = requests.get(url, verify=False)
+
+        status = restResp.status_code
+        print("Status Code: "+str(status))
+
+        print(restResp.json())
+
+        json_data = json.loads(restResp.text)
+
+        print(str(type(json_data)))
+        for item in json_data:
+            print()
+            print(str(type(item)))
+            print(str(item))
+            schemaName = item["schemaName"]
+            print("SchemaName: "+schemaName)
+            tableList = item["tables"]
+            for table in tableList:
+                print("table type: "+str(type(table)))
+
+        if(True):
+            return
+
         scene = BlackBirdDiagram("BlackBird Diagram", parent=self.session.project)
         rows = []
         row0 = BBTableRow(name='Nome')
