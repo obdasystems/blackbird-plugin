@@ -69,6 +69,7 @@ class BlackbirdPlugin(AbstractPlugin):
         """
         super().__init__(spec, session)
 
+    # noinspection PyArgumentList
     def initActions(self):
         #############################################
         #   MenuBar Actions
@@ -92,6 +93,7 @@ class BlackbirdPlugin(AbstractPlugin):
         self.addAction(QtWidgets.QAction('Export Schema Diagrams', objectName='export_schema_diagrams',
                                          triggered=self.doExportSchemaDiagrams))
 
+    # noinspection PyArgumentList
     def initMenus(self):
         #############################################
         #   MenuBar QMenu
