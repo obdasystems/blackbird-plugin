@@ -33,6 +33,11 @@
 ##########################################################################
 
 """Blackbird: Ontology to relational schema translator plugin."""
+
+
+import json
+import requests
+
 from enum import unique
 
 from PyQt5 import QtCore
@@ -47,14 +52,11 @@ from eddy.core.datatypes.graphol import Item
 from eddy.core.functions.misc import first
 from eddy.core.functions.path import expandPath
 from eddy.core.functions.signals import connect, disconnect
+from eddy.core.output import getLogger
 from eddy.core.plugin import AbstractPlugin
 
-from eddy.core.output import getLogger
-
-import requests
-import json
-
 LOGGER = getLogger()
+
 
 class BlackbirdPlugin(AbstractPlugin):
     """
@@ -143,7 +145,6 @@ class BlackbirdPlugin(AbstractPlugin):
         Executed whenever a diagram is added to the active project.
         """
         connect(diagram.sgnMenuCreated, self.onMenuCreated)
-        self.showMessage("You have added a new diagram named: {}".format(diagram.name))
 
     @QtCore.pyqtSlot('QGraphicsScene')
     def onDiagramRemoved(self, diagram):
@@ -151,42 +152,41 @@ class BlackbirdPlugin(AbstractPlugin):
         Executed whenever a diagram is removed from the active project.
         """
         disconnect(diagram.sgnMenuCreated, self.onMenuCreated)
-        self.showMessage("You have deleted the diagram named: {}".format(diagram.name))
 
     @QtCore.pyqtSlot()
     def onDiagramSelectionChanged(self):
         """
         Executed whenever the selection of the active diagram changes.
         """
-        self.showMessage("Selection changed on diagram {}".format(self.mdiSubWindow.diagram.name))
+        pass
 
     @QtCore.pyqtSlot()
     def onDiagramUpdated(self):
         """
         Executed whenever the active diagram is updated.
         """
-        self.showMessage("Diagram {} has changed".format(self.mdiSubWindow.diagram.name))
+        pass
 
     @QtCore.pyqtSlot('QGraphicsScene', 'QGraphicsItem')
     def onProjectItemAdded(self, diagram, item):
         """
         Executed whenever a new element is added to the active project.
         """
-        self.showMessage("Added item {} to diagram {}".format(item, diagram.name))
+        pass
 
     @QtCore.pyqtSlot('QGraphicsScene', 'QGraphicsItem')
     def onProjectItemRemoved(self, diagram, item):
         """
         Executed whenever a new element is removed from the active project.
         """
-        self.showMessage("Removed item {} from diagram {}".format(item, diagram.name))
+        pass
 
     @QtCore.pyqtSlot()
     def onProjectUpdated(self):
         """
         Executed whenever the current project is updated.
         """
-        self.showMessage("Project {} has been updated".format(self.session.project.name))
+        pass
 
     @QtCore.pyqtSlot()
     def onSessionReady(self):
@@ -200,11 +200,9 @@ class BlackbirdPlugin(AbstractPlugin):
         connect(self.project.sgnItemAdded, self.onProjectItemAdded)
         connect(self.project.sgnItemRemoved, self.onProjectItemRemoved)
 
-        self.showMessage("Blackbird plugin initialized!")
-
     @QtCore.pyqtSlot('QMenu', list, 'QPointF')
     def onMenuCreated(self, menu, items, pos=None):
-        self.showMessage("Constructed menu {}".format(menu))
+        pass
 
     @QtCore.pyqtSlot()
     def doOpen(self):
@@ -346,7 +344,7 @@ class BlackbirdPlugin(AbstractPlugin):
         dialog.setWindowTitle("Blackbird Plugin")
         dialog.setModal(False)
         dialog.setLayout(layout)
-        connect(confirmation.accepted, lambda: dialog.accept())
+        connect(confirmation.accepted, dialog.accept)
         dialog.show()
         # Executes dialog event loop synchronously with the rest of the ui (locks until the dialog is dismissed)
         # use the `raise_()` method if you want the dialog to run its own event thread.
@@ -380,30 +378,29 @@ class BlackbirdPlugin(AbstractPlugin):
 
         schema = RelationalSchemaParser.getSchema(json_schema_data,json_action_data)
 
-        print(str(schema))
-
+        self.debug(str(schema))
 
         # Executes dialog event loop synchronously with the rest of the ui (locks until the dialog is dismissed)
         # use the `raise_()` method if you want the dialog to run its own event thread.
         dialog.exec_()
 
+
 class SchemaToDiagramElements(QtCore.QObject):
 
+    # noinspection PyArgumentList
     def __init__(self, relational_schema, session=None, **kwargs):
         super().__init__(session, **kwargs)
         self._relationalSchema = relational_schema
-
 
     @property
     def session(self):
         return self.parent()
 
-
-
-    def getType(self,value):
+    def getType(self, value):
         type = EntityType.fromValue(value)
-        if type==EntityType.Class:
+        if type == EntityType.Class:
             return 4
+
 
 class BlackbirdOntologyEntityManager(QtCore.QObject):
     """
@@ -411,6 +408,8 @@ class BlackbirdOntologyEntityManager(QtCore.QObject):
     :type relational_schema: RelationalSchema
     :type parent: Project
     """
+
+    # noinspection PyArgumentList
     def __init__(self, relational_schema, parent, **kwargs):
         super().__init__(parent, **kwargs)
         self._parent = parent
@@ -435,22 +434,22 @@ class BlackbirdOntologyEntityManager(QtCore.QObject):
                 if entityType == EntityType.Class:
                     for node in nodes:
                         if node.Type == Item.ConceptNode:
-                            nodeShortIRI = node.text().replace("\n","")
-                            if nodeShortIRI==entityShortIRI:
+                            nodeShortIRI = node.text().replace("\n", "")
+                            if nodeShortIRI == entityShortIRI:
                                 currList.append(node)
                 elif entityType == EntityType.ObjectProperty:
                     for node in nodes:
                         if node.Type == Item.RoleNode:
-                            nodeShortIRI = node.text().replace("\n","")
-                            if nodeShortIRI==entityShortIRI:
+                            nodeShortIRI = node.text().replace("\n", "")
+                            if nodeShortIRI == entityShortIRI:
                                 currList.append(node)
                 elif entityType == EntityType.DataProperty:
                     for node in nodes:
                         if node.Type == Item.AttributeNode:
-                            nodeShortIRI = node.text().replace("\n","")
-                            if nodeShortIRI==entityShortIRI:
+                            nodeShortIRI = node.text().replace("\n", "")
+                            if nodeShortIRI == entityShortIRI:
                                 currList.append(node)
-                if len(currList)>0:
+                if len(currList) > 0:
                     currDiagramToTableDict[table] = currList
             self._diagramToTables[ontDiagram] = currDiagramToTableDict
 
@@ -477,21 +476,22 @@ class BlackbirdOntologyEntityManager(QtCore.QObject):
                 tgtOccurrencesInDiagram = self._diagramToTables[ontDiagram][tgtTable]
 
                 if srcOccurrencesInDiagram and tgtOccurrencesInDiagram:
-                    if len(srcColumnNames)==1:
-                        if srcEntityType==EntityType.Class:
-                            if tgtEntityType==EntityType.Class:
+                    if len(srcColumnNames) == 1:
+                        if srcEntityType == EntityType.Class:
+                            if tgtEntityType == EntityType.Class:
                                 currVisualEls.append(self.getEntityIsaEntityVEs(srcOccurrencesInDiagram,
                                                                                 tgtOccurrencesInDiagram,
                                                                                 ontDiagram))
-                            elif tgtEntityType==EntityType.ObjectProperty:
+                            elif tgtEntityType == EntityType.ObjectProperty:
                                 tgtColumnName = first(tgtColumnNames)
                                 relColumn = tgtTable.getColumnByName(tgtColumnName)
                                 relcolPos = relColumn.position
-                                if relcolPos==1:
-                                    currVisualEls.append(self.getClassIsaExistRoleOrAttributeVEs(srcOccurrencesInDiagram,
-                                                                                                 tgtOccurrencesInDiagram,
-                                                                                                 ontDiagram))
-                                elif relcolPos==2:
+                                if relcolPos == 1:
+                                    currVisualEls.append(
+                                        self.getClassIsaExistRoleOrAttributeVEs(srcOccurrencesInDiagram,
+                                                                                tgtOccurrencesInDiagram,
+                                                                                ontDiagram))
+                                elif relcolPos == 2:
                                     currVisualEls.append(self.getClassIsaExistRoleInvVEs(srcOccurrencesInDiagram,
                                                                                          tgtOccurrencesInDiagram,
                                                                                          ontDiagram))
@@ -504,68 +504,78 @@ class BlackbirdOntologyEntityManager(QtCore.QObject):
                                 currVisualEls.append(self.getClassIsaExistRoleOrAttributeVEs(srcOccurrencesInDiagram,
                                                                                              tgtOccurrencesInDiagram,
                                                                                              ontDiagram))
-                        elif srcEntityType==EntityType.ObjectProperty:
+                        elif srcEntityType == EntityType.ObjectProperty:
                             srcColumnName = first(srcColumnNames)
                             srcRelColumn = srcTable.getColumnByName(srcColumnName)
                             srcRelcolPos = srcRelColumn.position
                             if tgtEntityType == EntityType.Class:
-                                if srcRelcolPos==1:
-                                    currVisualEls.append(self.getExistRoleOrAttributeIsaClassVEs(srcOccurrencesInDiagram,tgtOccurrencesInDiagram,ontDiagram))
-                                elif srcRelcolPos==2:
+                                if srcRelcolPos == 1:
+                                    currVisualEls.append(
+                                        self.getExistRoleOrAttributeIsaClassVEs(srcOccurrencesInDiagram,
+                                                                                tgtOccurrencesInDiagram, ontDiagram))
+                                elif srcRelcolPos == 2:
                                     currVisualEls.append(self.getExistRoleInvIsaClassVEs(srcOccurrencesInDiagram,
-                                                                                              tgtOccurrencesInDiagram,
-                                                                                              ontDiagram))
+                                                                                         tgtOccurrencesInDiagram,
+                                                                                         ontDiagram))
                             elif tgtEntityType == EntityType.ObjectProperty:
                                 tgtColumnName = first(tgtColumnNames)
                                 tgtRelColumn = tgtTable.getColumnByName(tgtColumnName)
                                 tgtRelcolPos = tgtRelColumn.position
-                                if srcRelcolPos==1 and tgtRelcolPos==1:
-                                    currVisualEls.append(self.getExistRoleOrAttributeIsaExistRoleOrAttributeVEs(srcOccurrencesInDiagram,
-                                                                                                            tgtOccurrencesInDiagram,
-                                                                                                            ontDiagram))
-                                elif srcRelcolPos==1 and tgtRelcolPos==2:
-                                    currVisualEls.append(self.getExistRoleOrAttributeIsaExistRoleInvVEs(srcOccurrencesInDiagram,
-                                                                                            tgtOccurrencesInDiagram,
-                                                                                            ontDiagram))
-                                elif srcRelcolPos==2 and tgtRelcolPos==1:
-                                    currVisualEls.append(self.getExistRoleInvIsaExistRoleOrAttributeVEs(srcOccurrencesInDiagram,
-                                                                                            tgtOccurrencesInDiagram,
-                                                                                            ontDiagram))
-                                elif srcRelcolPos==2 and tgtRelcolPos==2:
+                                if srcRelcolPos == 1 and tgtRelcolPos == 1:
+                                    currVisualEls.append(
+                                        self.getExistRoleOrAttributeIsaExistRoleOrAttributeVEs(srcOccurrencesInDiagram,
+                                                                                               tgtOccurrencesInDiagram,
+                                                                                               ontDiagram))
+                                elif srcRelcolPos == 1 and tgtRelcolPos == 2:
+                                    currVisualEls.append(
+                                        self.getExistRoleOrAttributeIsaExistRoleInvVEs(srcOccurrencesInDiagram,
+                                                                                       tgtOccurrencesInDiagram,
+                                                                                       ontDiagram))
+                                elif srcRelcolPos == 2 and tgtRelcolPos == 1:
+                                    currVisualEls.append(
+                                        self.getExistRoleInvIsaExistRoleOrAttributeVEs(srcOccurrencesInDiagram,
+                                                                                       tgtOccurrencesInDiagram,
+                                                                                       ontDiagram))
+                                elif srcRelcolPos == 2 and tgtRelcolPos == 2:
                                     currVisualEls.append(self.getExistRoleInvIsaExistRoleInvVEs(srcOccurrencesInDiagram,
-                                                                                            tgtOccurrencesInDiagram,
-                                                                                            ontDiagram))
+                                                                                                tgtOccurrencesInDiagram,
+                                                                                                ontDiagram))
                             elif tgtEntityType == EntityType.DataProperty:
-                                if srcRelcolPos==1:
-                                    currVisualEls.append(self.getExistRoleOrAttributeIsaExistRoleOrAttributeVEs(srcOccurrencesInDiagram,
-                                                                                                                tgtOccurrencesInDiagram,
-                                                                                                                ontDiagram))
-                                elif srcRelcolPos==2:
-                                    currVisualEls.append(self.getExistRoleInvIsaExistRoleOrAttributeVEs(srcOccurrencesInDiagram,
-                                                                                              tgtOccurrencesInDiagram,
-                                                                                              ontDiagram))
-                        elif srcEntityType==EntityType.DataProperty:
+                                if srcRelcolPos == 1:
+                                    currVisualEls.append(
+                                        self.getExistRoleOrAttributeIsaExistRoleOrAttributeVEs(srcOccurrencesInDiagram,
+                                                                                               tgtOccurrencesInDiagram,
+                                                                                               ontDiagram))
+                                elif srcRelcolPos == 2:
+                                    currVisualEls.append(
+                                        self.getExistRoleInvIsaExistRoleOrAttributeVEs(srcOccurrencesInDiagram,
+                                                                                       tgtOccurrencesInDiagram,
+                                                                                       ontDiagram))
+                        elif srcEntityType == EntityType.DataProperty:
                             if tgtEntityType == EntityType.Class:
                                 currVisualEls.append(self.getExistRoleOrAttributeIsaClassVEs(srcOccurrencesInDiagram,
-                                                                                            tgtOccurrencesInDiagram,
-                                                                                            ontDiagram))
+                                                                                             tgtOccurrencesInDiagram,
+                                                                                             ontDiagram))
                             elif tgtEntityType == EntityType.ObjectProperty:
                                 tgtColumnName = first(tgtColumnNames)
                                 tgtRelColumn = tgtTable.getColumnByName(tgtColumnName)
                                 tgtRelcolPos = tgtRelColumn.position
-                                if tgtRelcolPos==1:
-                                    currVisualEls.append(self.getExistRoleOrAttributeIsaExistRoleOrAttributeVEs(srcOccurrencesInDiagram,
-                                                                                                                tgtOccurrencesInDiagram,
-                                                                                                                ontDiagram))
-                                elif tgtRelcolPos==2:
-                                    currVisualEls.append(self.getExistRoleOrAttributeIsaExistRoleInvVEs(srcOccurrencesInDiagram,
-                                                                                                       tgtOccurrencesInDiagram,
-                                                                                                       ontDiagram))
+                                if tgtRelcolPos == 1:
+                                    currVisualEls.append(
+                                        self.getExistRoleOrAttributeIsaExistRoleOrAttributeVEs(srcOccurrencesInDiagram,
+                                                                                               tgtOccurrencesInDiagram,
+                                                                                               ontDiagram))
+                                elif tgtRelcolPos == 2:
+                                    currVisualEls.append(
+                                        self.getExistRoleOrAttributeIsaExistRoleInvVEs(srcOccurrencesInDiagram,
+                                                                                       tgtOccurrencesInDiagram,
+                                                                                       ontDiagram))
                             elif tgtEntityType == EntityType.DataProperty:
-                                currVisualEls.append(self.getExistRoleOrAttributeIsaExistRoleOrAttributeVEs(srcOccurrencesInDiagram,
-                                                                                                           tgtOccurrencesInDiagram,
-                                                                                                           ontDiagram))
-                    elif len(srcColumnNames)==2:
+                                currVisualEls.append(
+                                    self.getExistRoleOrAttributeIsaExistRoleOrAttributeVEs(srcOccurrencesInDiagram,
+                                                                                           tgtOccurrencesInDiagram,
+                                                                                           ontDiagram))
+                    elif len(srcColumnNames) == 2:
                         if srcEntityType == EntityType.ObjectProperty:
                             if tgtEntityType == EntityType.ObjectProperty:
                                 currVisualEls.append(self.getEntityIsaEntityVEs(srcOccurrencesInDiagram,
@@ -577,36 +587,37 @@ class BlackbirdOntologyEntityManager(QtCore.QObject):
                                                                                 tgtOccurrencesInDiagram,
                                                                                 ontDiagram))
                     if currVisualEls:
-                        currDiagramToForeignKeyDict[fk]=currVisualEls
+                        currDiagramToForeignKeyDict[fk] = currVisualEls
             self._diagramToForeignKeys[ontDiagram] = currDiagramToForeignKeyDict
 
-    #A-->B, R-->P, U1-->U2
+    # A-->B, R-->P, U1-->U2
     def getEntityIsaEntityVEs(self, srcOccurrencesInDiagram, tgtOccurrencesInDiagram, ontDiagram):
         result = list()
         edges = ontDiagram.edges
         for edge in edges:
             firstSrc = edge.source
             firstTgt = edge.target
-            if edge.type==Item.InclusionEdge or edge.type==Item.EquivalenceEdge:
+            if edge.type == Item.InclusionEdge or edge.type == Item.EquivalenceEdge:
                 if firstSrc in srcOccurrencesInDiagram and firstTgt in tgtOccurrencesInDiagram:
-                    currVE = ForeignKeyVisualElements(firstSrc,firstTgt,[edge])
+                    currVE = ForeignKeyVisualElements(firstSrc, firstTgt, [edge])
                     result.append(currVE)
-            elif edge.type==Item.InputEdge:
-                if firstSrc in srcOccurrencesInDiagram and (firstTgt.type()==Item.UnionNode or firstTgt.type()==Item.DisjointUnionNode):
+            elif edge.type == Item.InputEdge:
+                if firstSrc in srcOccurrencesInDiagram and (
+                        firstTgt.type() == Item.UnionNode or firstTgt.type() == Item.DisjointUnionNode):
                     for secondEdge in firstTgt.edges:
                         secondSrc = secondEdge.source
                         secondTgt = secondEdge.target
-                        if secondSrc==firstTgt and secondTgt in tgtOccurrencesInDiagram:
-                            currVE = ForeignKeyVisualElements(firstSrc, secondTgt, [edge,secondEdge],[firstTgt])
+                        if secondSrc == firstTgt and secondTgt in tgtOccurrencesInDiagram:
+                            currVE = ForeignKeyVisualElements(firstSrc, secondTgt, [edge, secondEdge], [firstTgt])
 
         return result
 
-    #A-->exist(R) , A-->exist(U)
+    # A-->exist(R) , A-->exist(U)
     def getClassIsaExistRoleOrAttributeVEs(self, srcOccurrencesInDiagram, tgtOccurrencesInDiagram, ontDiagram):
         result = list()
         edges = ontDiagram.edges
         for edge in edges:
-            if edge.type()==Item.InclusionEdge or edge.type()==Item.EquivalenceEdge:
+            if edge.type() == Item.InclusionEdge or edge.type() == Item.EquivalenceEdge:
                 currSrc = edge.source
                 currRestrTgt = edge.target
                 if currSrc in srcOccurrencesInDiagram and currRestrTgt.type() is Item.DomainRestrictionNode:
@@ -614,8 +625,8 @@ class BlackbirdOntologyEntityManager(QtCore.QObject):
                         if innerEdge.type() == Item.InputEdge:
                             innerSrc = innerEdge.source
                             innerTgt = innerEdge.target
-                            if innerSrc in tgtOccurrencesInDiagram and innerTgt==currRestrTgt:
-                                currVE = ForeignKeyVisualElements(currSrc, innerSrc, [edge,innerEdge], [currRestrTgt])
+                            if innerSrc in tgtOccurrencesInDiagram and innerTgt == currRestrTgt:
+                                currVE = ForeignKeyVisualElements(currSrc, innerSrc, [edge, innerEdge], [currRestrTgt])
                                 result.append(currVE)
         return result
 
@@ -624,39 +635,42 @@ class BlackbirdOntologyEntityManager(QtCore.QObject):
         result = list()
         edges = ontDiagram.edges
         for edge in edges:
-            if edge.type()==Item.InputEdge:
+            if edge.type() == Item.InputEdge:
                 currSrc = edge.source
                 currRestrTgt = edge.target
                 if currSrc in srcOccurrencesInDiagram and currRestrTgt.type() is Item.DomainRestrictionNode:
                     for innerEdge in edges:
-                        if innerEdge.type()==Item.InclusionEdge or innerEdge.type()==Item.EquivalenceEdge:
+                        if innerEdge.type() == Item.InclusionEdge or innerEdge.type() == Item.EquivalenceEdge:
                             innerSrc = innerEdge.source
                             innerTgt = innerEdge.target
-                            if innerTgt in tgtOccurrencesInDiagram and innerSrc==currRestrTgt:
-                                currVE = ForeignKeyVisualElements(currSrc, innerTgt, [edge,innerEdge], [currRestrTgt])
+                            if innerTgt in tgtOccurrencesInDiagram and innerSrc == currRestrTgt:
+                                currVE = ForeignKeyVisualElements(currSrc, innerTgt, [edge, innerEdge], [currRestrTgt])
                                 result.append(currVE)
         return result
 
     # exist(R)-->exist(P), exist(R)-->exist(U), exist(U)-->exist(R), exist(U1)-->exist(U2)
-    def getExistRoleOrAttributeIsaExistRoleOrAttributeVEs(self, srcOccurrencesInDiagram, tgtOccurrencesInDiagram, ontDiagram):
+    def getExistRoleOrAttributeIsaExistRoleOrAttributeVEs(self, srcOccurrencesInDiagram, tgtOccurrencesInDiagram,
+                                                          ontDiagram):
         result = list()
         edges = ontDiagram.edges
         for firstEdge in edges:
-            if firstEdge.type()==Item.InputEdge:
+            if firstEdge.type() == Item.InputEdge:
                 firstSrc = firstEdge.source
                 firstTgt = firstEdge.target
                 if firstSrc in srcOccurrencesInDiagram and firstTgt is Item.DomainRestrictionNode:
                     for secondEdge in edges:
-                        if secondEdge.type()==Item.InclusionEdge or secondEdge.type()==Item.EquivalenceEdge:
+                        if secondEdge.type() == Item.InclusionEdge or secondEdge.type() == Item.EquivalenceEdge:
                             secondSrc = secondEdge.source
                             secondTgt = secondEdge.target
-                            if secondSrc==firstTgt and secondTgt is Item.DomainRestrictionNode:
+                            if secondSrc == firstTgt and secondTgt is Item.DomainRestrictionNode:
                                 for thirdEdge in edges:
-                                    if thirdEdge.type()==Item.InputEdge:
+                                    if thirdEdge.type() == Item.InputEdge:
                                         thirdSrc = thirdEdge.source
                                         thirdTgt = thirdEdge.target
-                                        if thirdTgt==secondTgt and thirdSrc in tgtOccurrencesInDiagram:
-                                            currVE = ForeignKeyVisualElements(firstSrc, thirdSrc, [firstEdge,secondEdge,thirdEdge],[firstTgt,secondTgt])
+                                        if thirdTgt == secondTgt and thirdSrc in tgtOccurrencesInDiagram:
+                                            currVE = ForeignKeyVisualElements(firstSrc, thirdSrc,
+                                                                              [firstEdge, secondEdge, thirdEdge],
+                                                                              [firstTgt, secondTgt])
                                             result.append(currVE)
         return result
 
@@ -665,21 +679,23 @@ class BlackbirdOntologyEntityManager(QtCore.QObject):
         result = list()
         edges = ontDiagram.edges
         for firstEdge in edges:
-            if firstEdge.type()==Item.InputEdge:
+            if firstEdge.type() == Item.InputEdge:
                 firstSrc = firstEdge.source
                 firstTgt = firstEdge.target
                 if firstSrc in srcOccurrencesInDiagram and firstTgt is Item.RangeRestrictionNode:
                     for secondEdge in edges:
-                        if secondEdge.type()==Item.InclusionEdge or secondEdge.type()==Item.EquivalenceEdge:
+                        if secondEdge.type() == Item.InclusionEdge or secondEdge.type() == Item.EquivalenceEdge:
                             secondSrc = secondEdge.source
                             secondTgt = secondEdge.target
-                            if secondSrc==firstTgt and secondTgt is Item.DomainRestrictionNode:
+                            if secondSrc == firstTgt and secondTgt is Item.DomainRestrictionNode:
                                 for thirdEdge in edges:
-                                    if thirdEdge.type()==Item.InputEdge:
+                                    if thirdEdge.type() == Item.InputEdge:
                                         thirdSrc = thirdEdge.source
                                         thirdTgt = thirdEdge.target
-                                        if thirdTgt==secondTgt and thirdSrc in tgtOccurrencesInDiagram:
-                                            currVE = ForeignKeyVisualElements(firstSrc, thirdSrc, [firstEdge,secondEdge,thirdEdge],[firstTgt,secondTgt])
+                                        if thirdTgt == secondTgt and thirdSrc in tgtOccurrencesInDiagram:
+                                            currVE = ForeignKeyVisualElements(firstSrc, thirdSrc,
+                                                                              [firstEdge, secondEdge, thirdEdge],
+                                                                              [firstTgt, secondTgt])
                                             result.append(currVE)
         return result
 
@@ -688,21 +704,23 @@ class BlackbirdOntologyEntityManager(QtCore.QObject):
         result = list()
         edges = ontDiagram.edges
         for firstEdge in edges:
-            if firstEdge.type()==Item.InputEdge:
+            if firstEdge.type() == Item.InputEdge:
                 firstSrc = firstEdge.source
                 firstTgt = firstEdge.target
                 if firstSrc in srcOccurrencesInDiagram and firstTgt is Item.RangeRestrictionNode:
                     for secondEdge in edges:
-                        if secondEdge.type()==Item.InclusionEdge or secondEdge.type()==Item.EquivalenceEdge:
+                        if secondEdge.type() == Item.InclusionEdge or secondEdge.type() == Item.EquivalenceEdge:
                             secondSrc = secondEdge.source
                             secondTgt = secondEdge.target
-                            if secondSrc==firstTgt and secondTgt is Item.RangeRestrictionNode:
+                            if secondSrc == firstTgt and secondTgt is Item.RangeRestrictionNode:
                                 for thirdEdge in edges:
-                                    if thirdEdge.type()==Item.InputEdge:
+                                    if thirdEdge.type() == Item.InputEdge:
                                         thirdSrc = thirdEdge.source
                                         thirdTgt = thirdEdge.target
-                                        if thirdTgt==secondTgt and thirdSrc in tgtOccurrencesInDiagram:
-                                            currVE = ForeignKeyVisualElements(firstSrc, thirdSrc, [firstEdge,secondEdge,thirdEdge],[firstTgt,secondTgt])
+                                        if thirdTgt == secondTgt and thirdSrc in tgtOccurrencesInDiagram:
+                                            currVE = ForeignKeyVisualElements(firstSrc, thirdSrc,
+                                                                              [firstEdge, secondEdge, thirdEdge],
+                                                                              [firstTgt, secondTgt])
                                             result.append(currVE)
         return result
 
@@ -711,21 +729,23 @@ class BlackbirdOntologyEntityManager(QtCore.QObject):
         result = list()
         edges = ontDiagram.edges
         for firstEdge in edges:
-            if firstEdge.type()==Item.InputEdge:
+            if firstEdge.type() == Item.InputEdge:
                 firstSrc = firstEdge.source
                 firstTgt = firstEdge.target
                 if firstSrc in srcOccurrencesInDiagram and firstTgt is Item.DomainRestrictionNode:
                     for secondEdge in edges:
-                        if secondEdge.type()==Item.InclusionEdge or secondEdge.type()==Item.EquivalenceEdge:
+                        if secondEdge.type() == Item.InclusionEdge or secondEdge.type() == Item.EquivalenceEdge:
                             secondSrc = secondEdge.source
                             secondTgt = secondEdge.target
-                            if secondSrc==firstTgt and secondTgt is Item.RangeRestrictionNode:
+                            if secondSrc == firstTgt and secondTgt is Item.RangeRestrictionNode:
                                 for thirdEdge in edges:
-                                    if thirdEdge.type()==Item.InputEdge:
+                                    if thirdEdge.type() == Item.InputEdge:
                                         thirdSrc = thirdEdge.source
                                         thirdTgt = thirdEdge.target
-                                        if thirdTgt==secondTgt and thirdSrc in tgtOccurrencesInDiagram:
-                                            currVE = ForeignKeyVisualElements(firstSrc, thirdSrc, [firstEdge,secondEdge,thirdEdge],[firstTgt,secondTgt])
+                                        if thirdTgt == secondTgt and thirdSrc in tgtOccurrencesInDiagram:
+                                            currVE = ForeignKeyVisualElements(firstSrc, thirdSrc,
+                                                                              [firstEdge, secondEdge, thirdEdge],
+                                                                              [firstTgt, secondTgt])
                                             result.append(currVE)
 
     # A-->exist(inv(R))
@@ -733,7 +753,7 @@ class BlackbirdOntologyEntityManager(QtCore.QObject):
         result = list()
         edges = ontDiagram.edges
         for edge in edges:
-            if edge.type()==Item.InclusionEdge or edge.type()==Item.EquivalenceEdge:
+            if edge.type() == Item.InclusionEdge or edge.type() == Item.EquivalenceEdge:
                 currSrc = edge.source
                 currRestrTgt = edge.target
                 if currSrc in srcOccurrencesInDiagram and currRestrTgt.type() is Item.RangeRestrictionNode:
@@ -741,8 +761,8 @@ class BlackbirdOntologyEntityManager(QtCore.QObject):
                         if innerEdge.type() == Item.InputEdge:
                             innerSrc = innerEdge.source
                             innerTgt = innerEdge.target
-                            if innerSrc in tgtOccurrencesInDiagram and innerTgt==currRestrTgt:
-                                currVE = ForeignKeyVisualElements(currSrc, innerSrc, [edge,innerEdge], [currRestrTgt])
+                            if innerSrc in tgtOccurrencesInDiagram and innerTgt == currRestrTgt:
+                                currVE = ForeignKeyVisualElements(currSrc, innerSrc, [edge, innerEdge], [currRestrTgt])
                                 result.append(currVE)
         return result
 
@@ -751,20 +771,21 @@ class BlackbirdOntologyEntityManager(QtCore.QObject):
         result = list()
         edges = ontDiagram.edges
         for edge in edges:
-            if edge.type()==Item.InputEdge:
+            if edge.type() == Item.InputEdge:
                 currSrc = edge.source
                 currRestrTgt = edge.target
                 if currSrc in srcOccurrencesInDiagram and currRestrTgt.type() is Item.RangeRestrictionNode:
                     for innerEdge in edges:
-                        if innerEdge.type()==Item.InclusionEdge or innerEdge.type()==Item.EquivalenceEdge:
+                        if innerEdge.type() == Item.InclusionEdge or innerEdge.type() == Item.EquivalenceEdge:
                             innerSrc = innerEdge.source
                             innerTgt = innerEdge.target
-                            if innerTgt in tgtOccurrencesInDiagram and innerSrc==currRestrTgt:
-                                currVE = ForeignKeyVisualElements(currSrc, innerTgt, [edge,innerEdge], [currRestrTgt])
+                            if innerTgt in tgtOccurrencesInDiagram and innerSrc == currRestrTgt:
+                                currVE = ForeignKeyVisualElements(currSrc, innerTgt, [edge, innerEdge], [currRestrTgt])
                                 result.append(currVE)
         return result
 
-class ForeignKeyVisualElements():
+
+class ForeignKeyVisualElements:
     def __init__(self, src, tgt, edges, inners=None):
         self._src = src
         self._tgt = tgt
@@ -781,18 +802,20 @@ class ForeignKeyVisualElements():
 
     @property
     def inner(self):
-        return self._inner
+        return self._inners
 
     @property
     def edges(self):
         return self._edges
 
-class RelationalSchemaParser():
-    """_instance = None
-    def __new__(cls, *args, **kwargs):
-       if not cls._instance:
-              cls._instance = object.__new__(cls)
-          return cls._instance"""
+
+class RelationalSchemaParser:
+    # _instance = None
+    #
+    # def __new__(cls, *args, **kwargs):
+    #    if not cls._instance:
+    #           cls._instance = object.__new__(cls)
+    #       return cls._instance
 
     @staticmethod
     def getSchema(schema_json_data, actions_json_data):
@@ -809,9 +832,9 @@ class RelationalSchemaParser():
             subjectName = item["actionSubjectTableName"]
             actionType = item["actionType"]
             objectsNames = item["actionObjectsNames"]
-            action = RelationalTableAction(subjectName,actionType,objectsNames)
+            action = RelationalTableAction(subjectName, actionType, objectsNames)
             actions.append(action)
-        return RelationalSchema(schemaName,tables,actions)
+        return RelationalSchema(schemaName, tables, actions)
 
     @staticmethod
     def getTable(jsonTable):
@@ -839,7 +862,7 @@ class RelationalSchemaParser():
             for jsonFK in jsonFKs:
                 fk = RelationalSchemaParser.getForeignKey(jsonFK)
                 foreignKeys.append(fk)
-        return RelationalTable(tableName,entity,columns,primaryKey,uniques,foreignKeys)
+        return RelationalTable(tableName, entity, columns, primaryKey, uniques, foreignKeys)
 
     @staticmethod
     def getColumn(jsonColumn):
@@ -848,20 +871,20 @@ class RelationalSchemaParser():
         columnType = jsonColumn["columnType"]
         position = jsonColumn["position"]
         nullable = jsonColumn["nullable"]
-        return RelationalColumn(columnName,entityIRI,columnType,position,nullable)
+        return RelationalColumn(columnName, entityIRI, columnType, position, nullable)
 
     @staticmethod
     def getOriginEntity(jsonEntity):
         fullIRI = jsonEntity["entityFullIRI"]
         shortIRI = jsonEntity["entityShortIRI"]
         entityType = jsonEntity["entityType"]
-        return RelationalTableOriginEntity(fullIRI,shortIRI,entityType)
+        return RelationalTableOriginEntity(fullIRI, shortIRI, entityType)
 
     @staticmethod
     def getPrimaryKey(jsonPK):
         pkName = jsonPK["pkName"]
         columnNames = jsonPK["columnNames"]
-        return PrimaryKeyConstraint(pkName,columnNames)
+        return PrimaryKeyConstraint(pkName, columnNames)
 
     @staticmethod
     def getUnique(jsonUnique):
@@ -876,10 +899,11 @@ class RelationalSchemaParser():
         srcColumnNames = jsonFK["sourceColumnsNames"]
         tgtTableName = jsonFK["targetTableName"]
         tgtColumnNames = jsonFK["targetColumnsNames"]
-        return ForeignKeyConstraint(fkName,srcTableName,srcColumnNames,tgtTableName,tgtColumnNames)
+        return ForeignKeyConstraint(fkName, srcTableName, srcColumnNames, tgtTableName, tgtColumnNames)
 
-class RelationalSchema():
-    def __init__(self,name, tables, actions):
+
+class RelationalSchema:
+    def __init__(self, name, tables, actions):
         self._name = name
         self._tables = tables
         self._actions = actions
@@ -888,6 +912,7 @@ class RelationalSchema():
             for table in self._tables:
                 if table.foreignKeys:
                     self._foreignKeys.extend(table.foreignKeys)
+
     @property
     def name(self):
         return self._name
@@ -904,18 +929,19 @@ class RelationalSchema():
     def foreignKeys(self):
         return self._foreignKeys
 
-    def getTableByName(self,tableName):
+    def getTableByName(self, tableName):
         for table in self.tables:
             if table.name == tableName:
                 return table
         return None
 
     def __str__(self):
-        tablesStr = "\n".join(map(str,self.tables))
-        actionsStr = "\n".join(map(str,self.actions))
-        return 'Name: {}\nTables: [{}]\nActions: [{}]'.format(self.name,tablesStr,actionsStr)
+        tablesStr = "\n".join(map(str, self.tables))
+        actionsStr = "\n".join(map(str, self.actions))
+        return 'Name: {}\nTables: [{}]\nActions: [{}]'.format(self.name, tablesStr, actionsStr)
 
-class RelationalTable():
+
+class RelationalTable:
     def __init__(self, name, entity, columns, primary_key, uniques, foreign_keys):
         self._name = name
         self._entity = entity
@@ -963,12 +989,15 @@ class RelationalTable():
         return None
 
     def __str__(self):
-        columnsStr = "\n".join(map(str,self.columns))
-        uniquesStr = "\n".join(map(str,self.uniques))
-        fkStr = "\n".join(map(str,self.foreignKeys))
-        return 'Name: {}\nEntity: {}\nColumns: [{}]\nPK: {}\nuniques: [{}]\nFKs: [{}]'.format(self.name,self.entity,columnsStr,self.primaryKey, uniquesStr, fkStr)
+        columnsStr = "\n".join(map(str, self.columns))
+        uniquesStr = "\n".join(map(str, self.uniques))
+        fkStr = "\n".join(map(str, self.foreignKeys))
+        return 'Name: {}\nEntity: {}\nColumns: [{}]\n' \
+               'PK: {}\nuniques: [{}]\nFKs: [{}]'.format(self.name, self.entity, columnsStr,
+                                                         self.primaryKey, uniquesStr, fkStr)
 
-class RelationalColumn():
+
+class RelationalColumn:
     def __init__(self, column_name, entity_IRI, column_type, position, is_nullable=True):
         self._columnName = column_name
         self._entityIRI = entity_IRI
@@ -997,9 +1026,12 @@ class RelationalColumn():
         return self._isNullable
 
     def __str__(self):
-        return 'Name: {}\nEntityIRI: {}\nColumnType: {}\nPosition: {}\nNullable: {}'.format(self.columnName,self.entityIRI,self.columnType,self.position, self.isNullable)
+        return 'Name: {}\nEntityIRI: {}\nColumnType: {}\n' \
+               'Position: {}\nNullable: {}'.format(self.columnName, self.entityIRI, self.columnType,
+                                                   self.position, self.isNullable)
 
-class PrimaryKeyConstraint():
+
+class PrimaryKeyConstraint:
     def __init__(self, name, columns):
         self._name = name
         self._columns = columns
@@ -1013,10 +1045,11 @@ class PrimaryKeyConstraint():
         return self._columns
 
     def __str__(self):
-        columnsStr = ",".join(map(str,self.columns))
-        return 'Name: {}\nColumns: [{}]'.format(self.name,columnsStr)
+        columnsStr = ",".join(map(str, self.columns))
+        return 'Name: {}\nColumns: [{}]'.format(self.name, columnsStr)
 
-class UniqueConstraint():
+
+class UniqueConstraint:
     def __init__(self, name, columns):
         self._name = name
         self._columns = columns
@@ -1030,10 +1063,11 @@ class UniqueConstraint():
         return self._columns
 
     def __str__(self):
-        columnsStr = ",".join(map(str,self.columns))
-        return 'Name: {}\nColumns: [{}]'.format(self.name,columnsStr)
+        columnsStr = ",".join(map(str, self.columns))
+        return 'Name: {}\nColumns: [{}]'.format(self.name, columnsStr)
 
-class ForeignKeyConstraint():
+
+class ForeignKeyConstraint:
     def __init__(self, name, src_table, src_columns, tgt_table, tgt_columns):
         self._name = name
         self._srcTable = src_table
@@ -1062,9 +1096,12 @@ class ForeignKeyConstraint():
         return self._tgtColumns
 
     def __str__(self):
-        srcColumnsStr = ",".join(map(str,self.srcColumns))
-        tgtColumnsStr = ",".join(map(str,self.tgtColumns))
-        return 'Name: {}\nSourceTable: {}\nSourceColumns: [{}]\nTargetTable: {} \nTargetColumns: [{}]'.format(self.name,self.srcTable,srcColumnsStr,self.tgtTable,tgtColumnsStr)
+        srcColumnsStr = ",".join(map(str, self.srcColumns))
+        tgtColumnsStr = ",".join(map(str, self.tgtColumns))
+        return 'Name: {}\nSourceTable: {}\nSourceColumns: [{}]\n' \
+               'TargetTable: {} \nTargetColumns: [{}]'.format(self.name, self.srcTable, srcColumnsStr,
+                                                              self.tgtTable, tgtColumnsStr)
+
 
 class RelationalTableOriginEntity:
     def __init__(self, full_IRI, short_IRI, entity_type):
@@ -1090,7 +1127,8 @@ class RelationalTableOriginEntity:
         return self._entityTypeDescr
 
     def __str__(self):
-        return 'FullIRI: {} \nShortIRI: {} \nType: {}'.format(self.fullIRI,self.shortIRI,self.entityTypeDescription)
+        return 'FullIRI: {} \nShortIRI: {} \nType: {}'.format(self.fullIRI, self.shortIRI, self.entityTypeDescription)
+
 
 class RelationalTableAction:
     def __init__(self, subject_table, action_type, object_tables):
@@ -1111,15 +1149,19 @@ class RelationalTableAction:
         return self._objectTables
 
     def __str__(self):
-        objectTablesStr = ",".join(map(str,self.objectTables))
-        return 'SubjectTable: {} \nActionType: {} \nObjectTables: [{}]'.format(self.subjectTable,self.actionType,objectTablesStr)
+        objectTablesStr = ",".join(map(str, self.objectTables))
+        return 'SubjectTable: {} \nActionType: {} \n' \
+               'ObjectTables: [{}]'.format(self.subjectTable, self.actionType, objectTablesStr)
+
 
 @unique
 class EntityType(IntEnum_):
-
-    Class=0
-    ObjectProperty=1
-    DataProperty=2
+    """
+    Enumeration of all possible entity types that can correspond to a relational table.
+    """
+    Class = 0
+    ObjectProperty = 1
+    DataProperty = 2
 
     @classmethod
     def fromValue(cls, value):
@@ -1131,27 +1173,28 @@ class EntityType(IntEnum_):
             return cls.DataProperty
         return None
 
-class RestUtils():
 
+class RestUtils:
+    """
+    Utility class to deal with REST requests.
+    """
     baseUrl = "https://obdatest.dis.uniroma1.it:8080/BlackbirdEndpoint/rest/bbe/{}"
     schemaListResource = "schema"
     actionsBySchemaResource = "schema/{}/table/actions"
 
-    """
-    ADD LOGGING TO ALL METHODS, MOVE EXCEPTION HANDLING OUTSIDE
-    """
+    # ADD LOGGING TO ALL METHODS, MOVE EXCEPTION HANDLING OUTSIDE
 
     @staticmethod
     def getAllSchemas(verifySSL=False):
         """
         Return string representation of service response
-        :param verifySSL: bool
+        :type verifySSL: bool
         :rtype: str
         """
         try:
             resourceUrl = RestUtils.baseUrl.format(RestUtils.schemaListResource)
             response = requests.get(resourceUrl, verify=verifySSL)
-            return response.text;
+            return response.text
         except requests.exceptions.Timeout as e:
             # Maybe set up for a retry, or continue in a retry loop
             print(e)
@@ -1166,15 +1209,15 @@ class RestUtils():
     def getActionsBySchema(schemaName="", verifySSL=False):
         """
         Return string representation of service response
-        :param schemaName: str
-        :param verifySSL: bool
+        :type schemaName: str
+        :type verifySSL: bool
         :rtype: str
         """
         try:
             resource = RestUtils.actionsBySchemaResource.format(schemaName)
             resourceUrl = RestUtils.baseUrl.format(resource)
             response = requests.get(resourceUrl, verify=verifySSL)
-            return response.text;
+            return response.text
         except requests.exceptions.Timeout as e:
             # Maybe set up for a retry, or continue in a retry loop
             print(e)
