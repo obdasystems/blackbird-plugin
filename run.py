@@ -1,15 +1,38 @@
-import sys
+# -*- coding: utf-8 -*-
 
-from PyQt5.QtWidgets import QMainWindow, QApplication
+##########################################################################
+#                                                                        #
+#  Blackbird: An ontology to relational schema translator                #
+#  Copyright (C) 2019 OBDA Systems                                       #
+#                                                                        #
+#  ####################################################################  #
+#                                                                        #
+#  This program is free software: you can redistribute it and/or modify  #
+#  it under the terms of the GNU General Public License as published by  #
+#  the Free Software Foundation, either version 3 of the License, or     #
+#  (at your option) any later version.                                   #
+#                                                                        #
+#  This program is distributed in the hope that it will be useful,       #
+#  but WITHOUT ANY WARRANTY; without even the implied warranty of        #
+#  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the          #
+#  GNU General Public License for more details.                          #
+#                                                                        #
+#  You should have received a copy of the GNU General Public License     #
+#  along with this program. If not, see <http://www.gnu.org/licenses/>.  #
+#                                                                        #
+##########################################################################
 
-from eddy.core.functions.fsystem import fread
-from eddy.core.plugin import PluginSpec, PluginManager
-from eddy.plugins.blackbird.blackbird import BlackbirdPlugin
+
+from eddy import VERSION, APPNAME
+from eddy.core.application import main
+from eddy.core.output import getLogger
+
+LOGGER = getLogger()
 
 if __name__ == '__main__':
-    app = QApplication(sys.argv)
-    mw = QMainWindow()
-    spec = PluginSpec(PluginManager.spec(fread('./plugin.spec')))
-    bbp = BlackbirdPlugin(spec, mw)
-    bbp.showDialog("Blackbird")
-    app.exec_()
+    try:
+        # START EDDY
+        LOGGER.info('Starting {} {}'.format(APPNAME, VERSION))
+        main()
+    except Exception as e:
+        LOGGER.exception(e)
