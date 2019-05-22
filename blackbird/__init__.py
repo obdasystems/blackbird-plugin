@@ -51,6 +51,10 @@ from eddy.plugins.blackbird.schema import (
     EntityType
 )
 
+# Qundo importi da altri file del progetto aggiungi sempre eddy.plugins. al path suggerito ed aggiungi riga noinspection
+
+from blackbird.graphol import BlackbirdOntologyEntityManager
+
 LOGGER = getLogger()
 
 
@@ -72,6 +76,8 @@ class BlackbirdPlugin(AbstractPlugin):
         #############################################
         #   MenuBar Actions
         #################################
+        BlackbirdOntologyEntityManager
+
         self.addAction(QtWidgets.QAction('Open', objectName='open', triggered=self.doOpen))
         self.addAction(QtWidgets.QAction('Save', objectName='save', triggered=self.doSave))
         self.addAction(QtWidgets.QAction('Save as', objectName='save_as', triggered=self.doSaveAs))
