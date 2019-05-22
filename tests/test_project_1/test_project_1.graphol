@@ -1,0 +1,289 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<graphol version="2">
+  <ontology>
+    <name>test_project_1</name>
+    <version>1.0</version>
+    <profile>OWL 2</profile>
+    <IRI_prefixes_nodes_dict>
+      <iri iri_value="https://obdasystems.com/blackbird/test/1/">
+        <prefixes>
+          <prefix prefix_value="bbt1"/>
+        </prefixes>
+        <nodes>
+          <node node_value="ConceptNode:bbt1:A:n0"/>
+          <node node_value="RoleNode:bbt1:R:n2"/>
+          <node node_value="ConceptNode:bbt1:B:n3"/>
+          <node node_value="RoleNode:bbt1:R:n2"/>
+          <node node_value="ConceptNode:bbt1:C:n2"/>
+          <node node_value="ConceptNode:bbt1:B:n1"/>
+          <node node_value="AttributeNode:bbt1:U:n2"/>
+          <node node_value="RoleNode:bbt1:R:n2"/>
+          <node node_value="AttributeNode:bbt1:U:n4"/>
+          <node node_value="ConceptNode:bbt1:A:n0"/>
+          <node node_value="ConceptNode:bbt1:C:n2"/>
+          <node node_value="ConceptNode:bbt1:A:n5"/>
+          <node node_value="ConceptNode:bbt1:B:n1"/>
+          <node node_value="ConceptNode:bbt1:A:n3"/>
+          <node node_value="ConceptNode:bbt1:B:n1"/>
+          <node node_value="ConceptNode:bbt1:B:n1"/>
+          <node node_value="AttributeNode:bbt1:U:n6"/>
+          <node node_value="ConceptNode:bbt1:B:n0"/>
+          <node node_value="ConceptNode:bbt1:A:n0"/>
+          <node node_value="ConceptNode:bbt1:A:n0"/>
+        </nodes>
+        <properties>
+          <property property_value="Project_IRI"/>
+        </properties>
+      </iri>
+      <iri iri_value="http://www.w3.org/1999/02/22-rdf-syntax-ns">
+        <prefixes>
+          <prefix prefix_value="rdf"/>
+        </prefixes>
+        <nodes/>
+        <properties>
+          <property property_value="Standard_IRI"/>
+        </properties>
+      </iri>
+      <iri iri_value="http://www.w3.org/2000/01/rdf-schema">
+        <prefixes>
+          <prefix prefix_value="rdfs"/>
+        </prefixes>
+        <nodes/>
+        <properties>
+          <property property_value="Standard_IRI"/>
+        </properties>
+      </iri>
+      <iri iri_value="http://www.w3.org/2001/XMLSchema">
+        <prefixes>
+          <prefix prefix_value="xsd"/>
+        </prefixes>
+        <nodes/>
+        <properties>
+          <property property_value="Standard_IRI"/>
+        </properties>
+      </iri>
+      <iri iri_value="http://www.w3.org/2002/07/owl">
+        <prefixes>
+          <prefix prefix_value="owl"/>
+        </prefixes>
+        <nodes/>
+        <properties>
+          <property property_value="Standard_IRI"/>
+        </properties>
+      </iri>
+    </IRI_prefixes_nodes_dict>
+  </ontology>
+  <predicates/>
+  <diagrams>
+    <diagram height="5000" width="5000" name="Diagram_6">
+      <node remaining_characters="B" color="#fcfcfc" id="n3" type="concept">
+        <geometry height="50" width="110" x="240" y="180"/>
+        <label height="23" width="42" x="240" y="180">bbt1:B</label>
+      </node>
+      <node remaining_characters="A" color="#fcfcfc" id="n5" type="concept">
+        <geometry height="50" width="110" x="380" y="-50"/>
+        <label height="23" width="42" x="380" y="-50">bbt1:A</label>
+      </node>
+      <node color="#000000" id="n1" type="disjoint-union">
+        <geometry height="30" width="50" x="380" y="70"/>
+      </node>
+      <node remaining_characters="C" color="#fcfcfc" id="n2" type="concept">
+        <geometry height="50" width="110" x="540" y="180"/>
+        <label height="23" width="42" x="540" y="180">bbt1:C</label>
+      </node>
+      <node color="#fcfcfc" id="n0" type="domain-restriction">
+        <geometry height="20" width="20" x="680" y="180"/>
+        <label height="23" width="39" x="680" y="158">exists</label>
+      </node>
+      <node remaining_characters="U" color="#fcfcfc" id="n4" type="attribute">
+        <geometry height="20" width="20" x="750" y="180"/>
+        <label height="23" width="42" x="750" y="158">bbt1:U</label>
+      </node>
+      <edge target="n1" source="n2" id="e3" type="input">
+        <point x="540" y="180"/>
+        <point x="540" y="70"/>
+        <point x="380" y="70"/>
+      </edge>
+      <edge target="n0" source="n2" id="e1" type="inclusion">
+        <point x="540" y="180"/>
+        <point x="680" y="180"/>
+      </edge>
+      <edge target="n1" source="n3" id="e2" type="input">
+        <point x="240" y="180"/>
+        <point x="240" y="70"/>
+        <point x="380" y="70"/>
+      </edge>
+      <edge target="n0" source="n4" id="e0" type="input">
+        <point x="750" y="180"/>
+        <point x="680" y="180"/>
+      </edge>
+      <edge target="n5" source="n1" id="e5" type="equivalence">
+        <point x="380" y="70"/>
+        <point x="380" y="-50"/>
+      </edge>
+    </diagram>
+    <diagram height="5000" width="5000" name="Diagram_5">
+      <node color="#000000" id="n5" type="disjoint-union">
+        <geometry height="30" width="50" x="360" y="60"/>
+      </node>
+      <node remaining_characters="C" color="#fcfcfc" id="n2" type="concept">
+        <geometry height="50" width="110" x="520" y="170"/>
+        <label height="23" width="42" x="520" y="170">bbt1:C</label>
+      </node>
+      <node remaining_characters="B" color="#fcfcfc" id="n1" type="concept">
+        <geometry height="50" width="110" x="220" y="170"/>
+        <label height="23" width="42" x="220" y="170">bbt1:B</label>
+      </node>
+      <node remaining_characters="U" color="#fcfcfc" id="n6" type="attribute">
+        <geometry height="20" width="20" x="730" y="170"/>
+        <label height="23" width="42" x="730" y="148">bbt1:U</label>
+      </node>
+      <node remaining_characters="A" color="#fcfcfc" id="n0" type="concept">
+        <geometry height="50" width="110" x="360" y="-60"/>
+        <label height="23" width="42" x="360" y="-60">bbt1:A</label>
+      </node>
+      <node color="#fcfcfc" id="n7" type="domain-restriction">
+        <geometry height="20" width="20" x="660" y="170"/>
+        <label height="23" width="39" x="660" y="148">exists</label>
+      </node>
+      <edge target="n7" source="n6" id="e5" type="input">
+        <point x="730" y="170"/>
+        <point x="660" y="170"/>
+      </edge>
+      <edge target="n0" source="n5" id="e4" type="inclusion">
+        <point x="360" y="60"/>
+        <point x="360" y="-60"/>
+      </edge>
+      <edge target="n5" source="n2" id="e3" type="input">
+        <point x="520" y="170"/>
+        <point x="520" y="60"/>
+        <point x="360" y="60"/>
+      </edge>
+      <edge target="n5" source="n1" id="e2" type="input">
+        <point x="220" y="170"/>
+        <point x="220" y="60"/>
+        <point x="360" y="60"/>
+      </edge>
+      <edge target="n7" source="n2" id="e6" type="inclusion">
+        <point x="520" y="170"/>
+        <point x="660" y="170"/>
+      </edge>
+    </diagram>
+    <diagram height="5000" width="5000" name="Diagram_4">
+      <node remaining_characters="A" color="#fcfcfc" id="n0" type="concept">
+        <geometry height="50" width="110" x="350" y="20"/>
+        <label height="23" width="42" x="350" y="20">bbt1:A</label>
+      </node>
+      <node remaining_characters="B" color="#fcfcfc" id="n1" type="concept">
+        <geometry height="50" width="110" x="350" y="160"/>
+        <label height="23" width="42" x="350" y="160">bbt1:B</label>
+      </node>
+      <node remaining_characters="R" color="#fcfcfc" id="n2" type="role">
+        <geometry height="50" width="70" x="630" y="160"/>
+        <label height="23" width="43" x="630" y="160">bbt1:R</label>
+      </node>
+      <node color="#000000" id="n4" type="range-restriction">
+        <geometry height="20" width="20" x="540" y="160"/>
+        <label height="23" width="39" x="540" y="138">exists</label>
+      </node>
+      <edge target="n1" source="n4" id="e3" type="inclusion">
+        <point x="540" y="160"/>
+        <point x="350" y="160"/>
+      </edge>
+      <edge target="n4" source="n2" id="e2" type="input">
+        <point x="630" y="160"/>
+        <point x="540" y="160"/>
+      </edge>
+    </diagram>
+    <diagram height="5000" width="5000" name="Diagram_2">
+      <node remaining_characters="A" color="#fcfcfc" id="n0" type="concept">
+        <geometry height="50" width="110" x="240" y="-20"/>
+        <label height="23" width="42" x="240" y="-20">bbt1:A</label>
+      </node>
+      <node color="#fcfcfc" id="n3" type="domain-restriction">
+        <geometry height="20" width="20" x="470" y="-20"/>
+        <label height="23" width="39" x="470" y="-42">exists</label>
+      </node>
+      <node remaining_characters="U" color="#fcfcfc" id="n2" type="attribute">
+        <geometry height="20" width="20" x="540" y="-20"/>
+        <label height="23" width="42" x="540" y="-42">bbt1:U</label>
+      </node>
+      <node remaining_characters="B" color="#fcfcfc" id="n1" type="concept">
+        <geometry height="50" width="110" x="240" y="140"/>
+        <label height="23" width="42" x="240" y="140">bbt1:B</label>
+      </node>
+      <edge target="n0" source="n3" id="e1" type="equivalence">
+        <point x="470" y="-20"/>
+        <point x="240" y="-20"/>
+      </edge>
+      <edge target="n3" source="n2" id="e0" type="input">
+        <point x="540" y="-20"/>
+        <point x="470" y="-20"/>
+      </edge>
+      <edge target="n0" source="n1" id="e2" type="inclusion">
+        <point x="240" y="140"/>
+        <point x="240" y="-20"/>
+      </edge>
+    </diagram>
+    <diagram height="5000" width="5000" name="Diagram_1">
+      <node remaining_characters="A" color="#fcfcfc" id="n0" type="concept">
+        <geometry height="50" width="110" x="260" y="0"/>
+        <label height="23" width="42" x="260" y="0">bbt1:A</label>
+      </node>
+      <node color="#fcfcfc" id="n3" type="domain-restriction">
+        <geometry height="20" width="20" x="460" y="0"/>
+        <label height="23" width="39" x="460" y="-22">exists</label>
+      </node>
+      <node remaining_characters="R" color="#fcfcfc" id="n2" type="role">
+        <geometry height="50" width="70" x="540" y="0"/>
+        <label height="23" width="43" x="540" y="0">bbt1:R</label>
+      </node>
+      <node remaining_characters="B" color="#fcfcfc" id="n1" type="concept">
+        <geometry height="50" width="110" x="260" y="150"/>
+        <label height="23" width="42" x="260" y="150">bbt1:B</label>
+      </node>
+      <edge target="n0" source="n1" id="e2" type="inclusion">
+        <point x="260" y="150"/>
+        <point x="260" y="0"/>
+      </edge>
+      <edge target="n3" source="n0" id="e1" type="inclusion">
+        <point x="260" y="0"/>
+        <point x="460" y="0"/>
+      </edge>
+      <edge target="n3" source="n2" id="e0" type="input">
+        <point x="540" y="0"/>
+        <point x="460" y="0"/>
+      </edge>
+    </diagram>
+    <diagram height="5000" width="5000" name="Diagram_3">
+      <node remaining_characters="A" color="#fcfcfc" id="n3" type="concept">
+        <geometry height="50" width="110" x="280" y="10"/>
+        <label height="23" width="42" x="280" y="10">bbt1:A</label>
+      </node>
+      <node remaining_characters="R" color="#fcfcfc" id="n2" type="role">
+        <geometry height="50" width="70" x="560" y="10"/>
+        <label height="23" width="43" x="560" y="10">bbt1:R</label>
+      </node>
+      <node color="#fcfcfc" id="n1" type="domain-restriction">
+        <geometry height="20" width="20" x="480" y="10"/>
+        <label height="23" width="39" x="480" y="-12">exists</label>
+      </node>
+      <node remaining_characters="B" color="#fcfcfc" id="n0" type="concept">
+        <geometry height="50" width="110" x="280" y="160"/>
+        <label height="23" width="42" x="280" y="160">bbt1:B</label>
+      </node>
+      <edge target="n3" source="n0" id="e0" type="inclusion">
+        <point x="280" y="160"/>
+        <point x="280" y="10"/>
+      </edge>
+      <edge target="n1" source="n3" id="e1" type="inclusion">
+        <point x="280" y="10"/>
+        <point x="480" y="10"/>
+      </edge>
+      <edge target="n1" source="n2" id="e2" type="input">
+        <point x="560" y="10"/>
+        <point x="480" y="10"/>
+      </edge>
+    </diagram>
+  </diagrams>
+</graphol>

@@ -1,0 +1,280 @@
+{
+    "schemaName": "<https://obdasystems.com/blackbird/test/1/>",
+    "tables": [
+        {
+            "tableName": "CL_bbt1_C",
+            "entity": {
+                "entityFullIRI": "https://obdasystems.com/blackbird/test/1/C",
+                "entityShortIRI": "C",
+                "entityType": 0
+            },
+            "columns": [
+                {
+                    "columnName": "ID_TABLE_15",
+                    "entityIRI": {
+                        "entityFullIRI": "https://obdasystems.com/blackbird/test/1/C",
+                        "entityShortIRI": "C",
+                        "entityType": 0
+                    },
+                    "columnType": "integer",
+                    "position": 0,
+                    "id": "COL_22",
+                    "nullable": false
+                }
+            ],
+            "primaryKeyConstraint": {
+                "pkName": "PK_CL_bbt1_C",
+                "columnNames": [
+                    "ID_TABLE_15"
+                ]
+            },
+            "uniqueConstraints": [],
+            "foreignKeyConstraints": [],
+            "id": "TABLE_15"
+        },
+        {
+            "tableName": "CL_bbt1_B",
+            "entity": {
+                "entityFullIRI": "https://obdasystems.com/blackbird/test/1/B",
+                "entityShortIRI": "B",
+                "entityType": 0
+            },
+            "columns": [
+                {
+                    "columnName": "ID_TABLE_16",
+                    "entityIRI": {
+                        "entityFullIRI": "https://obdasystems.com/blackbird/test/1/B",
+                        "entityShortIRI": "B",
+                        "entityType": 0
+                    },
+                    "columnType": "integer",
+                    "position": 0,
+                    "id": "COL_23",
+                    "nullable": false
+                }
+            ],
+            "primaryKeyConstraint": {
+                "pkName": "PK_CL_bbt1_B",
+                "columnNames": [
+                    "ID_TABLE_16"
+                ]
+            },
+            "uniqueConstraints": [],
+            "foreignKeyConstraints": [],
+            "id": "TABLE_16"
+        },
+        {
+            "tableName": "CL_bbt1_A",
+            "entity": {
+                "entityFullIRI": "https://obdasystems.com/blackbird/test/1/A",
+                "entityShortIRI": "A",
+                "entityType": 0
+            },
+            "columns": [
+                {
+                    "columnName": "ID_TABLE_17",
+                    "entityIRI": {
+                        "entityFullIRI": "https://obdasystems.com/blackbird/test/1/A",
+                        "entityShortIRI": "A",
+                        "entityType": 0
+                    },
+                    "columnType": "integer",
+                    "position": 0,
+                    "id": "COL_24",
+                    "nullable": false
+                }
+            ],
+            "primaryKeyConstraint": {
+                "pkName": "PK_CL_bbt1_A",
+                "columnNames": [
+                    "ID_TABLE_17"
+                ]
+            },
+            "uniqueConstraints": [],
+            "foreignKeyConstraints": [],
+            "id": "TABLE_17"
+        },
+        {
+            "tableName": "DP_bbt1_U",
+            "entity": {
+                "entityFullIRI": "https://obdasystems.com/blackbird/test/1/U",
+                "entityShortIRI": "U",
+                "entityType": 2
+            },
+            "columns": [
+                {
+                    "columnName": "ID_TABLE_18",
+                    "entityIRI": {
+                        "entityFullIRI": "https://obdasystems.com/blackbird/test/1/U",
+                        "entityShortIRI": "U",
+                        "entityType": 2
+                    },
+                    "columnType": "integer",
+                    "position": 0,
+                    "id": "COL_25",
+                    "nullable": false
+                },
+                {
+                    "columnName": "TXT_U",
+                    "entityIRI": {
+                        "entityFullIRI": "https://obdasystems.com/blackbird/test/1/U",
+                        "entityShortIRI": "U",
+                        "entityType": 2
+                    },
+                    "columnType": "STRING",
+                    "position": 1,
+                    "id": "COL_26",
+                    "nullable": false
+                }
+            ],
+            "primaryKeyConstraint": {
+                "pkName": "PK_DP_bbt1_U",
+                "columnNames": [
+                    "ID_TABLE_18"
+                ]
+            },
+            "uniqueConstraints": [],
+            "foreignKeyConstraints": [],
+            "id": "TABLE_18"
+        }
+    ],
+    "id": "DB_6",
+    "iri2tableMap": {
+        "https://obdasystems.com/blackbird/test/1/B": {
+            "tableName": "CL_bbt1_B",
+            "entity": {
+                "entityFullIRI": "https://obdasystems.com/blackbird/test/1/B",
+                "entityShortIRI": "B",
+                "entityType": 0
+            },
+            "columns": [
+                {
+                    "columnName": "ID_TABLE_16",
+                    "entityIRI": {
+                        "entityFullIRI": "https://obdasystems.com/blackbird/test/1/B",
+                        "entityShortIRI": "B",
+                        "entityType": 0
+                    },
+                    "columnType": "integer",
+                    "position": 0,
+                    "id": "COL_23",
+                    "nullable": false
+                }
+            ],
+            "primaryKeyConstraint": {
+                "pkName": "PK_CL_bbt1_B",
+                "columnNames": [
+                    "ID_TABLE_16"
+                ]
+            },
+            "uniqueConstraints": [],
+            "foreignKeyConstraints": [],
+            "id": "TABLE_16"
+        },
+        "https://obdasystems.com/blackbird/test/1/A": {
+            "tableName": "CL_bbt1_A",
+            "entity": {
+                "entityFullIRI": "https://obdasystems.com/blackbird/test/1/A",
+                "entityShortIRI": "A",
+                "entityType": 0
+            },
+            "columns": [
+                {
+                    "columnName": "ID_TABLE_17",
+                    "entityIRI": {
+                        "entityFullIRI": "https://obdasystems.com/blackbird/test/1/A",
+                        "entityShortIRI": "A",
+                        "entityType": 0
+                    },
+                    "columnType": "integer",
+                    "position": 0,
+                    "id": "COL_24",
+                    "nullable": false
+                }
+            ],
+            "primaryKeyConstraint": {
+                "pkName": "PK_CL_bbt1_A",
+                "columnNames": [
+                    "ID_TABLE_17"
+                ]
+            },
+            "uniqueConstraints": [],
+            "foreignKeyConstraints": [],
+            "id": "TABLE_17"
+        },
+        "https://obdasystems.com/blackbird/test/1/C": {
+            "tableName": "CL_bbt1_C",
+            "entity": {
+                "entityFullIRI": "https://obdasystems.com/blackbird/test/1/C",
+                "entityShortIRI": "C",
+                "entityType": 0
+            },
+            "columns": [
+                {
+                    "columnName": "ID_TABLE_15",
+                    "entityIRI": {
+                        "entityFullIRI": "https://obdasystems.com/blackbird/test/1/C",
+                        "entityShortIRI": "C",
+                        "entityType": 0
+                    },
+                    "columnType": "integer",
+                    "position": 0,
+                    "id": "COL_22",
+                    "nullable": false
+                }
+            ],
+            "primaryKeyConstraint": {
+                "pkName": "PK_CL_bbt1_C",
+                "columnNames": [
+                    "ID_TABLE_15"
+                ]
+            },
+            "uniqueConstraints": [],
+            "foreignKeyConstraints": [],
+            "id": "TABLE_15"
+        },
+        "https://obdasystems.com/blackbird/test/1/U": {
+            "tableName": "DP_bbt1_U",
+            "entity": {
+                "entityFullIRI": "https://obdasystems.com/blackbird/test/1/U",
+                "entityShortIRI": "U",
+                "entityType": 2
+            },
+            "columns": [
+                {
+                    "columnName": "ID_TABLE_18",
+                    "entityIRI": {
+                        "entityFullIRI": "https://obdasystems.com/blackbird/test/1/U",
+                        "entityShortIRI": "U",
+                        "entityType": 2
+                    },
+                    "columnType": "integer",
+                    "position": 0,
+                    "id": "COL_25",
+                    "nullable": false
+                },
+                {
+                    "columnName": "TXT_U",
+                    "entityIRI": {
+                        "entityFullIRI": "https://obdasystems.com/blackbird/test/1/U",
+                        "entityShortIRI": "U",
+                        "entityType": 2
+                    },
+                    "columnType": "STRING",
+                    "position": 1,
+                    "id": "COL_26",
+                    "nullable": false
+                }
+            ],
+            "primaryKeyConstraint": {
+                "pkName": "PK_DP_bbt1_U",
+                "columnNames": [
+                    "ID_TABLE_18"
+                ]
+            },
+            "uniqueConstraints": [],
+            "foreignKeyConstraints": [],
+            "id": "TABLE_18"
+        }
+    }
+}
