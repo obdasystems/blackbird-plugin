@@ -1,0 +1,2 @@
+# From GitHub
+-e git+https://github.com/obdasystems/eddy.git@develop#egg=Eddy
