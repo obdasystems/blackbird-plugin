@@ -2,10 +2,10 @@
     "schemaName": "<https://obdasystems.com/blackbird/test/1/>",
     "tables": [
         {
-            "tableName": "CL_owl_Thing",
+            "tableName": "CL_owlThing",
             "entity": {
                 "entityFullIRI": "http://www.w3.org/2002/07/owl#Thing",
-                "entityShortIRI": "Thing",
+                "entityShortIRI": "owl:Thing",
                 "entityType": 0
             },
             "columns": [
@@ -13,7 +13,7 @@
                     "columnName": "ID_TABLE_1",
                     "entityIRI": {
                         "entityFullIRI": "http://www.w3.org/2002/07/owl#Thing",
-                        "entityShortIRI": "Thing",
+                        "entityShortIRI": "owl:Thing",
                         "entityType": 0
                     },
                     "columnType": "integer",
@@ -23,7 +23,7 @@
                 }
             ],
             "primaryKeyConstraint": {
-                "pkName": "PK_CL_owl_Thing",
+                "pkName": "PK_CL_owlThing",
                 "columnNames": [
                     "ID_TABLE_1"
                 ]
@@ -33,10 +33,10 @@
             "id": "TABLE_1"
         },
         {
-            "tableName": "CL_bbt1_B",
+            "tableName": "CL_bbt1B",
             "entity": {
                 "entityFullIRI": "https://obdasystems.com/blackbird/test/1/B",
-                "entityShortIRI": "B",
+                "entityShortIRI": "bbt1:B",
                 "entityType": 0
             },
             "columns": [
@@ -44,7 +44,7 @@
                     "columnName": "ID_TABLE_2",
                     "entityIRI": {
                         "entityFullIRI": "https://obdasystems.com/blackbird/test/1/B",
-                        "entityShortIRI": "B",
+                        "entityShortIRI": "bbt1:B",
                         "entityType": 0
                     },
                     "columnType": "integer",
@@ -54,7 +54,7 @@
                 }
             ],
             "primaryKeyConstraint": {
-                "pkName": "PK_CL_bbt1_B",
+                "pkName": "PK_CL_bbt1B",
                 "columnNames": [
                     "ID_TABLE_2"
                 ]
@@ -62,12 +62,12 @@
             "uniqueConstraints": [],
             "foreignKeyConstraints": [
                 {
-                    "fkName": "FK_CL_bbt1_B_0_CL_bbt1_A_0",
-                    "sourceTableName": "CL_bbt1_B",
+                    "fkName": "FK_CL_bbt1B_0_CL_bbt1A_0",
+                    "sourceTableName": "CL_bbt1B",
                     "sourceColumnsNames": [
                         "ID_TABLE_2"
                     ],
-                    "targetTableName": "CL_bbt1_A",
+                    "targetTableName": "CL_bbt1A",
                     "targetColumnsNames": [
                         "ID_TABLE_3"
                     ],
@@ -77,10 +77,10 @@
             "id": "TABLE_2"
         },
         {
-            "tableName": "CL_bbt1_A",
+            "tableName": "CL_bbt1A",
             "entity": {
                 "entityFullIRI": "https://obdasystems.com/blackbird/test/1/A",
-                "entityShortIRI": "A",
+                "entityShortIRI": "bbt1:A",
                 "entityType": 0
             },
             "columns": [
@@ -88,7 +88,7 @@
                     "columnName": "ID_TABLE_3",
                     "entityIRI": {
                         "entityFullIRI": "https://obdasystems.com/blackbird/test/1/A",
-                        "entityShortIRI": "A",
+                        "entityShortIRI": "bbt1:A",
                         "entityType": 0
                     },
                     "columnType": "integer",
@@ -98,20 +98,33 @@
                 }
             ],
             "primaryKeyConstraint": {
-                "pkName": "PK_CL_bbt1_A",
+                "pkName": "PK_CL_bbt1A",
                 "columnNames": [
                     "ID_TABLE_3"
                 ]
             },
             "uniqueConstraints": [],
-            "foreignKeyConstraints": [],
+            "foreignKeyConstraints": [
+                {
+                    "fkName": "FK_CL_bbt1A_0_OP_bbt1R_1",
+                    "sourceTableName": "CL_bbt1A",
+                    "sourceColumnsNames": [
+                        "ID_TABLE_3"
+                    ],
+                    "targetTableName": "OP_bbt1R",
+                    "targetColumnsNames": [
+                        "DOMAIN_R"
+                    ],
+                    "axiomType": "ObjectPropertyDomainParticipation"
+                }
+            ],
             "id": "TABLE_3"
         },
         {
-            "tableName": "OP_bbt1_R",
+            "tableName": "OP_bbt1R",
             "entity": {
                 "entityFullIRI": "https://obdasystems.com/blackbird/test/1/R",
-                "entityShortIRI": "R",
+                "entityShortIRI": "bbt1:R",
                 "entityType": 1
             },
             "columns": [
@@ -119,7 +132,7 @@
                     "columnName": "ID_TABLE_4",
                     "entityIRI": {
                         "entityFullIRI": "https://obdasystems.com/blackbird/test/1/R",
-                        "entityShortIRI": "R",
+                        "entityShortIRI": "bbt1:R",
                         "entityType": 1
                     },
                     "columnType": "integer",
@@ -131,7 +144,7 @@
                     "columnName": "DOMAIN_R",
                     "entityIRI": {
                         "entityFullIRI": "https://obdasystems.com/blackbird/test/1/R",
-                        "entityShortIRI": "R",
+                        "entityShortIRI": "bbt1:R",
                         "entityType": 1
                     },
                     "columnType": "integer",
@@ -143,7 +156,7 @@
                     "columnName": "RANGE_R",
                     "entityIRI": {
                         "entityFullIRI": "https://obdasystems.com/blackbird/test/1/R",
-                        "entityShortIRI": "R",
+                        "entityShortIRI": "bbt1:R",
                         "entityType": 1
                     },
                     "columnType": "integer",
@@ -153,7 +166,7 @@
                 }
             ],
             "primaryKeyConstraint": {
-                "pkName": "PK_OP_bbt1_R",
+                "pkName": "PK_OP_bbt1R",
                 "columnNames": [
                     "ID_TABLE_4"
                 ]
@@ -163,13 +176,13 @@
             "id": "TABLE_4"
         }
     ],
-    "id": "DB_2",
+    "id": "DB_1",
     "iri2tableMap": {
         "https://obdasystems.com/blackbird/test/1/B": {
-            "tableName": "CL_bbt1_B",
+            "tableName": "CL_bbt1B",
             "entity": {
                 "entityFullIRI": "https://obdasystems.com/blackbird/test/1/B",
-                "entityShortIRI": "B",
+                "entityShortIRI": "bbt1:B",
                 "entityType": 0
             },
             "columns": [
@@ -177,7 +190,7 @@
                     "columnName": "ID_TABLE_2",
                     "entityIRI": {
                         "entityFullIRI": "https://obdasystems.com/blackbird/test/1/B",
-                        "entityShortIRI": "B",
+                        "entityShortIRI": "bbt1:B",
                         "entityType": 0
                     },
                     "columnType": "integer",
@@ -187,7 +200,7 @@
                 }
             ],
             "primaryKeyConstraint": {
-                "pkName": "PK_CL_bbt1_B",
+                "pkName": "PK_CL_bbt1B",
                 "columnNames": [
                     "ID_TABLE_2"
                 ]
@@ -195,12 +208,12 @@
             "uniqueConstraints": [],
             "foreignKeyConstraints": [
                 {
-                    "fkName": "FK_CL_bbt1_B_0_CL_bbt1_A_0",
-                    "sourceTableName": "CL_bbt1_B",
+                    "fkName": "FK_CL_bbt1B_0_CL_bbt1A_0",
+                    "sourceTableName": "CL_bbt1B",
                     "sourceColumnsNames": [
                         "ID_TABLE_2"
                     ],
-                    "targetTableName": "CL_bbt1_A",
+                    "targetTableName": "CL_bbt1A",
                     "targetColumnsNames": [
                         "ID_TABLE_3"
                     ],
@@ -210,10 +223,10 @@
             "id": "TABLE_2"
         },
         "https://obdasystems.com/blackbird/test/1/R": {
-            "tableName": "OP_bbt1_R",
+            "tableName": "OP_bbt1R",
             "entity": {
                 "entityFullIRI": "https://obdasystems.com/blackbird/test/1/R",
-                "entityShortIRI": "R",
+                "entityShortIRI": "bbt1:R",
                 "entityType": 1
             },
             "columns": [
@@ -221,7 +234,7 @@
                     "columnName": "ID_TABLE_4",
                     "entityIRI": {
                         "entityFullIRI": "https://obdasystems.com/blackbird/test/1/R",
-                        "entityShortIRI": "R",
+                        "entityShortIRI": "bbt1:R",
                         "entityType": 1
                     },
                     "columnType": "integer",
@@ -233,7 +246,7 @@
                     "columnName": "DOMAIN_R",
                     "entityIRI": {
                         "entityFullIRI": "https://obdasystems.com/blackbird/test/1/R",
-                        "entityShortIRI": "R",
+                        "entityShortIRI": "bbt1:R",
                         "entityType": 1
                     },
                     "columnType": "integer",
@@ -245,7 +258,7 @@
                     "columnName": "RANGE_R",
                     "entityIRI": {
                         "entityFullIRI": "https://obdasystems.com/blackbird/test/1/R",
-                        "entityShortIRI": "R",
+                        "entityShortIRI": "bbt1:R",
                         "entityType": 1
                     },
                     "columnType": "integer",
@@ -255,7 +268,7 @@
                 }
             ],
             "primaryKeyConstraint": {
-                "pkName": "PK_OP_bbt1_R",
+                "pkName": "PK_OP_bbt1R",
                 "columnNames": [
                     "ID_TABLE_4"
                 ]
@@ -265,10 +278,10 @@
             "id": "TABLE_4"
         },
         "https://obdasystems.com/blackbird/test/1/A": {
-            "tableName": "CL_bbt1_A",
+            "tableName": "CL_bbt1A",
             "entity": {
                 "entityFullIRI": "https://obdasystems.com/blackbird/test/1/A",
-                "entityShortIRI": "A",
+                "entityShortIRI": "bbt1:A",
                 "entityType": 0
             },
             "columns": [
@@ -276,7 +289,7 @@
                     "columnName": "ID_TABLE_3",
                     "entityIRI": {
                         "entityFullIRI": "https://obdasystems.com/blackbird/test/1/A",
-                        "entityShortIRI": "A",
+                        "entityShortIRI": "bbt1:A",
                         "entityType": 0
                     },
                     "columnType": "integer",
@@ -286,20 +299,33 @@
                 }
             ],
             "primaryKeyConstraint": {
-                "pkName": "PK_CL_bbt1_A",
+                "pkName": "PK_CL_bbt1A",
                 "columnNames": [
                     "ID_TABLE_3"
                 ]
             },
             "uniqueConstraints": [],
-            "foreignKeyConstraints": [],
+            "foreignKeyConstraints": [
+                {
+                    "fkName": "FK_CL_bbt1A_0_OP_bbt1R_1",
+                    "sourceTableName": "CL_bbt1A",
+                    "sourceColumnsNames": [
+                        "ID_TABLE_3"
+                    ],
+                    "targetTableName": "OP_bbt1R",
+                    "targetColumnsNames": [
+                        "DOMAIN_R"
+                    ],
+                    "axiomType": "ObjectPropertyDomainParticipation"
+                }
+            ],
             "id": "TABLE_3"
         },
         "http://www.w3.org/2002/07/owl#Thing": {
-            "tableName": "CL_owl_Thing",
+            "tableName": "CL_owlThing",
             "entity": {
                 "entityFullIRI": "http://www.w3.org/2002/07/owl#Thing",
-                "entityShortIRI": "Thing",
+                "entityShortIRI": "owl:Thing",
                 "entityType": 0
             },
             "columns": [
@@ -307,7 +333,7 @@
                     "columnName": "ID_TABLE_1",
                     "entityIRI": {
                         "entityFullIRI": "http://www.w3.org/2002/07/owl#Thing",
-                        "entityShortIRI": "Thing",
+                        "entityShortIRI": "owl:Thing",
                         "entityType": 0
                     },
                     "columnType": "integer",
@@ -317,7 +343,7 @@
                 }
             ],
             "primaryKeyConstraint": {
-                "pkName": "PK_CL_owl_Thing",
+                "pkName": "PK_CL_owlThing",
                 "columnNames": [
                     "ID_TABLE_1"
                 ]

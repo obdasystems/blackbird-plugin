@@ -1,0 +1,23 @@
+Prefix(owl:=<http://www.w3.org/2002/07/owl#>)
+Prefix(rdf:=<http://www.w3.org/1999/02/22-rdf-syntax-ns#>)
+Prefix(xml:=<http://www.w3.org/XML/1998/namespace>)
+Prefix(xsd:=<http://www.w3.org/2001/XMLSchema#>)
+Prefix(bbt1:=<https://obdasystems.com/blackbird/test/1/>)
+Prefix(rdfs:=<http://www.w3.org/2000/01/rdf-schema#>)
+
+Ontology(<https://obdasystems.com/blackbird/test/1/>
+
+<https://obdasystems.com/blackbird/test/1/1.0>
+Declaration(Class(bbt1:A))
+Declaration(Class(bbt1:B))
+Declaration(Class(bbt1:C))
+Declaration(ObjectProperty(bbt1:R))
+Declaration(DataProperty(bbt1:U))
+ObjectPropertyRange(bbt1:R bbt1:B)
+EquivalentClasses(bbt1:A ObjectUnionOf(bbt1:B bbt1:C))
+SubClassOf(bbt1:A ObjectSomeValuesFrom(bbt1:R owl:Thing))
+SubClassOf(bbt1:B bbt1:A)
+DisjointClasses(bbt1:B bbt1:C)
+SubClassOf(bbt1:C DataSomeValuesFrom(bbt1:U rdfs:Literal))
+SubClassOf(ObjectUnionOf(bbt1:B bbt1:C) bbt1:A)
+)
