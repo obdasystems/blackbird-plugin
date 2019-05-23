@@ -72,23 +72,23 @@ class BlackbirdPlugin(AbstractPlugin):
         #############################################
         #   MenuBar Actions
         #################################
-        self.addAction(QtWidgets.QAction('Open', objectName='open', triggered=self.doOpen))
-        self.addAction(QtWidgets.QAction('Save', objectName='save', triggered=self.doSave))
-        self.addAction(QtWidgets.QAction('Save as', objectName='save_as', triggered=self.doSaveAs))
-        self.addAction(QtWidgets.QAction('Settings', objectName='settings', triggered=self.doOpenSettings))
-        self.addAction(QtWidgets.QAction('Ontology Analysis', objectName='open_ontology_analysis',
+        self.addAction(QtWidgets.QAction('Open', self, objectName='open', triggered=self.doOpen))
+        self.addAction(QtWidgets.QAction('Save', self, objectName='save', triggered=self.doSave))
+        self.addAction(QtWidgets.QAction('Save as', self, objectName='save_as', triggered=self.doSaveAs))
+        self.addAction(QtWidgets.QAction('Settings', self, objectName='settings', triggered=self.doOpenSettings))
+        self.addAction(QtWidgets.QAction('Ontology Analysis', self, objectName='open_ontology_analysis',
                                          triggered=self.doOpenOntologyAnalysis))
-        self.addAction(QtWidgets.QAction('Entity Filter', objectName='open_entity_filter',
+        self.addAction(QtWidgets.QAction('Entity Filter', self, objectName='open_entity_filter',
                                          triggered=self.doOpenEntityFilter))
-        self.addAction(QtWidgets.QAction('Recap Schema Selections', objectName='open_schema_selections',
+        self.addAction(QtWidgets.QAction('Recap Schema Selections', self, objectName='open_schema_selections',
                                          triggered=self.doOpenSchemaSelections))
-        self.addAction(QtWidgets.QAction('Generate Preview Schema', objectName='generate_preview_schema',
+        self.addAction(QtWidgets.QAction('Generate Preview Schema', self, objectName='generate_preview_schema',
                                          triggered=self.doGeneratePreviewSchema))
-        self.addAction(QtWidgets.QAction('Export Mappings', objectName='export_mappings',
+        self.addAction(QtWidgets.QAction('Export Mappings', self, objectName='export_mappings',
                                          triggered=self.doExportMappings))
-        self.addAction(QtWidgets.QAction('Export SQL Script', objectName='export_sql',
+        self.addAction(QtWidgets.QAction('Export SQL Script', self, objectName='export_sql',
                                          triggered=self.doExportSQLScript))
-        self.addAction(QtWidgets.QAction('Export Schema Diagrams', objectName='export_schema_diagrams',
+        self.addAction(QtWidgets.QAction('Export Schema Diagrams', self, objectName='export_schema_diagrams',
                                          triggered=self.doExportSchemaDiagrams))
 
     # noinspection PyArgumentList
