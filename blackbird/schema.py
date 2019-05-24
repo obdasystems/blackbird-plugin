@@ -60,12 +60,17 @@ class RelationalSchemaParser:
     def getSchema(schema_json_data, actions_json_data):
         schemaName = None
         tables = list()
-        for item in schema_json_data:
-            schemaName = item["schemaName"]
-            jsonTables = item["tables"]
-            for jsonTable in jsonTables:
-                table = RelationalSchemaParser.getTable(jsonTable)
-                tables.append(table)
+        #for item in schema_json_data:
+            #schemaName = item["schemaName"]
+            #jsonTables = item["tables"]
+            #for jsonTable in jsonTables:
+                #table = RelationalSchemaParser.getTable(jsonTable)
+                #tables.append(table)
+        schemaName = schema_json_data["schemaName"]
+        jsonTables = schema_json_data["tables"]
+        for jsonTable in jsonTables:
+            table = RelationalSchemaParser.getTable(jsonTable)
+            tables.append(table)
         actions = list()
         for item in actions_json_data:
             subjectName = item["actionSubjectTableName"]
@@ -96,12 +101,13 @@ class RelationalSchemaParser:
                 unique = RelationalSchemaParser.getUnique(jsonUnique)
                 uniques.append(unique)
         foreignKeys = list()
-        jsonFKs = jsonTable["foreingKeyConstraints"]
+        jsonFKs = jsonTable["foreignKeyConstraints"]
         if jsonFKs:
             for jsonFK in jsonFKs:
                 fk = RelationalSchemaParser.getForeignKey(jsonFK)
                 foreignKeys.append(fk)
-        return RelationalTable(tableName, entity, columns, primaryKey, uniques, foreignKeys)
+        tableId = jsonTable["id"]
+        return RelationalTable(tableName, entity, columns, primaryKey, uniques, foreignKeys, tableId)
 
     @staticmethod
     def getColumn(jsonColumn):
@@ -110,7 +116,8 @@ class RelationalSchemaParser:
         columnType = jsonColumn["columnType"]
         position = jsonColumn["position"]
         nullable = jsonColumn["nullable"]
-        return RelationalColumn(columnName, entityIRI, columnType, position, nullable)
+        colId = jsonColumn["id"]
+        return RelationalColumn(columnName, entityIRI, columnType, position, colId, nullable)
 
     @staticmethod
     def getOriginEntity(jsonEntity):
@@ -138,7 +145,8 @@ class RelationalSchemaParser:
         srcColumnNames = jsonFK["sourceColumnsNames"]
         tgtTableName = jsonFK["targetTableName"]
         tgtColumnNames = jsonFK["targetColumnsNames"]
-        return ForeignKeyConstraint(fkName, srcTableName, srcColumnNames, tgtTableName, tgtColumnNames)
+        axiomType = jsonFK["axiomType"]
+        return ForeignKeyConstraint(fkName, srcTableName, srcColumnNames, tgtTableName, tgtColumnNames, axiomType)
 
 
 class RelationalSchema:
@@ -175,19 +183,20 @@ class RelationalSchema:
         return None
 
     def __str__(self):
-        tablesStr = "\n".join(map(str, self.tables))
+        tablesStr = "\n\n".join(map(str, self.tables))
         actionsStr = "\n".join(map(str, self.actions))
-        return 'Name: {}\nTables: [{}]\nActions: [{}]'.format(self.name, tablesStr, actionsStr)
+        return 'Name: {}\nTables: [\n{}\n]\nActions: [{}]'.format(self.name, tablesStr, actionsStr)
 
 
 class RelationalTable:
-    def __init__(self, name, entity, columns, primary_key, uniques, foreign_keys):
+    def __init__(self, name, entity, columns, primary_key, uniques, foreign_keys, id):
         self._name = name
         self._entity = entity
         self._columns = columns
         self._primaryKey = primary_key
         self._uniques = uniques
         self._foreignKeys = foreign_keys
+        self._id = id
 
     @property
     def name(self):
@@ -213,6 +222,10 @@ class RelationalTable:
     def foreignKeys(self):
         return self._foreignKeys
 
+    @property
+    def id(self):
+        return self._id
+
     def getForeignKeyByName(self, fkName):
         if self._foreignKeys:
             for fk in self._foreignKeys:
@@ -227,21 +240,24 @@ class RelationalTable:
                     return col
         return None
 
+
+
     def __str__(self):
         columnsStr = "\n".join(map(str, self.columns))
         uniquesStr = "\n".join(map(str, self.uniques))
         fkStr = "\n".join(map(str, self.foreignKeys))
-        return 'Name: {}\nEntity: {}\nColumns: [{}]\n' \
-               'PK: {}\nuniques: [{}]\nFKs: [{}]'.format(self.name, self.entity, columnsStr,
-                                                         self.primaryKey, uniquesStr, fkStr)
+        return '\tName: {}\n\tEntity: {}\n\tColumns: [\n{}\t]\n\t' \
+               'PK: {}\n\tuniques: [{}\t]\n\tFKs: [{}\t]\n\tid: {}'.format(self.name, self.entity, columnsStr,
+                                                         self.primaryKey, uniquesStr, fkStr,self.id)
 
 
 class RelationalColumn:
-    def __init__(self, column_name, entity_IRI, column_type, position, is_nullable=True):
+    def __init__(self, column_name, entity_IRI, column_type, position, id, is_nullable=True):
         self._columnName = column_name
         self._entityIRI = entity_IRI
         self._columnType = column_type
         self._position = position
+        self._id = id
         self._isNullable = is_nullable
 
     @property
@@ -261,13 +277,17 @@ class RelationalColumn:
         return self._position
 
     @property
+    def id(self):
+        return self._id
+
+    @property
     def isNullable(self):
         return self._isNullable
 
     def __str__(self):
-        return 'Name: {}\nEntityIRI: {}\nColumnType: {}\n' \
-               'Position: {}\nNullable: {}'.format(self.columnName, self.entityIRI, self.columnType,
-                                                   self.position, self.isNullable)
+        return '\t\tName: {}\n\t\tEntityIRI: {}\n\t\tColumnType: {}\n\t\t' \
+               'Position: {}\n\t\tNullable: {}\n\t\tid:{}\n'.format(self.columnName, self.entityIRI, self.columnType,
+                                                   self.position, self.isNullable, self.id)
 
 
 class PrimaryKeyConstraint:
@@ -285,7 +305,7 @@ class PrimaryKeyConstraint:
 
     def __str__(self):
         columnsStr = ",".join(map(str, self.columns))
-        return 'Name: {}\nColumns: [{}]'.format(self.name, columnsStr)
+        return '(Name= {}; Columns= [{}])'.format(self.name, columnsStr)
 
 
 class UniqueConstraint:
@@ -303,16 +323,17 @@ class UniqueConstraint:
 
     def __str__(self):
         columnsStr = ",".join(map(str, self.columns))
-        return 'Name: {}\nColumns: [{}]'.format(self.name, columnsStr)
+        return '\n\t(Name= {}; Columns= [{}])'.format(self.name, columnsStr)
 
 
 class ForeignKeyConstraint:
-    def __init__(self, name, src_table, src_columns, tgt_table, tgt_columns):
+    def __init__(self, name, src_table, src_columns, tgt_table, tgt_columns, axiom_type):
         self._name = name
         self._srcTable = src_table
         self._srcColumns = src_columns
         self._tgtTable = tgt_table
         self._tgtColumns = tgt_columns
+        self._axiomType = axiom_type
 
     @property
     def name(self):
@@ -334,12 +355,17 @@ class ForeignKeyConstraint:
     def tgtColumns(self):
         return self._tgtColumns
 
+    @property
+    def axiomType(self):
+        return self._axiomType
+
     def __str__(self):
         srcColumnsStr = ",".join(map(str, self.srcColumns))
         tgtColumnsStr = ",".join(map(str, self.tgtColumns))
-        return 'Name: {}\nSourceTable: {}\nSourceColumns: [{}]\n' \
-               'TargetTable: {} \nTargetColumns: [{}]'.format(self.name, self.srcTable, srcColumnsStr,
-                                                              self.tgtTable, tgtColumnsStr)
+        return '\n\t\tName: {}\n\t\tSourceTable: {}\n\t\tSourceColumns: [{}]\n\t\t' \
+               'TargetTable: {} \n\t\tTargetColumns: [{}] \n\t\t' \
+               'AxiomType: {}\n'.format(self.name, self.srcTable, srcColumnsStr,
+                                                              self.tgtTable, tgtColumnsStr, self.axiomType)
 
 
 class RelationalTableOriginEntity:
@@ -366,7 +392,7 @@ class RelationalTableOriginEntity:
         return self._entityTypeDescr
 
     def __str__(self):
-        return 'FullIRI: {} \nShortIRI: {} \nType: {}'.format(self.fullIRI, self.shortIRI, self.entityTypeDescription)
+        return '(FullIRI= {};  ShortIRI= {}; Type: {})'.format(self.fullIRI, self.shortIRI, self.entityTypeDescription)
 
 
 class RelationalTableAction:

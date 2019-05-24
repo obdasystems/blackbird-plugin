@@ -27,10 +27,12 @@ from PyQt5 import QtCore
 
 from eddy.core.datatypes.graphol import Item
 from eddy.core.functions.misc import first
+from eddy.core.output import getLogger
 
 # noinspection PyUnresolvedReferences
 from eddy.plugins.blackbird.schema import EntityType
 
+LOGGER = getLogger()
 
 class SchemaToDiagramElements(QtCore.QObject):
 
@@ -65,12 +67,38 @@ class ForeignKeyVisualElements:
         return self._tgt
 
     @property
-    def inner(self):
+    def inners(self):
         return self._inners
 
     @property
     def edges(self):
         return self._edges
+
+    def __repr__(self):
+        edgesStr = '['
+        for edge in self.edges:
+            edgesStr += ' ({}) '.format(str(edge))
+        edgesStr += ']'
+        innersStr = 'EMPTY'
+        if self.inners:
+            innersStr = '['
+            for inner in self.inners:
+                innersStr += ' ({}) '.format(str(inner))
+            innersStr += ']'
+        return 'VE(src:({}); edges:{}; inners:{}; tgt:({}))'.format(str(self.src), edgesStr, innersStr, str(self.tgt))
+
+    def __str__(self):
+        edgesStr = '['
+        for edge in self.edges:
+            edgesStr += ' ' + edge.id
+        edgesStr += ']'
+        innersStr = 'EMPTY'
+        if self.inners:
+            innersStr = '['
+            for inner in self.inners:
+                innersStr += ' ' + inner.id
+            innersStr += ']'
+        return 'VE(src:{}; edges:{}; inners:{}; tgt:{})'.format(self.src.id, edgesStr, innersStr, self.tgt.id)
 
 
 class BlackbirdOntologyEntityManager(QtCore.QObject):
@@ -92,10 +120,22 @@ class BlackbirdOntologyEntityManager(QtCore.QObject):
 
         self._diagramToTables = {}
         self._diagramToForeignKeys = {}
+        self.buildDictionaries()
+
+    @property
+    def diagramToTables(self):
+        return self._diagramToTables
+
+    @property
+    def diagramToForeignKeys(self):
+        return self._diagramToForeignKeys
 
     def buildDictionaries(self):
+        LOGGER.info('########## Starting mapping schema objects to diagrams\' visual elements ##########')
         for ontDiagram in self._ontologyDiagrams:
+            LOGGER.debug('\n##### DIAGRAM {} #####'.format(ontDiagram.name))
             currDiagramToTableDict = {}
+            LOGGER.info('### TABLES ###'.format(ontDiagram.name))
             for table in self._tables:
                 currList = list()
                 tableEntity = table.entity
@@ -123,10 +163,14 @@ class BlackbirdOntologyEntityManager(QtCore.QObject):
                                 currList.append(node)
                 if len(currList) > 0:
                     currDiagramToTableDict[table] = currList
+                    tablesStr = ",".join(map(str, currList))
+                    LOGGER.info('{} --> [{}]'.format(table.name,tablesStr))
             self._diagramToTables[ontDiagram] = currDiagramToTableDict
 
+            LOGGER.info('### FOREIGN KEYS ###'.format(ontDiagram.name))
             currDiagramToForeignKeyDict = {}
             for fk in self._foreignKeys:
+                LOGGER.debug('## Mapping fk {}'.format(fk.name))
                 currVisualEls = list()
                 srcTableName = fk.srcTable
                 srcTable = self._relationalSchema.getTableByName(srcTableName)
@@ -260,10 +304,13 @@ class BlackbirdOntologyEntityManager(QtCore.QObject):
                                                                                 ontDiagram))
                     if currVisualEls:
                         currDiagramToForeignKeyDict[fk] = currVisualEls
+                        fksStr = ",".join(map(str, currVisualEls))
+                        LOGGER.info('{} --> [{}]'.format(fk.name, fksStr))
             self._diagramToForeignKeys[ontDiagram] = currDiagramToForeignKeyDict
 
     # A-->B, R-->P, U1-->U2
     def getEntityIsaEntityVEs(self, srcOccurrencesInDiagram, tgtOccurrencesInDiagram, ontDiagram):
+        LOGGER.debug('Call to getEntityIsaEntityVEs')
         result = list()
         edges = ontDiagram.edges
         for edge in edges:
@@ -281,11 +328,12 @@ class BlackbirdOntologyEntityManager(QtCore.QObject):
                         secondTgt = secondEdge.target
                         if secondSrc == firstTgt and secondTgt in tgtOccurrencesInDiagram:
                             currVE = ForeignKeyVisualElements(firstSrc, secondTgt, [edge, secondEdge], [firstTgt])
-
+                            result.append(currVE)
         return result
 
     # A-->exist(R) , A-->exist(U)
     def getClassIsaExistRoleOrAttributeVEs(self, srcOccurrencesInDiagram, tgtOccurrencesInDiagram, ontDiagram):
+        LOGGER.debug('Call to getClassIsaExistRoleOrAttributeVEs')
         result = list()
         edges = ontDiagram.edges
         for edge in edges:
@@ -304,6 +352,7 @@ class BlackbirdOntologyEntityManager(QtCore.QObject):
 
     # exist(R)-->A , exist(U)-->A
     def getExistRoleOrAttributeIsaClassVEs(self, srcOccurrencesInDiagram, tgtOccurrencesInDiagram, ontDiagram):
+        LOGGER.debug('Call to getExistRoleOrAttributeIsaClassVEs')
         result = list()
         edges = ontDiagram.edges
         for edge in edges:
@@ -323,6 +372,7 @@ class BlackbirdOntologyEntityManager(QtCore.QObject):
     # exist(R)-->exist(P), exist(R)-->exist(U), exist(U)-->exist(R), exist(U1)-->exist(U2)
     def getExistRoleOrAttributeIsaExistRoleOrAttributeVEs(self, srcOccurrencesInDiagram, tgtOccurrencesInDiagram,
                                                           ontDiagram):
+        LOGGER.debug('Call to getExistRoleOrAttributeIsaExistRoleOrAttributeVEs')
         result = list()
         edges = ontDiagram.edges
         for firstEdge in edges:
@@ -348,6 +398,7 @@ class BlackbirdOntologyEntityManager(QtCore.QObject):
 
     # exist(inv(R))-->exist(P), exist(inv(R))-->exist(U)
     def getExistRoleInvIsaExistRoleOrAttributeVEs(self, srcOccurrencesInDiagram, tgtOccurrencesInDiagram, ontDiagram):
+        LOGGER.debug('Call to getExistRoleInvIsaExistRoleOrAttributeVEs')
         result = list()
         edges = ontDiagram.edges
         for firstEdge in edges:
@@ -373,6 +424,7 @@ class BlackbirdOntologyEntityManager(QtCore.QObject):
 
     # exist(inv(R))-->exist(inv(P))
     def getExistRoleInvIsaExistRoleInvVEs(self, srcOccurrencesInDiagram, tgtOccurrencesInDiagram, ontDiagram):
+        LOGGER.debug('Call to getExistRoleInvIsaExistRoleInvVEs')
         result = list()
         edges = ontDiagram.edges
         for firstEdge in edges:
@@ -398,6 +450,7 @@ class BlackbirdOntologyEntityManager(QtCore.QObject):
 
     # exist(R)-->exist(inv(P)), exist(U)-->exist(inv(P))
     def getExistRoleOrAttributeIsaExistRoleInvVEs(self, srcOccurrencesInDiagram, tgtOccurrencesInDiagram, ontDiagram):
+        LOGGER.debug('Call to getExistRoleOrAttributeIsaExistRoleInvVEs')
         result = list()
         edges = ontDiagram.edges
         for firstEdge in edges:
@@ -422,6 +475,7 @@ class BlackbirdOntologyEntityManager(QtCore.QObject):
 
     # A-->exist(inv(R))
     def getClassIsaExistRoleInvVEs(self, srcOccurrencesInDiagram, tgtOccurrencesInDiagram, ontDiagram):
+        LOGGER.debug('Call to getClassIsaExistRoleInvVEs')
         result = list()
         edges = ontDiagram.edges
         for edge in edges:
@@ -440,6 +494,7 @@ class BlackbirdOntologyEntityManager(QtCore.QObject):
 
     # exist(inv(R))-->A
     def getExistRoleInvIsaClassVEs(self, srcOccurrencesInDiagram, tgtOccurrencesInDiagram, ontDiagram):
+        LOGGER.debug('Call to getExistRoleInvIsaClassVEs')
         result = list()
         edges = ontDiagram.edges
         for edge in edges:

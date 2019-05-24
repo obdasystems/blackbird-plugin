@@ -44,6 +44,8 @@ from eddy.ui.progress import BusyProgressDialog
 # noinspection PyUnresolvedReferences
 from eddy.plugins.blackbird.rest import RestUtils
 # noinspection PyUnresolvedReferences
+from eddy.plugins.blackbird.files import FileUtils
+# noinspection PyUnresolvedReferences
 from eddy.plugins.blackbird.graphol import ForeignKeyVisualElements
 # noinspection PyUnresolvedReferences
 from eddy.plugins.blackbird.schema import (
@@ -355,13 +357,22 @@ class BlackbirdPlugin(AbstractPlugin):
         Displays the given message in a new dialog.
         """
         dialog = QtWidgets.QDialog(self.session)
-        text = QtWidgets.QTextEdit(self.session)
-        text.setFont(Font('Roboto', 14))
+        textSchema = QtWidgets.QTextEdit(self.session)
+        textSchema.setFont(Font('Roboto', 14))
+
+        textTables = QtWidgets.QTextEdit(self.session)
+        textTables.setFont(Font('Roboto', 14))
+
+        textFKs = QtWidgets.QTextEdit(self.session)
+        textFKs.setFont(Font('Roboto', 14))
+
         confirmation = QtWidgets.QDialogButtonBox(QtWidgets.QDialogButtonBox.Close, self.session)
         confirmation.setContentsMargins(10, 0, 10, 10)
         confirmation.setFont(Font('Roboto', 12))
         layout = QtWidgets.QVBoxLayout()
-        layout.addWidget(text)
+        layout.addWidget(textSchema)
+        layout.addWidget(textTables)
+        layout.addWidget(textFKs)
         layout.addWidget(confirmation, 0, QtCore.Qt.AlignRight)
         dialog.setWindowTitle("Blackbird Plugin")
         dialog.setModal(False)
@@ -371,8 +382,11 @@ class BlackbirdPlugin(AbstractPlugin):
 
         with BusyProgressDialog('Generating Schema...', mtime=1, parent=self.session):
             # GET SCHEMA DEFINITION
-            getAllSchemasText = RestUtils.getAllSchemas()
-            json_schema_data = json.loads(getAllSchemasText)
+            #getAllSchemasText = RestUtils.getAllSchemas()
+            #json_schema_data = json.loads(getAllSchemasText)
+
+            filePath = '/Users/lorenzo/PycharmProjects/blackbird/tests/test_export_schema_1/Diagram1.json'
+            json_schema_data = FileUtils.parseSchemaFile(filePath)
 
             # GET TABLE ACTIONS
             getActionsText = RestUtils.getActionsBySchema("BOOKS_DB_SCHEMA")
@@ -380,8 +394,25 @@ class BlackbirdPlugin(AbstractPlugin):
 
             # PARSE THE SCHEMA
             schema = RelationalSchemaParser.getSchema(json_schema_data, json_action_data)
-            text.setPlainText(str(schema))
-            text.setReadOnly(True)
+            LOGGER.debug('Relational Schema Parsed: ')
+            LOGGER.debug(str(schema))
+            textSchema.setPlainText(str(schema))
+            textSchema.setReadOnly(True)
+
+            #MAP TO ONTOLOGY VISUAL ELEMENTS
+            visualManager = BlackbirdOntologyEntityManager(schema,self.session.project)
+            tableDict = visualManager.diagramToTables
+            LOGGER.debug('table dictionary created')
+            LOGGER.debug(str(tableDict))
+            textTables.setPlainText(str(tableDict))
+            textTables.setReadOnly(True)
+
+            fkDict = visualManager.diagramToForeignKeys
+            LOGGER.debug('FKs dictionary created')
+            LOGGER.debug(str(fkDict))
+            textFKs.setPlainText(str(fkDict))
+            textFKs.setReadOnly(True)
+
 
         # SHOW THE DIALOG
         dialog.exec_()
