@@ -28,3 +28,6 @@ contact: info@obdasystems.com
 id: blackbird
 name: Blackbird
 version: 0.1
+
+[blackbird]
+executable=blackbird.jar

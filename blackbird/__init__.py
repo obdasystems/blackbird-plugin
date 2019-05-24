@@ -26,14 +26,21 @@
 
 
 import json
+import os
+import tempfile
+from textwrap import dedent
 
 from PyQt5 import (
     QtCore,
+    QtGui,
     QtWidgets
 )
 
 from eddy import ORGANIZATION, APPNAME, WORKSPACE
+from eddy.core.datatypes.owl import OWLAxiom, OWLSyntax
 from eddy.core.datatypes.qt import Font
+from eddy.core.exporters.owl2 import OWLOntologyExporterWorker
+from eddy.core.functions.fsystem import fexists, fread
 from eddy.core.functions.misc import first
 from eddy.core.functions.path import expandPath
 from eddy.core.functions.signals import connect, disconnect
@@ -42,14 +49,25 @@ from eddy.core.plugin import AbstractPlugin
 from eddy.ui.progress import BusyProgressDialog
 
 # noinspection PyUnresolvedReferences
-from eddy.plugins.blackbird.rest import RestUtils
+from eddy.plugins.blackbird import resources_rc
+# noinspection PyUnresolvedReferences
+from eddy.plugins.blackbird.about import AboutDialog
+# noinspection PyUnresolvedReferences
+from eddy.plugins.blackbird.dialogs import (
+    BlackbirdLogDialog,
+    BlackbirdOutputDialog
+)
 # noinspection PyUnresolvedReferences
 from eddy.plugins.blackbird.graphol import ForeignKeyVisualElements
+# noinspection PyUnresolvedReferences
+from eddy.plugins.blackbird.rest import RestUtils
 # noinspection PyUnresolvedReferences
 from eddy.plugins.blackbird.schema import (
     RelationalSchemaParser,
     EntityType
 )
+# noinspection PyUnresolvedReferences
+from eddy.plugins.blackbird.translator import BlackbirdProcess
 
 LOGGER = getLogger()
 
@@ -58,6 +76,8 @@ class BlackbirdPlugin(AbstractPlugin):
     """
     This plugin provides integration with Blackbird, a tool for translating an ontology into a relational schema.
     """
+    sgnStartTranslator = QtCore.pyqtSignal()
+    sgnStopTranslator = QtCore.pyqtSignal()
 
     def __init__(self, spec, session):
         """
@@ -66,9 +86,13 @@ class BlackbirdPlugin(AbstractPlugin):
         :type session: Session
         """
         super().__init__(spec, session)
+        self.translator = None
 
     # noinspection PyArgumentList
     def initActions(self):
+        """
+        Initialize plugin actions.
+        """
         #############################################
         #   MenuBar Actions
         #################################
@@ -90,9 +114,25 @@ class BlackbirdPlugin(AbstractPlugin):
                                          triggered=self.doExportSQLScript))
         self.addAction(QtWidgets.QAction('Export Schema Diagrams', self, objectName='export_schema_diagrams',
                                          triggered=self.doExportSchemaDiagrams))
+        self.addAction(QtWidgets.QAction('Blackbird Log', self, objectName='blackbird_log',
+                                         triggered=self.doShowTranslatorLog))
+        self.addAction(QtWidgets.QAction(
+            QtGui.QIcon(':/blackbird/icons/128/ic_blackbird'), 'About Blackbird', self,
+            objectName='about', triggered=self.doShowAboutDialog))
+
+        #############################################
+        #   ToolBar Actions
+        #################################
+        self.addAction(QtWidgets.QAction(
+            QtGui.QIcon(':/blackbird/icons/128/ic_blackbird'), 'Generate Schema', self,
+            objectName='generate_schema', toolTip='Generate database schema',
+            triggered=self.doGenerateDiagramSchema))
 
     # noinspection PyArgumentList
     def initMenus(self):
+        """
+        Initialize plugin menu.
+        """
         #############################################
         #   MenuBar QMenu
         #################################
@@ -111,9 +151,47 @@ class BlackbirdPlugin(AbstractPlugin):
         menu.addAction(self.action('export_mappings'))
         menu.addAction(self.action('export_sql'))
         menu.addAction(self.action('export_diagrams'))
+        menu.addSeparator()
+        menu.addAction(self.action('blackbird_log'))
+        menu.addSeparator()
+        menu.addAction(self.action('about'))
         self.addMenu(menu)
         # Add blackbird menu to session's menu bar
         self.session.menuBar().insertMenu(self.session.menu('window').menuAction(), self.menu('menubar_menu'))
+
+    # noinspection PyArgumentList
+    def initToolBars(self):
+        """
+        Initialize toolbar actions.
+        """
+        toolbar = QtWidgets.QToolBar(self.session, objectName='blackbird_toolbar')
+        toolbar.addAction(self.action('generate_schema'))
+        self.addWidget(toolbar)
+
+        self.session.addToolBar(QtCore.Qt.TopToolBarArea, self.widget('blackbird_toolbar'))
+        self.session.insertToolBarBreak(self.widget('blackbird_toolbar'))
+
+    def initSubprocess(self):
+        """
+        Initialize the Blackbird translator process.
+        """
+        bbpath = os.path.join(self.path(), self.spec.get('blackbird', 'executable'))
+        if not fexists(bbpath):
+            raise IOError('Cannot find Blackbird executable!')
+        self.translator = BlackbirdProcess(bbpath, self)
+        connect(self.translator.started, self.onTranslatorReady)
+        connect(self.translator.errorOccurred, self.onTranslatorErrorOccurred)
+        connect(self.sgnStartTranslator, self.doStartTranslator)
+        connect(self.sgnStopTranslator, self.doStopTranslator)
+
+    # noinspection PyArgumentList
+    def initWidgets(self):
+        """
+        Initialize plugin widgets.
+        """
+        progress = BusyProgressDialog('Generating Schema...', parent=self.session)
+        progress.setObjectName('progress')
+        self.addWidget(progress)
 
     #############################################
     #   EVENTS
@@ -196,9 +274,66 @@ class BlackbirdPlugin(AbstractPlugin):
         connect(self.project.sgnItemAdded, self.onProjectItemAdded)
         connect(self.project.sgnItemRemoved, self.onProjectItemRemoved)
 
-    @QtCore.pyqtSlot('QMenu', list, 'QPointF')
-    def onMenuCreated(self, menu, items, pos=None):
-        pass
+        # START BLACKBIRD PROCESS
+        if not self.translator.state() == QtCore.QProcess.Running:
+            self.sgnStartTranslator.emit()
+
+    @QtCore.pyqtSlot()
+    def onDiagramExportCompleted(self):
+        """
+        Executed when the diagram -> OWL export completes.
+        """
+        try:
+            worker = self.session.worker('Blackbird OWL Export')
+            owltext = fread(worker.tmpfile.name)
+            os.unlink(worker.tmpfile.name)
+            import requests
+            response = requests.post('http://localhost:8080/bbe/schema',
+                                     data=owltext.encode('utf-8'),
+                                     headers={'Content-Type': 'text/plain'})
+            if response.status_code == 200:
+                dialog = BlackbirdOutputDialog(owltext, json.dumps(json.loads(response.text), indent=2), self.session)
+                dialog.show()
+                dialog.raise_()
+            else:
+                self.session.addNotification('Error generating schema: {}'.format(response.text))
+                LOGGER.error('Error generating schema: {}'.format(response.text))
+        except Exception as e:
+            self.session.addNotification(dedent("""\
+                <b><font color="#7E0B17">ERROR</font></b>: Could not connect to Blackbird Engine.<br/>
+                <p>{}</p>""".format(e)))
+            LOGGER.exception(e)
+        self.widget('progress').hide()
+
+    @QtCore.pyqtSlot()
+    def onDiagramExportFailure(self):
+        """
+        Executed when the diagram -> OWL export fails.
+        """
+        self.widget('progress').hide()
+        self.session.addNotification(dedent("""\
+                <b><font color="#7E0B17">ERROR</font></b>: Could not export diagram.<br/>
+                <p>{}</p>"""))
+        LOGGER.error('Could not export diagram')
+
+    @QtCore.pyqtSlot(QtCore.QProcess.ProcessError)
+    def onTranslatorErrorOccurred(self, error):
+        """
+        Executed when an error occurs during the Blackbird engine startup process.
+        :type error: ProcessError
+        """
+        self.session.addNotification(dedent("""\
+        <b><font color="#7E0B17">ERROR</font></b>: Could not start Blackbird Engine: {}
+        """.format(error)))
+        LOGGER.error('Could not start Blackbird Engine: {}'.format(error))
+
+    @QtCore.pyqtSlot()
+    def onTranslatorReady(self):
+        """
+        Executed when the Blackbird engine completes the startup process.
+        """
+        self.session.addNotification('Blackbird Engine Ready')
+        LOGGER.info('Blackbird Engine Ready')
 
     @QtCore.pyqtSlot()
     def doOpen(self):
@@ -286,6 +421,76 @@ class BlackbirdPlugin(AbstractPlugin):
         """
         pass
 
+    @QtCore.pyqtSlot()
+    def doGenerateDiagramSchema(self):
+        """
+        Generate the schema for the active diagram.
+        """
+        diagram = self.session.mdi.activeDiagram()
+        if diagram and self.translator.state() == QtCore.QProcess.Running:
+            self.widget('progress').show()
+            # EXPORT DIAGRAM TO OWL
+            tmpfile = tempfile.NamedTemporaryFile('wb', delete=False)
+            worker = OWLOntologyExporterWorker(self.project, tmpfile.name,
+                                               axioms={x for x in OWLAxiom},
+                                               normalize=False,
+                                               syntax=OWLSyntax.Functional,
+                                               selected_diagrams=[diagram])
+            worker.tmpfile = tmpfile
+            connect(worker.sgnCompleted, self.onDiagramExportCompleted)
+            connect(worker.sgnErrored, self.onDiagramExportFailure)
+            self.session.startThread('Blackbird OWL Export', worker)
+
+    @QtCore.pyqtSlot()
+    def doShowTranslatorLog(self):
+        """
+        Shows the output of the translator.
+        """
+        if self.translator:
+            dialog = BlackbirdLogDialog(self.translator.buffer, self.session)
+            dialog.exec_()
+
+    @QtCore.pyqtSlot()
+    def doStartTranslator(self):
+        """
+        Start the Blackbird translator process.
+        """
+        if self.translator and self.translator.state() == QtCore.QProcess.NotRunning:
+            self.translator.start()
+            attempt = 0
+            while attempt < 30:
+                self.translator.waitForStarted(100)
+                QtWidgets.QApplication.processEvents()
+                if self.translator.state() == QtCore.QProcess.Running:
+                    break
+                attempt += 1
+
+    @QtCore.pyqtSlot()
+    def doStopTranslator(self):
+        """
+        Stop the Blackbird translator process.
+        """
+        if self.translator and self.translator.state() != QtCore.QProcess.NotRunning:
+            self.translator.terminate()
+            attempt = 0
+            while attempt < 30:
+                self.translator.waitForFinished(100)
+                QtWidgets.QApplication.processEvents()
+                if self.translator.state() == QtCore.QProcess.NotRunning:
+                    break
+                attempt += 1
+            if self.translator.state() != QtCore.QProcess.NotRunning:
+                self.translator.kill()
+
+    @QtCore.pyqtSlot()
+    def doShowAboutDialog(self):
+        """
+        Show the Blackbird about dialog.
+        """
+        dialog = AboutDialog(self, self.session)
+        dialog.show()
+        dialog.raise_()
+
     #############################################
     #   HOOKS
     #################################
@@ -294,6 +499,9 @@ class BlackbirdPlugin(AbstractPlugin):
         """
         Executed whenever the plugin is going to be destroyed.
         """
+        # STOP BLACKBIRD PROCESS
+        self.sgnStopTranslator.emit()
+
         # DISCONNECT FROM CURRENT PROJECT
         self.debug('Disconnecting from project: %s', self.project.name)
         disconnect(self.project.sgnUpdated, self.onProjectUpdated)
@@ -316,6 +524,11 @@ class BlackbirdPlugin(AbstractPlugin):
         # INITIALIZE ACTIONS AND MENUS
         self.initActions()
         self.initMenus()
+        self.initToolBars()
+        self.initWidgets()
+
+        # INITIALIZE BLACKBIRD TRANSLATOR
+        self.initSubprocess()
 
         # CONFIGURE SIGNAL/SLOTS
         self.debug('Connecting to active session')

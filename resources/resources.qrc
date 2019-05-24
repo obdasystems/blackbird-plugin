@@ -1,0 +1,11 @@
+<!DOCTYPE RCC>
+<RCC version="1.0">
+    <qresource prefix="/blackbird/icons/128">
+        <file alias="ic_blackbird">icons/128/ic_blackbird@1x.png</file>
+        <file alias="ic_blackbird@2x">icons/128/ic_blackbird@2x.png</file>
+    </qresource>
+    <qresource prefix="/blackbird/images">
+        <file alias="im_blackbird_logo">images/im_blackbird_logo.png</file>
+        <file alias="im_blackbird_name">images/im_blackbird_name.png</file>
+    </qresource>
+</RCC>
