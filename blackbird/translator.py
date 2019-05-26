@@ -28,13 +28,14 @@ import zipfile
 from io import StringIO
 
 from PyQt5 import QtCore
+
 from eddy.core.functions.misc import first
 from eddy.core.functions.path import expandPath
-
 from eddy.core.functions.signals import connect
 from eddy.core.output import getLogger
 
 LOGGER = getLogger()
+RE_STARTED = re.compile(r'.*-\sStarted\s@(\d+)ms')
 
 
 class BlackbirdProcess(QtCore.QProcess):
@@ -42,7 +43,10 @@ class BlackbirdProcess(QtCore.QProcess):
     Subclass of QProcess that wraps the Blackbird translator executable.
     """
     sgnReady = QtCore.pyqtSignal()
+    sgnFinished = QtCore.pyqtSignal()
+    sgnErrorOccurred = QtCore.pyqtSignal()
 
+    # noinspection PyArgumentList
     def __init__(self, path, parent=None):
         """
         Initialize the BlackbirdProcess instance.
@@ -53,6 +57,9 @@ class BlackbirdProcess(QtCore.QProcess):
         self.buffer = StringIO()
         connect(self.readyReadStandardError, self.onStandardErrorReady)
         connect(self.readyReadStandardOutput, self.onStandardOutputReady)
+        connect(self.started, self.onStarted)
+        connect(self.finished, self.onFinished)
+        connect(self.errorOccurred, self.onErrorOccurred)
 
     #############################################
     #   SLOTS
@@ -66,6 +73,11 @@ class BlackbirdProcess(QtCore.QProcess):
         output = self.readAllStandardError()
         if output:
             decoded = str(output.data(), encoding='utf-8')
+            for line in decoded.splitlines(False):
+                match = RE_STARTED.match(line)
+                if match:
+                    LOGGER.info('Blackbird Engine startup completed in {} ms'.format(match.group(1)))
+                    self.sgnReady.emit()
             self.buffer.write(decoded)
 
     @QtCore.pyqtSlot()
@@ -76,7 +88,41 @@ class BlackbirdProcess(QtCore.QProcess):
         output = self.readAllStandardOutput()
         if output:
             decoded = str(output.data(), encoding='utf-8')
+            for line in decoded.splitlines(False):
+                match = RE_STARTED.match(line)
+                if match:
+                    LOGGER.info('Blackbird Engine startup completed in {} ms'.format(match.group(1)))
+                    self.sgnReady.emit()
             self.buffer.write(decoded)
+
+    @QtCore.pyqtSlot()
+    def onStarted(self):
+        """
+        Executed when the process is started.
+        """
+        LOGGER.info('Blackbird process starting (PID: {})'.format(self.processId()))
+
+    @QtCore.pyqtSlot(int, QtCore.QProcess.ExitStatus)
+    def onFinished(self, exitCode, exitStatus):
+        """
+        Executed when the process finishes execution.
+        :type exitCode: int
+        :type exitStatus: ExitStatus
+        """
+        if exitStatus != QtCore.QProcess.NormalExit:
+            LOGGER.warning('Blackbird Engine terminated abnormally')
+        self.sgnFinished.emit()
+
+    @QtCore.pyqtSlot(QtCore.QProcess.ProcessError)
+    def onErrorOccurred(self, error):
+        """
+        Executed when an error occurs.
+        :type error: ProcessError
+        """
+        LOGGER.error('Error starting Blackbird engine: {}'.format(error))
+        if self.state() != QtCore.QProcess.NotRunning:
+            self.kill()
+        self.sgnErrorOccurred.emit()
 
 
 #############################################
