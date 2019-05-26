@@ -23,14 +23,19 @@
 ##########################################################################
 
 
+import os
+
 from eddy import VERSION, APPNAME
 from eddy.core.application import main
 from eddy.core.output import getLogger
+from eddy.core.plugin import PluginManager
 
 LOGGER = getLogger()
 
 if __name__ == '__main__':
     try:
+        # SCAN FOR PLUGIN
+        PluginManager.scan(os.path.abspath(os.path.normpath(os.path.join(os.curdir, os.pardir))))
         # START EDDY
         LOGGER.info('Starting {} {}'.format(APPNAME, VERSION))
         main()

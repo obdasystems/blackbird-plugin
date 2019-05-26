@@ -33,6 +33,7 @@ from textwrap import dedent
 from PyQt5 import (
     QtCore,
     QtGui,
+    QtNetwork,
     QtWidgets
 )
 
@@ -60,7 +61,10 @@ from eddy.plugins.blackbird.dialogs import (
 # noinspection PyUnresolvedReferences
 from eddy.plugins.blackbird.graphol import ForeignKeyVisualElements
 # noinspection PyUnresolvedReferences
-from eddy.plugins.blackbird.rest import RestUtils
+from eddy.plugins.blackbird.rest import (
+    NetworkManager,
+    RestUtils
+)
 # noinspection PyUnresolvedReferences
 from eddy.plugins.blackbird.schema import (
     RelationalSchemaParser,
@@ -86,6 +90,7 @@ class BlackbirdPlugin(AbstractPlugin):
         :type session: Session
         """
         super().__init__(spec, session)
+        self.nmanager = NetworkManager(self)
         self.translator = None
 
     # noinspection PyArgumentList
@@ -175,7 +180,8 @@ class BlackbirdPlugin(AbstractPlugin):
         """
         Initialize the Blackbird translator process.
         """
-        bbpath = os.path.join(self.path(), self.spec.get('blackbird', 'executable'))
+        path = os.path.normpath(os.path.join(__file__, os.pardir, os.pardir))
+        bbpath = os.path.join(path, self.spec.get('blackbird', 'executable'))
         if not fexists(bbpath):
             raise IOError('Cannot find Blackbird executable!')
         self.translator = BlackbirdProcess(bbpath, self)
@@ -218,14 +224,14 @@ class BlackbirdPlugin(AbstractPlugin):
         """
         Executed whenever a diagram is added to the active project.
         """
-        connect(diagram.sgnMenuCreated, self.onMenuCreated)
+        pass
 
     @QtCore.pyqtSlot('QGraphicsScene')
     def onDiagramRemoved(self, diagram):
         """
         Executed whenever a diagram is removed from the active project.
         """
-        disconnect(diagram.sgnMenuCreated, self.onMenuCreated)
+        pass
 
     @QtCore.pyqtSlot()
     def onDiagramSelectionChanged(self):
@@ -287,23 +293,16 @@ class BlackbirdPlugin(AbstractPlugin):
             worker = self.session.worker('Blackbird OWL Export')
             owltext = fread(worker.tmpfile.name)
             os.unlink(worker.tmpfile.name)
-            import requests
-            response = requests.post('http://localhost:8080/bbe/schema',
-                                     data=owltext.encode('utf-8'),
-                                     headers={'Content-Type': 'text/plain'})
-            if response.status_code == 200:
-                dialog = BlackbirdOutputDialog(owltext, json.dumps(json.loads(response.text), indent=2), self.session)
-                dialog.show()
-                dialog.raise_()
-            else:
-                self.session.addNotification('Error generating schema: {}'.format(response.text))
-                LOGGER.error('Error generating schema: {}'.format(response.text))
+            reply = self.nmanager.postSchema(owltext.encode('utf-8'))
+            # We deal with network errors in the slot connected to the finished()
+            # signal since it always follows the error() signal
+            connect(reply.finished, self.onSchemaGenerationCompleted)
         except Exception as e:
+            self.widget('progress').hide()
             self.session.addNotification(dedent("""\
                 <b><font color="#7E0B17">ERROR</font></b>: Could not connect to Blackbird Engine.<br/>
                 <p>{}</p>""".format(e)))
             LOGGER.exception(e)
-        self.widget('progress').hide()
 
     @QtCore.pyqtSlot()
     def onDiagramExportFailure(self):
@@ -315,6 +314,27 @@ class BlackbirdPlugin(AbstractPlugin):
                 <b><font color="#7E0B17">ERROR</font></b>: Could not export diagram.<br/>
                 <p>{}</p>"""))
         LOGGER.error('Could not export diagram')
+
+    @QtCore.pyqtSlot()
+    def onSchemaGenerationCompleted(self):
+        """
+        Executed when the schema generation completes.
+        """
+        try:
+            reply = self.sender()
+            reply.deleteLater()
+            assert reply.isFinished()
+            if reply.error() == QtNetwork.QNetworkReply.NoError:
+                owltext = str(reply.request().attribute(NetworkManager.OWL), encoding='utf-8')
+                schema = str(reply.readAll(), encoding='utf-8')
+                dialog = BlackbirdOutputDialog(owltext, json.dumps(json.loads(schema), indent=2), self.session)
+                dialog.show()
+                dialog.raise_()
+            else:
+                self.session.addNotification('Error generating schema: {}'.format(reply.errorString()))
+                LOGGER.error('Error generating schema: {}'.format(reply.errorString()))
+        finally:
+            self.widget('progress').hide()
 
     @QtCore.pyqtSlot(QtCore.QProcess.ProcessError)
     def onTranslatorErrorOccurred(self, error):
@@ -491,6 +511,14 @@ class BlackbirdPlugin(AbstractPlugin):
         dialog.show()
         dialog.raise_()
 
+    @QtCore.pyqtSlot()
+    def doUpdateState(self):
+        """
+        Executed when the plugin session updates its state.
+        """
+        isDiagramActive = self.session.mdi.activeDiagram() is not None
+        self.action('generate_schema').setEnabled(isDiagramActive)
+
     #############################################
     #   HOOKS
     #################################
@@ -513,6 +541,7 @@ class BlackbirdPlugin(AbstractPlugin):
         # DISCONNECT FROM ACTIVE SESSION
         self.debug('Disconnecting from active session')
         disconnect(self.session.sgnReady, self.onSessionReady)
+        disconnect(self.session.sgnUpdateState, self.doUpdateState)
 
     def start(self):
         """
@@ -533,6 +562,7 @@ class BlackbirdPlugin(AbstractPlugin):
         # CONFIGURE SIGNAL/SLOTS
         self.debug('Connecting to active session')
         connect(self.session.sgnReady, self.onSessionReady)
+        connect(self.session.sgnUpdateState, self.doUpdateState)
 
     #############################################
     #   UTILITIES

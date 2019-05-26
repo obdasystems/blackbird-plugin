@@ -23,11 +23,74 @@
 ##########################################################################
 
 
+from enum import unique
+
 import requests
 
+from PyQt5 import (
+    QtCore,
+    QtNetwork
+)
+
+from eddy.core.datatypes.common import Enum_
 from eddy.core.output import getLogger
 
 LOGGER = getLogger()
+
+
+@unique
+class Resources(Enum_):
+    Endpoint = 'http://localhost:8080/bbe'
+    Schema = '{}/schema'.format(Endpoint)
+    SchemaActions = '{}/{}/table/actions'.format(Schema, '{}')
+
+
+class NetworkManager(QtNetwork.QNetworkAccessManager):
+    """
+    Subclass of QNetworkAccessManager used for REST request to the Blackbird API.
+    """
+    OWL = QtNetwork.QNetworkRequest.Attribute(7001)
+    SchemaName = QtNetwork.QNetworkRequest.Attribute(7002)
+
+    def getAllSchemas(self):
+        """
+        Get the list of schemas from the Blackbird engine.
+        :rtype: QNetworkReply
+        """
+        url = QtCore.QUrl(Resources.Schema.value)
+        request = QtNetwork.QNetworkRequest(url)
+        reply = self.get(request)
+        return reply
+
+    def getSchemaActions(self, schema):
+        """
+        Get the list of actions for the specified schema.
+        :type schema: str
+        :rtype: QNetworkReply
+        """
+        if not schema:
+            raise BlackbirdRequestError('Schema name must not be empty')
+        url = QtCore.QUrl(Resources.SchemaActions.value.format(schema))
+        request = QtNetwork.QNetworkRequest(url)
+        request.setAttribute(self.SchemaName, schema)
+        reply = self.get(request)
+        return reply
+
+    def postSchema(self, owl):
+        """
+        Post the specified OWL ontology to generate a database schema
+        returning the corresponding reply.
+        It is responsibility of the caller to delete the reply once
+        the processing completes by calling its 'deleteLater()' method.
+        :type owl: str
+        :rtype: QNetworkReply
+        """
+        url = QtCore.QUrl(Resources.Schema.value)
+        request = QtNetwork.QNetworkRequest(url)
+        request.setHeader(QtNetwork.QNetworkRequest.ContentTypeHeader, 'text/plain;charset=utf-8')
+        request.setAttribute(self.OWL, owl)
+        reply = self.post(request, bytes(owl))
+        return reply
 
 
 class RestUtils:
@@ -83,3 +146,10 @@ class RestUtils:
         except requests.exceptions.RequestException as e:
             # catastrophic error. bail.
             LOGGER.exception(e)
+
+
+class BlackbirdRequestError(Exception):
+    """
+    Raised when an error occurs during a network request.
+    """
+    pass
