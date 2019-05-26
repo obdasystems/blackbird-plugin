@@ -23,11 +23,14 @@
 ##########################################################################
 
 
+import os
 import re
+import signal
 import zipfile
 from io import StringIO
 
 from PyQt5 import QtCore
+from eddy.core.functions.fsystem import fexists, isdir, fread, fwrite, fremove
 
 from eddy.core.functions.misc import first
 from eddy.core.functions.path import expandPath
@@ -55,6 +58,19 @@ class BlackbirdProcess(QtCore.QProcess):
         self.setProgram('java')
         self.setArguments(['-jar', path])
         self.buffer = StringIO()
+        self.runtimeDir = QtCore.QStandardPaths.writableLocation(QtCore.QStandardPaths.RuntimeLocation)
+        # CHECK FOR PRE-EXISTING FILES TO DEAL WITH ORPHANED PROCESSES
+        if isdir(self.runtimeDir) and fexists(os.path.join(self.runtimeDir, 'blackbird.pid')):
+            try:
+                pid = int(fread(os.path.join(self.runtimeDir, 'blackbird.pid')))
+                LOGGER.warning('Found pre-existing Blackbird process running (PID: {})'.format(pid))
+                # ATTEMPT TO KILL THE PROCESS
+                os.kill(pid, signal.SIGTERM)
+            except ProcessLookupError:
+                # PROCESS WAS ALREADY STOPPED
+                pass
+            except Exception as e:
+                LOGGER.exception(e)
         connect(self.readyReadStandardError, self.onStandardErrorReady)
         connect(self.readyReadStandardOutput, self.onStandardOutputReady)
         connect(self.started, self.onStarted)
@@ -101,6 +117,13 @@ class BlackbirdProcess(QtCore.QProcess):
         Executed when the process is started.
         """
         LOGGER.info('Blackbird process starting (PID: {})'.format(self.processId()))
+        # WRITE PROCESS ID TO FILE
+        if isdir(self.runtimeDir):
+            try:
+                fwrite('{:d}'.format(self.processId()), os.path.join(self.runtimeDir, 'blackbird.pid'))
+            except Exception as e:
+                LOGGER.error('Failed to write PID to file')
+                LOGGER.exception(e)
 
     @QtCore.pyqtSlot(int, QtCore.QProcess.ExitStatus)
     def onFinished(self, exitCode, exitStatus):
@@ -110,7 +133,13 @@ class BlackbirdProcess(QtCore.QProcess):
         :type exitStatus: ExitStatus
         """
         if exitStatus != QtCore.QProcess.NormalExit:
-            LOGGER.warning('Blackbird Engine terminated abnormally')
+            LOGGER.warning('Blackbird Engine terminated abnormally (code: {:d})'.format(exitCode))
+        # DELETE PID FILE
+        if isdir(self.runtimeDir):
+            try:
+                fremove(os.path.join(self.runtimeDir, 'blackbird.pid'))
+            except Exception:
+                pass
         self.sgnFinished.emit()
 
     @QtCore.pyqtSlot(QtCore.QProcess.ProcessError)
