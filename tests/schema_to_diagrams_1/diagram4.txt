@@ -1,0 +1,35 @@
+%%%%%%%%%%%%%%%% diagram4.owl %%%%%%%%%%%%%%%%%%%%
+
+
+##### DIAGRAM Diagram_5 #####
+## CL_bbt1B --> [ConceptNode:bbt1:B:n1]
+## CL_bbt1A --> [ConceptNode:bbt1:A:n0]
+##### DIAGRAM Diagram_4 #####
+## CL_bbt1B --> [ConceptNode:bbt1:B:n1]
+## CL_bbt1A --> [ConceptNode:bbt1:A:n0]
+## OP_bbt1R --> [RoleNode:bbt1:R:n2]
+##### DIAGRAM Diagram_6 #####
+## CL_bbt1B --> [ConceptNode:bbt1:B:n3]
+## CL_bbt1A --> [ConceptNode:bbt1:A:n5]
+##### DIAGRAM Diagram_3 #####
+## CL_bbt1B --> [ConceptNode:bbt1:B:n0]
+## CL_bbt1A --> [ConceptNode:bbt1:A:n3]
+## OP_bbt1R --> [RoleNode:bbt1:R:n2]
+##### DIAGRAM Diagram_1 #####
+## CL_bbt1B --> [ConceptNode:bbt1:B:n1]
+## CL_bbt1A --> [ConceptNode:bbt1:A:n0]
+## OP_bbt1R --> [RoleNode:bbt1:R:n2]
+##### DIAGRAM Diagram_2 #####
+## CL_bbt1B --> [ConceptNode:bbt1:B:n1]
+## CL_bbt1A --> [ConceptNode:bbt1:A:n0]
+
+
+##### DIAGRAM Diagram_5 #####
+##### DIAGRAM Diagram_4 #####
+## FK_OP_bbt1R_1_CL_bbt1B_0 --> [[]]
+##### DIAGRAM Diagram_6 #####
+##### DIAGRAM Diagram_3 #####
+## FK_OP_bbt1R_1_CL_bbt1B_0 --> [[]]
+##### DIAGRAM Diagram_1 #####
+## FK_OP_bbt1R_1_CL_bbt1B_0 --> [[]]
+##### DIAGRAM Diagram_2 #####

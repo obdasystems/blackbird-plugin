@@ -41,7 +41,7 @@ from eddy import ORGANIZATION, APPNAME, WORKSPACE
 from eddy.core.datatypes.owl import OWLAxiom, OWLSyntax
 from eddy.core.datatypes.qt import Font
 from eddy.core.exporters.owl2 import OWLOntologyExporterWorker
-from eddy.core.functions.fsystem import fexists, fread
+from eddy.core.functions.fsystem import fread, fexists
 from eddy.core.functions.misc import first
 from eddy.core.functions.path import expandPath
 from eddy.core.functions.signals import connect, disconnect
@@ -59,7 +59,12 @@ from eddy.plugins.blackbird.dialogs import (
     BlackbirdOutputDialog
 )
 # noinspection PyUnresolvedReferences
-from eddy.plugins.blackbird.graphol import ForeignKeyVisualElements
+from eddy.plugins.blackbird.files import FileUtils
+# noinspection PyUnresolvedReferences
+from eddy.plugins.blackbird.graphol import (
+    ForeignKeyVisualElements,
+    BlackbirdOntologyEntityManager
+)
 # noinspection PyUnresolvedReferences
 from eddy.plugins.blackbird.rest import (
     NetworkManager,
@@ -72,6 +77,8 @@ from eddy.plugins.blackbird.schema import (
 )
 # noinspection PyUnresolvedReferences
 from eddy.plugins.blackbird.translator import BlackbirdProcess
+
+# Quando importi da altri file del progetto aggiungi sempre eddy.plugins. al path suggerito ed aggiungi riga noinspection
 
 LOGGER = getLogger()
 
@@ -324,6 +331,7 @@ class BlackbirdPlugin(AbstractPlugin):
             reply = self.sender()
             reply.deleteLater()
             assert reply.isFinished()
+            # noinspection PyArgumentList
             if reply.error() == QtNetwork.QNetworkReply.NoError:
                 owltext = str(reply.request().attribute(NetworkManager.OWL), encoding='utf-8')
                 schema = str(reply.readAll(), encoding='utf-8')
@@ -592,13 +600,22 @@ class BlackbirdPlugin(AbstractPlugin):
         Displays the given message in a new dialog.
         """
         dialog = QtWidgets.QDialog(self.session)
-        text = QtWidgets.QTextEdit(self.session)
-        text.setFont(Font('Roboto', 14))
+        textSchema = QtWidgets.QTextEdit(self.session)
+        textSchema.setFont(Font('Roboto', 14))
+
+        textTables = QtWidgets.QTextEdit(self.session)
+        textTables.setFont(Font('Roboto', 14))
+
+        textFKs = QtWidgets.QTextEdit(self.session)
+        textFKs.setFont(Font('Roboto', 14))
+
         confirmation = QtWidgets.QDialogButtonBox(QtWidgets.QDialogButtonBox.Close, self.session)
         confirmation.setContentsMargins(10, 0, 10, 10)
         confirmation.setFont(Font('Roboto', 12))
         layout = QtWidgets.QVBoxLayout()
-        layout.addWidget(text)
+        layout.addWidget(textSchema)
+        layout.addWidget(textTables)
+        layout.addWidget(textFKs)
         layout.addWidget(confirmation, 0, QtCore.Qt.AlignRight)
         dialog.setWindowTitle("Blackbird Plugin")
         dialog.setModal(False)
@@ -608,8 +625,11 @@ class BlackbirdPlugin(AbstractPlugin):
 
         with BusyProgressDialog('Generating Schema...', mtime=1, parent=self.session):
             # GET SCHEMA DEFINITION
-            getAllSchemasText = RestUtils.getAllSchemas()
-            json_schema_data = json.loads(getAllSchemasText)
+            #getAllSchemasText = RestUtils.getAllSchemas()
+            #json_schema_data = json.loads(getAllSchemasText)
+
+            filePath = os.path.join(os.path.dirname(__file__), os.pardir, 'tests', 'test_export_schema_1', 'Diagram5.json')
+            json_schema_data = FileUtils.parseSchemaFile(filePath)
 
             # GET TABLE ACTIONS
             getActionsText = RestUtils.getActionsBySchema("BOOKS_DB_SCHEMA")
@@ -617,8 +637,28 @@ class BlackbirdPlugin(AbstractPlugin):
 
             # PARSE THE SCHEMA
             schema = RelationalSchemaParser.getSchema(json_schema_data, json_action_data)
-            text.setPlainText(str(schema))
-            text.setReadOnly(True)
+            LOGGER.debug('Relational Schema Parsed: ')
+            LOGGER.debug(str(schema))
+            textSchema.setPlainText(str(schema))
+            textSchema.setReadOnly(True)
+
+            #MAP TO ONTOLOGY VISUAL ELEMENTS
+            visualManager = BlackbirdOntologyEntityManager(schema,self.session.project)
+            tableDict = visualManager.diagramToTables
+            tableDictStr = visualManager.diagramToTablesString()
+
+            LOGGER.debug('table dictionary created')
+            LOGGER.debug(tableDictStr)
+            textTables.setPlainText(tableDictStr)
+            textTables.setReadOnly(True)
+
+            fkDict = visualManager.diagramToForeignKeys
+            fkDictStr = visualManager.diagramToForeignKeysString()
+            LOGGER.debug('FKs dictionary created')
+            LOGGER.debug(fkDictStr)
+            textFKs.setPlainText(fkDictStr)
+            textFKs.setReadOnly(True)
+
 
         # SHOW THE DIALOG
         dialog.exec_()
