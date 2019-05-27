@@ -236,7 +236,7 @@ class RelationalTable:
     def getColumnByName(self, colName):
         if self._columns:
             for col in self._columns:
-                if colName == col.name:
+                if colName == col.columnName:
                     return col
         return None
 

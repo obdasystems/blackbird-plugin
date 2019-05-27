@@ -385,7 +385,7 @@ class BlackbirdPlugin(AbstractPlugin):
             #getAllSchemasText = RestUtils.getAllSchemas()
             #json_schema_data = json.loads(getAllSchemasText)
 
-            filePath = '/Users/lorenzo/PycharmProjects/blackbird/tests/test_export_schema_1/Diagram1.json'
+            filePath = '/Users/lorenzo/PycharmProjects/blackbird/tests/test_export_schema_1/Diagram3456.json'
             json_schema_data = FileUtils.parseSchemaFile(filePath)
 
             # GET TABLE ACTIONS
@@ -402,15 +402,18 @@ class BlackbirdPlugin(AbstractPlugin):
             #MAP TO ONTOLOGY VISUAL ELEMENTS
             visualManager = BlackbirdOntologyEntityManager(schema,self.session.project)
             tableDict = visualManager.diagramToTables
+            tableDictStr = visualManager.diagramToTablesString()
+
             LOGGER.debug('table dictionary created')
-            LOGGER.debug(str(tableDict))
-            textTables.setPlainText(str(tableDict))
+            LOGGER.debug(tableDictStr)
+            textTables.setPlainText(tableDictStr)
             textTables.setReadOnly(True)
 
             fkDict = visualManager.diagramToForeignKeys
+            fkDictStr = visualManager.diagramToForeignKeysString()
             LOGGER.debug('FKs dictionary created')
-            LOGGER.debug(str(fkDict))
-            textFKs.setPlainText(str(fkDict))
+            LOGGER.debug(fkDictStr)
+            textFKs.setPlainText(fkDictStr)
             textFKs.setReadOnly(True)
 
 

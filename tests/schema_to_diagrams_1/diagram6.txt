@@ -1,0 +1,33 @@
+%%%%%%%%%%%%%%%% diagram6.owl %%%%%%%%%%%%%%%%%%%%
+
+##### DIAGRAM Diagram_4 #####
+## CL_bbt1B --> [ConceptNode:bbt1:B:n1]
+## CL_bbt1A --> [ConceptNode:bbt1:A:n0]
+##### DIAGRAM Diagram_6 #####
+## CL_bbt1C --> [ConceptNode:bbt1:C:n2]
+## CL_bbt1B --> [ConceptNode:bbt1:B:n3]
+## CL_bbt1A --> [ConceptNode:bbt1:A:n5]
+## DP_bbt1U --> [AttributeNode:bbt1:U:n4]
+##### DIAGRAM Diagram_3 #####
+## CL_bbt1B --> [ConceptNode:bbt1:B:n0]
+## CL_bbt1A --> [ConceptNode:bbt1:A:n3]
+##### DIAGRAM Diagram_1 #####
+## CL_bbt1B --> [ConceptNode:bbt1:B:n1]
+## CL_bbt1A --> [ConceptNode:bbt1:A:n0]
+##### DIAGRAM Diagram_5 #####
+## CL_bbt1C --> [ConceptNode:bbt1:C:n2]
+## CL_bbt1B --> [ConceptNode:bbt1:B:n1]
+## CL_bbt1A --> [ConceptNode:bbt1:A:n0]
+## DP_bbt1U --> [AttributeNode:bbt1:U:n6]
+##### DIAGRAM Diagram_2 #####
+## CL_bbt1B --> [ConceptNode:bbt1:B:n1]
+## CL_bbt1A --> [ConceptNode:bbt1:A:n0]
+## DP_bbt1U --> [AttributeNode:bbt1:U:n2]
+
+
+##### DIAGRAM Diagram_4 #####
+##### DIAGRAM Diagram_6 #####
+##### DIAGRAM Diagram_3 #####
+##### DIAGRAM Diagram_1 #####
+##### DIAGRAM Diagram_5 #####
+##### DIAGRAM Diagram_2 #####

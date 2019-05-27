@@ -126,14 +126,41 @@ class BlackbirdOntologyEntityManager(QtCore.QObject):
     def diagramToTables(self):
         return self._diagramToTables
 
+    def diagramToTablesString(self):
+        res = ''
+        for diagram in self._diagramToTables:
+            res += '##### DIAGRAM {} #####\n'.format(diagram.name)
+            tableDict = self._diagramToTables[diagram]
+            for table in tableDict:
+                res += '\t## {} --> {}\n'.format(table.name,tableDict[table])
+        return res
+
+    def diagramToTablesString(self):
+        res = ''
+        for diagram in self._diagramToTables:
+            res += '##### DIAGRAM {} #####\n'.format(diagram.name)
+            tableDict = self._diagramToTables[diagram]
+            for table in tableDict:
+                res += '\t## {} --> {}\n'.format(table.name,tableDict[table])
+        return res
+
     @property
     def diagramToForeignKeys(self):
         return self._diagramToForeignKeys
 
+    def diagramToForeignKeysString(self):
+        res = ''
+        for diagram in self._diagramToForeignKeys:
+            res += '##### DIAGRAM {} #####\n'.format(diagram.name)
+            fkDict = self._diagramToForeignKeys[diagram]
+            for fk in fkDict:
+                res += '## {} --> {}\n'.format(fk.name,fkDict[fk])
+        return res
+
     def buildDictionaries(self):
         LOGGER.info('########## Starting mapping schema objects to diagrams\' visual elements ##########')
         for ontDiagram in self._ontologyDiagrams:
-            LOGGER.debug('\n##### DIAGRAM {} #####'.format(ontDiagram.name))
+            LOGGER.info('\n##### DIAGRAM {} #####'.format(ontDiagram.name))
             currDiagramToTableDict = {}
             LOGGER.info('### TABLES ###'.format(ontDiagram.name))
             for table in self._tables:
@@ -142,7 +169,7 @@ class BlackbirdOntologyEntityManager(QtCore.QObject):
                 entityIRI = tableEntity.fullIRI
                 entityShortIRI = tableEntity.shortIRI
                 entityType = tableEntity.entityType
-                nodes = ontDiagram.nodes
+                nodes = ontDiagram.nodes()
                 if entityType == EntityType.Class:
                     for node in nodes:
                         if node.Type == Item.ConceptNode:
@@ -163,14 +190,14 @@ class BlackbirdOntologyEntityManager(QtCore.QObject):
                                 currList.append(node)
                 if len(currList) > 0:
                     currDiagramToTableDict[table] = currList
-                    tablesStr = ",".join(map(str, currList))
+                    tablesStr = " , ".join(map(str, currList))
                     LOGGER.info('{} --> [{}]'.format(table.name,tablesStr))
             self._diagramToTables[ontDiagram] = currDiagramToTableDict
 
             LOGGER.info('### FOREIGN KEYS ###'.format(ontDiagram.name))
             currDiagramToForeignKeyDict = {}
             for fk in self._foreignKeys:
-                LOGGER.debug('## Mapping fk {}'.format(fk.name))
+                LOGGER.info('## Mapping fk {}'.format(fk.name))
                 currVisualEls = list()
                 srcTableName = fk.srcTable
                 srcTable = self._relationalSchema.getTableByName(srcTableName)
@@ -188,139 +215,143 @@ class BlackbirdOntologyEntityManager(QtCore.QObject):
 
                 tgtColumnNames = fk.tgtColumns
 
-                srcOccurrencesInDiagram = self._diagramToTables[ontDiagram][srcTable]
-                tgtOccurrencesInDiagram = self._diagramToTables[ontDiagram][tgtTable]
+                if srcTable in self._diagramToTables[ontDiagram] and tgtTable in self._diagramToTables[ontDiagram]:
+                    srcOccurrencesInDiagram = self._diagramToTables[ontDiagram][srcTable]
+                    tgtOccurrencesInDiagram = self._diagramToTables[ontDiagram][tgtTable]
 
-                if srcOccurrencesInDiagram and tgtOccurrencesInDiagram:
-                    if len(srcColumnNames) == 1:
-                        if srcEntityType == EntityType.Class:
-                            if tgtEntityType == EntityType.Class:
-                                currVisualEls.append(self.getEntityIsaEntityVEs(srcOccurrencesInDiagram,
-                                                                                tgtOccurrencesInDiagram,
-                                                                                ontDiagram))
-                            elif tgtEntityType == EntityType.ObjectProperty:
+                    if srcOccurrencesInDiagram and tgtOccurrencesInDiagram:
+                        if len(srcColumnNames) == 1:
+                            if srcEntityType == EntityType.Class:
+                                if tgtEntityType == EntityType.Class:
+                                    currVisualEls.append(self.getEntityIsaEntityVEs(srcOccurrencesInDiagram,
+                                                                                    tgtOccurrencesInDiagram,
+                                                                                    ontDiagram))
+                                elif tgtEntityType == EntityType.ObjectProperty:
+                                    tgtColumnName = first(tgtColumnNames)
+                                    relColumn = tgtTable.getColumnByName(tgtColumnName)
+                                    relcolPos = relColumn.position
+                                    if relcolPos == 1:
+                                        currVisualEls.append(
+                                            self.getClassIsaExistRoleOrAttributeVEs(srcOccurrencesInDiagram,
+                                                                                    tgtOccurrencesInDiagram,
+                                                                                    ontDiagram))
+                                    elif relcolPos == 2:
+                                        currVisualEls.append(self.getClassIsaExistRoleInvVEs(srcOccurrencesInDiagram,
+                                                                                             tgtOccurrencesInDiagram,
+                                                                                             ontDiagram))
+
+                            elif tgtEntityType == EntityType.DataProperty:
                                 tgtColumnName = first(tgtColumnNames)
                                 relColumn = tgtTable.getColumnByName(tgtColumnName)
                                 relcolPos = relColumn.position
                                 if relcolPos == 1:
-                                    currVisualEls.append(
-                                        self.getClassIsaExistRoleOrAttributeVEs(srcOccurrencesInDiagram,
-                                                                                tgtOccurrencesInDiagram,
-                                                                                ontDiagram))
-                                elif relcolPos == 2:
-                                    currVisualEls.append(self.getClassIsaExistRoleInvVEs(srcOccurrencesInDiagram,
-                                                                                         tgtOccurrencesInDiagram,
-                                                                                         ontDiagram))
-
-                        elif tgtEntityType == EntityType.DataProperty:
-                            tgtColumnName = first(tgtColumnNames)
-                            relColumn = tgtTable.getColumnByName(tgtColumnName)
-                            relcolPos = relColumn.position
-                            if relcolPos == 1:
-                                currVisualEls.append(self.getClassIsaExistRoleOrAttributeVEs(srcOccurrencesInDiagram,
+                                    currVisualEls.append(self.getClassIsaExistRoleOrAttributeVEs(srcOccurrencesInDiagram,
+                                                                                                 tgtOccurrencesInDiagram,
+                                                                                                 ontDiagram))
+                            elif srcEntityType == EntityType.ObjectProperty:
+                                srcColumnName = first(srcColumnNames)
+                                srcRelColumn = srcTable.getColumnByName(srcColumnName)
+                                srcRelcolPos = srcRelColumn.position
+                                if tgtEntityType == EntityType.Class:
+                                    if srcRelcolPos == 1:
+                                        currVisualEls.append(
+                                            self.getExistRoleOrAttributeIsaClassVEs(srcOccurrencesInDiagram,
+                                                                                    tgtOccurrencesInDiagram, ontDiagram))
+                                    elif srcRelcolPos == 2:
+                                        currVisualEls.append(self.getExistRoleInvIsaClassVEs(srcOccurrencesInDiagram,
                                                                                              tgtOccurrencesInDiagram,
                                                                                              ontDiagram))
-                        elif srcEntityType == EntityType.ObjectProperty:
-                            srcColumnName = first(srcColumnNames)
-                            srcRelColumn = srcTable.getColumnByName(srcColumnName)
-                            srcRelcolPos = srcRelColumn.position
-                            if tgtEntityType == EntityType.Class:
-                                if srcRelcolPos == 1:
-                                    currVisualEls.append(
-                                        self.getExistRoleOrAttributeIsaClassVEs(srcOccurrencesInDiagram,
-                                                                                tgtOccurrencesInDiagram, ontDiagram))
-                                elif srcRelcolPos == 2:
-                                    currVisualEls.append(self.getExistRoleInvIsaClassVEs(srcOccurrencesInDiagram,
-                                                                                         tgtOccurrencesInDiagram,
-                                                                                         ontDiagram))
-                            elif tgtEntityType == EntityType.ObjectProperty:
-                                tgtColumnName = first(tgtColumnNames)
-                                tgtRelColumn = tgtTable.getColumnByName(tgtColumnName)
-                                tgtRelcolPos = tgtRelColumn.position
-                                if srcRelcolPos == 1 and tgtRelcolPos == 1:
-                                    currVisualEls.append(
-                                        self.getExistRoleOrAttributeIsaExistRoleOrAttributeVEs(srcOccurrencesInDiagram,
-                                                                                               tgtOccurrencesInDiagram,
-                                                                                               ontDiagram))
-                                elif srcRelcolPos == 1 and tgtRelcolPos == 2:
-                                    currVisualEls.append(
-                                        self.getExistRoleOrAttributeIsaExistRoleInvVEs(srcOccurrencesInDiagram,
-                                                                                       tgtOccurrencesInDiagram,
-                                                                                       ontDiagram))
-                                elif srcRelcolPos == 2 and tgtRelcolPos == 1:
-                                    currVisualEls.append(
-                                        self.getExistRoleInvIsaExistRoleOrAttributeVEs(srcOccurrencesInDiagram,
-                                                                                       tgtOccurrencesInDiagram,
-                                                                                       ontDiagram))
-                                elif srcRelcolPos == 2 and tgtRelcolPos == 2:
-                                    currVisualEls.append(self.getExistRoleInvIsaExistRoleInvVEs(srcOccurrencesInDiagram,
-                                                                                                tgtOccurrencesInDiagram,
-                                                                                                ontDiagram))
-                            elif tgtEntityType == EntityType.DataProperty:
-                                if srcRelcolPos == 1:
-                                    currVisualEls.append(
-                                        self.getExistRoleOrAttributeIsaExistRoleOrAttributeVEs(srcOccurrencesInDiagram,
-                                                                                               tgtOccurrencesInDiagram,
-                                                                                               ontDiagram))
-                                elif srcRelcolPos == 2:
-                                    currVisualEls.append(
-                                        self.getExistRoleInvIsaExistRoleOrAttributeVEs(srcOccurrencesInDiagram,
-                                                                                       tgtOccurrencesInDiagram,
-                                                                                       ontDiagram))
-                        elif srcEntityType == EntityType.DataProperty:
-                            if tgtEntityType == EntityType.Class:
-                                currVisualEls.append(self.getExistRoleOrAttributeIsaClassVEs(srcOccurrencesInDiagram,
-                                                                                             tgtOccurrencesInDiagram,
-                                                                                             ontDiagram))
-                            elif tgtEntityType == EntityType.ObjectProperty:
-                                tgtColumnName = first(tgtColumnNames)
-                                tgtRelColumn = tgtTable.getColumnByName(tgtColumnName)
-                                tgtRelcolPos = tgtRelColumn.position
-                                if tgtRelcolPos == 1:
-                                    currVisualEls.append(
-                                        self.getExistRoleOrAttributeIsaExistRoleOrAttributeVEs(srcOccurrencesInDiagram,
-                                                                                               tgtOccurrencesInDiagram,
-                                                                                               ontDiagram))
-                                elif tgtRelcolPos == 2:
-                                    currVisualEls.append(
-                                        self.getExistRoleOrAttributeIsaExistRoleInvVEs(srcOccurrencesInDiagram,
-                                                                                       tgtOccurrencesInDiagram,
-                                                                                       ontDiagram))
-                            elif tgtEntityType == EntityType.DataProperty:
-                                currVisualEls.append(
-                                    self.getExistRoleOrAttributeIsaExistRoleOrAttributeVEs(srcOccurrencesInDiagram,
+                                elif tgtEntityType == EntityType.ObjectProperty:
+                                    tgtColumnName = first(tgtColumnNames)
+                                    tgtRelColumn = tgtTable.getColumnByName(tgtColumnName)
+                                    tgtRelcolPos = tgtRelColumn.position
+                                    if srcRelcolPos == 1 and tgtRelcolPos == 1:
+                                        currVisualEls.append(
+                                            self.getExistRoleOrAttributeIsaExistRoleOrAttributeVEs(srcOccurrencesInDiagram,
+                                                                                                   tgtOccurrencesInDiagram,
+                                                                                                   ontDiagram))
+                                    elif srcRelcolPos == 1 and tgtRelcolPos == 2:
+                                        currVisualEls.append(
+                                            self.getExistRoleOrAttributeIsaExistRoleInvVEs(srcOccurrencesInDiagram,
                                                                                            tgtOccurrencesInDiagram,
                                                                                            ontDiagram))
-                    elif len(srcColumnNames) == 2:
-                        if srcEntityType == EntityType.ObjectProperty:
-                            if tgtEntityType == EntityType.ObjectProperty:
-                                currVisualEls.append(self.getEntityIsaEntityVEs(srcOccurrencesInDiagram,
-                                                                                tgtOccurrencesInDiagram,
-                                                                                ontDiagram))
-                        elif srcEntityType == EntityType.DataProperty:
-                            if tgtEntityType == EntityType.DataProperty:
-                                currVisualEls.append(self.getEntityIsaEntityVEs(srcOccurrencesInDiagram,
-                                                                                tgtOccurrencesInDiagram,
-                                                                                ontDiagram))
-                    if currVisualEls:
-                        currDiagramToForeignKeyDict[fk] = currVisualEls
-                        fksStr = ",".join(map(str, currVisualEls))
-                        LOGGER.info('{} --> [{}]'.format(fk.name, fksStr))
+                                    elif srcRelcolPos == 2 and tgtRelcolPos == 1:
+                                        currVisualEls.append(
+                                            self.getExistRoleInvIsaExistRoleOrAttributeVEs(srcOccurrencesInDiagram,
+                                                                                           tgtOccurrencesInDiagram,
+                                                                                           ontDiagram))
+                                    elif srcRelcolPos == 2 and tgtRelcolPos == 2:
+                                        currVisualEls.append(self.getExistRoleInvIsaExistRoleInvVEs(srcOccurrencesInDiagram,
+                                                                                                    tgtOccurrencesInDiagram,
+                                                                                                    ontDiagram))
+                                elif tgtEntityType == EntityType.DataProperty:
+                                    if srcRelcolPos == 1:
+                                        currVisualEls.append(
+                                            self.getExistRoleOrAttributeIsaExistRoleOrAttributeVEs(srcOccurrencesInDiagram,
+                                                                                                   tgtOccurrencesInDiagram,
+                                                                                                   ontDiagram))
+                                    elif srcRelcolPos == 2:
+                                        currVisualEls.append(
+                                            self.getExistRoleInvIsaExistRoleOrAttributeVEs(srcOccurrencesInDiagram,
+                                                                                           tgtOccurrencesInDiagram,
+                                                                                           ontDiagram))
+                            elif srcEntityType == EntityType.DataProperty:
+                                if tgtEntityType == EntityType.Class:
+                                    currVisualEls.append(self.getExistRoleOrAttributeIsaClassVEs(srcOccurrencesInDiagram,
+                                                                                                 tgtOccurrencesInDiagram,
+                                                                                                 ontDiagram))
+                                elif tgtEntityType == EntityType.ObjectProperty:
+                                    tgtColumnName = first(tgtColumnNames)
+                                    tgtRelColumn = tgtTable.getColumnByName(tgtColumnName)
+                                    tgtRelcolPos = tgtRelColumn.position
+                                    if tgtRelcolPos == 1:
+                                        currVisualEls.append(
+                                            self.getExistRoleOrAttributeIsaExistRoleOrAttributeVEs(srcOccurrencesInDiagram,
+                                                                                                   tgtOccurrencesInDiagram,
+                                                                                                   ontDiagram))
+                                    elif tgtRelcolPos == 2:
+                                        currVisualEls.append(
+                                            self.getExistRoleOrAttributeIsaExistRoleInvVEs(srcOccurrencesInDiagram,
+                                                                                           tgtOccurrencesInDiagram,
+                                                                                           ontDiagram))
+                                elif tgtEntityType == EntityType.DataProperty:
+                                    currVisualEls.append(
+                                        self.getExistRoleOrAttributeIsaExistRoleOrAttributeVEs(srcOccurrencesInDiagram,
+                                                                                               tgtOccurrencesInDiagram,
+                                                                                               ontDiagram))
+                        elif len(srcColumnNames) == 2:
+                            if srcEntityType == EntityType.ObjectProperty:
+                                if tgtEntityType == EntityType.ObjectProperty:
+                                    currVisualEls.append(self.getEntityIsaEntityVEs(srcOccurrencesInDiagram,
+                                                                                    tgtOccurrencesInDiagram,
+                                                                                    ontDiagram))
+                            elif srcEntityType == EntityType.DataProperty:
+                                if tgtEntityType == EntityType.DataProperty:
+                                    currVisualEls.append(self.getEntityIsaEntityVEs(srcOccurrencesInDiagram,
+                                                                                    tgtOccurrencesInDiagram,
+                                                                                    ontDiagram))
+                        if currVisualEls:
+                            currDiagramToForeignKeyDict[fk] = currVisualEls
+                            fksStr = ",".join(map(str, currVisualEls))
+                            LOGGER.info('{} --> [{}]'.format(fk.name, fksStr))
+                else:
+                    LOGGER.debug('FK skipped as diagram does not contain visual elements for srcTable ({}) or for '
+                                 'tgtTable ({})'.format(srcTable.entity.shortIRI, tgtTable.entity.shortIRI))
             self._diagramToForeignKeys[ontDiagram] = currDiagramToForeignKeyDict
 
     # A-->B, R-->P, U1-->U2
     def getEntityIsaEntityVEs(self, srcOccurrencesInDiagram, tgtOccurrencesInDiagram, ontDiagram):
         LOGGER.debug('Call to getEntityIsaEntityVEs')
         result = list()
-        edges = ontDiagram.edges
+        edges = ontDiagram.edges()
         for edge in edges:
             firstSrc = edge.source
             firstTgt = edge.target
-            if edge.type == Item.InclusionEdge or edge.type == Item.EquivalenceEdge:
+            if edge.type() == Item.InclusionEdge or edge.type() == Item.EquivalenceEdge:
                 if firstSrc in srcOccurrencesInDiagram and firstTgt in tgtOccurrencesInDiagram:
                     currVE = ForeignKeyVisualElements(firstSrc, firstTgt, [edge])
                     result.append(currVE)
-            elif edge.type == Item.InputEdge:
+            elif edge.type() == Item.InputEdge:
                 if firstSrc in srcOccurrencesInDiagram and (
                         firstTgt.type() == Item.UnionNode or firstTgt.type() == Item.DisjointUnionNode):
                     for secondEdge in firstTgt.edges:
@@ -335,7 +366,7 @@ class BlackbirdOntologyEntityManager(QtCore.QObject):
     def getClassIsaExistRoleOrAttributeVEs(self, srcOccurrencesInDiagram, tgtOccurrencesInDiagram, ontDiagram):
         LOGGER.debug('Call to getClassIsaExistRoleOrAttributeVEs')
         result = list()
-        edges = ontDiagram.edges
+        edges = ontDiagram.edges()
         for edge in edges:
             if edge.type() == Item.InclusionEdge or edge.type() == Item.EquivalenceEdge:
                 currSrc = edge.source
@@ -354,7 +385,7 @@ class BlackbirdOntologyEntityManager(QtCore.QObject):
     def getExistRoleOrAttributeIsaClassVEs(self, srcOccurrencesInDiagram, tgtOccurrencesInDiagram, ontDiagram):
         LOGGER.debug('Call to getExistRoleOrAttributeIsaClassVEs')
         result = list()
-        edges = ontDiagram.edges
+        edges = ontDiagram.edges()
         for edge in edges:
             if edge.type() == Item.InputEdge:
                 currSrc = edge.source
@@ -374,7 +405,7 @@ class BlackbirdOntologyEntityManager(QtCore.QObject):
                                                           ontDiagram):
         LOGGER.debug('Call to getExistRoleOrAttributeIsaExistRoleOrAttributeVEs')
         result = list()
-        edges = ontDiagram.edges
+        edges = ontDiagram.edges()
         for firstEdge in edges:
             if firstEdge.type() == Item.InputEdge:
                 firstSrc = firstEdge.source
@@ -400,7 +431,7 @@ class BlackbirdOntologyEntityManager(QtCore.QObject):
     def getExistRoleInvIsaExistRoleOrAttributeVEs(self, srcOccurrencesInDiagram, tgtOccurrencesInDiagram, ontDiagram):
         LOGGER.debug('Call to getExistRoleInvIsaExistRoleOrAttributeVEs')
         result = list()
-        edges = ontDiagram.edges
+        edges = ontDiagram.edges()
         for firstEdge in edges:
             if firstEdge.type() == Item.InputEdge:
                 firstSrc = firstEdge.source
@@ -426,7 +457,7 @@ class BlackbirdOntologyEntityManager(QtCore.QObject):
     def getExistRoleInvIsaExistRoleInvVEs(self, srcOccurrencesInDiagram, tgtOccurrencesInDiagram, ontDiagram):
         LOGGER.debug('Call to getExistRoleInvIsaExistRoleInvVEs')
         result = list()
-        edges = ontDiagram.edges
+        edges = ontDiagram.edges()
         for firstEdge in edges:
             if firstEdge.type() == Item.InputEdge:
                 firstSrc = firstEdge.source
@@ -452,7 +483,7 @@ class BlackbirdOntologyEntityManager(QtCore.QObject):
     def getExistRoleOrAttributeIsaExistRoleInvVEs(self, srcOccurrencesInDiagram, tgtOccurrencesInDiagram, ontDiagram):
         LOGGER.debug('Call to getExistRoleOrAttributeIsaExistRoleInvVEs')
         result = list()
-        edges = ontDiagram.edges
+        edges = ontDiagram.edges()
         for firstEdge in edges:
             if firstEdge.type() == Item.InputEdge:
                 firstSrc = firstEdge.source
@@ -477,7 +508,7 @@ class BlackbirdOntologyEntityManager(QtCore.QObject):
     def getClassIsaExistRoleInvVEs(self, srcOccurrencesInDiagram, tgtOccurrencesInDiagram, ontDiagram):
         LOGGER.debug('Call to getClassIsaExistRoleInvVEs')
         result = list()
-        edges = ontDiagram.edges
+        edges = ontDiagram.edges()
         for edge in edges:
             if edge.type() == Item.InclusionEdge or edge.type() == Item.EquivalenceEdge:
                 currSrc = edge.source
@@ -496,7 +527,7 @@ class BlackbirdOntologyEntityManager(QtCore.QObject):
     def getExistRoleInvIsaClassVEs(self, srcOccurrencesInDiagram, tgtOccurrencesInDiagram, ontDiagram):
         LOGGER.debug('Call to getExistRoleInvIsaClassVEs')
         result = list()
-        edges = ontDiagram.edges
+        edges = ontDiagram.edges()
         for edge in edges:
             if edge.type() == Item.InputEdge:
                 currSrc = edge.source
