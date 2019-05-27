@@ -240,14 +240,14 @@ class BlackbirdOntologyEntityManager(QtCore.QObject):
                                                                                              tgtOccurrencesInDiagram,
                                                                                              ontDiagram))
 
-                            elif tgtEntityType == EntityType.DataProperty:
-                                tgtColumnName = first(tgtColumnNames)
-                                relColumn = tgtTable.getColumnByName(tgtColumnName)
-                                relcolPos = relColumn.position
-                                if relcolPos == 1:
-                                    currVisualEls.append(self.getClassIsaExistRoleOrAttributeVEs(srcOccurrencesInDiagram,
-                                                                                                 tgtOccurrencesInDiagram,
-                                                                                                 ontDiagram))
+                                elif tgtEntityType == EntityType.DataProperty:
+                                    tgtColumnName = first(tgtColumnNames)
+                                    relColumn = tgtTable.getColumnByName(tgtColumnName)
+                                    relcolPos = relColumn.position
+                                    if relcolPos == 0:
+                                        currVisualEls.append(self.getClassIsaExistRoleOrAttributeVEs(srcOccurrencesInDiagram,
+                                                                                                     tgtOccurrencesInDiagram,
+                                                                                                     ontDiagram))
                             elif srcEntityType == EntityType.ObjectProperty:
                                 srcColumnName = first(srcColumnNames)
                                 srcRelColumn = srcTable.getColumnByName(srcColumnName)

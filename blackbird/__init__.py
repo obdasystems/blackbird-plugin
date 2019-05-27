@@ -385,7 +385,7 @@ class BlackbirdPlugin(AbstractPlugin):
             #getAllSchemasText = RestUtils.getAllSchemas()
             #json_schema_data = json.loads(getAllSchemasText)
 
-            filePath = '/Users/lorenzo/PycharmProjects/blackbird/tests/test_export_schema_1/Diagram3456.json'
+            filePath = '/Users/lorenzo/PycharmProjects/blackbird/tests/test_export_schema_1/Diagram5.json'
             json_schema_data = FileUtils.parseSchemaFile(filePath)
 
             # GET TABLE ACTIONS
