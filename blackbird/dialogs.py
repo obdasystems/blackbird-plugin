@@ -24,6 +24,7 @@
 
 
 import io
+import os
 
 from PyQt5 import (
     QtCore,
@@ -32,6 +33,9 @@ from PyQt5 import (
 )
 
 from eddy.core.datatypes.qt import Font
+from eddy.core.functions.fsystem import fwrite
+from eddy.core.functions.misc import first
+from eddy.core.functions.path import openPath
 from eddy.core.functions.signals import connect
 
 
@@ -151,11 +155,13 @@ class BlackbirdOutputDialog(QtWidgets.QDialog):
 
         owlText = QtWidgets.QTextEdit(self)
         owlText.setFont(Font('Roboto', 14))
+        owlText.setObjectName('owl_text')
         owlText.setReadOnly(True)
         owlText.setText(owl)
 
         schemaText = QtWidgets.QTextEdit(self)
         schemaText.setFont(Font('Roboto', 14))
+        schemaText.setObjectName('schema_text')
         schemaText.setReadOnly(True)
         schemaText.setText(schema)
 
@@ -172,9 +178,15 @@ class BlackbirdOutputDialog(QtWidgets.QDialog):
         # CONFIRMATION AREA
         #################################
 
+        exportBtn = QtWidgets.QPushButton('Export', self)
         confirmation = QtWidgets.QDialogButtonBox(QtWidgets.QDialogButtonBox.Close, self)
-        confirmation.setContentsMargins(10, 0, 10, 10)
-        confirmation.setFont(Font('Roboto', 12))
+        buttonLayout = QtWidgets.QHBoxLayout(self)
+        buttonLayout.setContentsMargins(10, 0, 10, 10)
+        buttonLayout.addWidget(exportBtn)
+        buttonLayout.addWidget(confirmation)
+
+        buttonWidget = QtWidgets.QWidget(self)
+        buttonWidget.setLayout(buttonLayout)
 
         #############################################
         # SETUP DIALOG LAYOUT
@@ -183,7 +195,7 @@ class BlackbirdOutputDialog(QtWidgets.QDialog):
         mainLayout = QtWidgets.QVBoxLayout()
         mainLayout.addWidget(headerWidget)
         mainLayout.addWidget(textWidget)
-        mainLayout.addWidget(confirmation, 0, QtCore.Qt.AlignRight)
+        mainLayout.addWidget(buttonWidget, 0, QtCore.Qt.AlignRight)
 
         self.setWindowTitle("Schema Generation Output")
         self.setModal(True)
@@ -191,3 +203,23 @@ class BlackbirdOutputDialog(QtWidgets.QDialog):
         self.setMinimumSize(1024, 480)
 
         connect(confirmation.clicked, self.accept)
+        connect(exportBtn.clicked, self.doExport)
+
+    #############################################
+    #   SLOTS
+    #################################
+
+    @QtCore.pyqtSlot()
+    def doExport(self):
+        """
+        Export the generated OWL and schema.
+        """
+        dialog = QtWidgets.QFileDialog(self)
+        dialog.setFileMode(QtWidgets.QFileDialog.Directory)
+        if dialog.exec_():
+            directory = first(dialog.selectedFiles())
+            owl = self.findChild(QtWidgets.QTextEdit, 'owl_text').toPlainText()
+            fwrite(owl, os.path.join(directory, 'ontology.owl'))
+            schema = self.findChild(QtWidgets.QTextEdit, 'schema_text').toPlainText()
+            fwrite(schema, os.path.join(directory, 'schema.json'))
+            openPath(directory)
