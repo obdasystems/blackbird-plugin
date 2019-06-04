@@ -25,8 +25,6 @@
 
 from enum import unique
 
-import requests
-
 from PyQt5 import (
     QtCore,
     QtNetwork
@@ -91,61 +89,6 @@ class NetworkManager(QtNetwork.QNetworkAccessManager):
         request.setAttribute(self.OWL, owl)
         reply = self.post(request, bytes(owl))
         return reply
-
-
-class RestUtils:
-    """
-    Utility class to deal with REST requests.
-    """
-    baseUrl = "https://obdatest.dis.uniroma1.it:8080/BlackbirdEndpoint/rest/bbe/{}"
-    schemaListResource = "schema"
-    actionsBySchemaResource = "schema/{}/table/actions"
-
-    # ADD LOGGING TO ALL METHODS, MOVE EXCEPTION HANDLING OUTSIDE
-
-    @staticmethod
-    def getAllSchemas(verifySSL=False):
-        """
-        Return string representation of service response
-        :type verifySSL: bool
-        :rtype: str
-        """
-        try:
-            resourceUrl = RestUtils.baseUrl.format(RestUtils.schemaListResource)
-            response = requests.get(resourceUrl, verify=verifySSL)
-            return response.text
-        except requests.exceptions.Timeout as e:
-            # Maybe set up for a retry, or continue in a retry loop
-            LOGGER.exception(e)
-        except requests.exceptions.TooManyRedirects as e:
-            # Tell the user their URL was bad and try a different one
-            LOGGER.exception(e)
-        except requests.exceptions.RequestException as e:
-            # catastrophic error. bail.
-            LOGGER.exception(e)
-
-    @staticmethod
-    def getActionsBySchema(schemaName="", verifySSL=False):
-        """
-        Return string representation of service response
-        :type schemaName: str
-        :type verifySSL: bool
-        :rtype: str
-        """
-        try:
-            resource = RestUtils.actionsBySchemaResource.format(schemaName)
-            resourceUrl = RestUtils.baseUrl.format(resource)
-            response = requests.get(resourceUrl, verify=verifySSL)
-            return response.text
-        except requests.exceptions.Timeout as e:
-            # Maybe set up for a retry, or continue in a retry loop
-            LOGGER.exception(e)
-        except requests.exceptions.TooManyRedirects as e:
-            # Tell the user their URL was bad and try a different one
-            LOGGER.exception(e)
-        except requests.exceptions.RequestException as e:
-            # catastrophic error. bail.
-            LOGGER.exception(e)
 
 
 class BlackbirdRequestError(Exception):

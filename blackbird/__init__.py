@@ -67,10 +67,7 @@ from eddy.plugins.blackbird.graphol import (
     BlackbirdOntologyEntityManager
 )
 # noinspection PyUnresolvedReferences
-from eddy.plugins.blackbird.rest import (
-    NetworkManager,
-    RestUtils
-)
+from eddy.plugins.blackbird.rest import NetworkManager
 # noinspection PyUnresolvedReferences
 from eddy.plugins.blackbird.schema import (
     RelationalSchemaParser,
@@ -636,7 +633,7 @@ class BlackbirdPlugin(AbstractPlugin):
             json_schema_data = FileUtils.parseSchemaFile(filePath)
 
             # GET TABLE ACTIONS
-            getActionsText = RestUtils.getActionsBySchema("BOOKS_DB_SCHEMA")
+            getActionsText = '{}'  # Needs to be rewritten since we removed requests
             json_action_data = json.loads(getActionsText)
 
             # PARSE THE SCHEMA
@@ -662,7 +659,6 @@ class BlackbirdPlugin(AbstractPlugin):
             LOGGER.debug(fkDictStr)
             textFKs.setPlainText(fkDictStr)
             textFKs.setReadOnly(True)
-
 
         # SHOW THE DIALOG
         dialog.exec_()
