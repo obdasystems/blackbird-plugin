@@ -338,6 +338,7 @@ class BlackbirdPlugin(AbstractPlugin):
                 dialog = BlackbirdOutputDialog(owltext, json.dumps(json.loads(schema), indent=2), self.session)
                 dialog.show()
                 dialog.raise_()
+                #AGGANCIATI QUI CON IL PARSER
             else:
                 self.session.addNotification('Error generating schema: {}'.format(reply.errorString()))
                 LOGGER.error('Error generating schema: {}'.format(reply.errorString()))
