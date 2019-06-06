@@ -47,6 +47,7 @@ from eddy.core.functions.path import expandPath
 from eddy.core.functions.signals import connect, disconnect
 from eddy.core.output import getLogger
 from eddy.core.plugin import AbstractPlugin
+from eddy.ui.dialogs import DiagramSelectionDialog
 from eddy.ui.progress import BusyProgressDialog
 
 # noinspection PyUnresolvedReferences
@@ -66,10 +67,7 @@ from eddy.plugins.blackbird.graphol import (
     BlackbirdOntologyEntityManager
 )
 # noinspection PyUnresolvedReferences
-from eddy.plugins.blackbird.rest import (
-    NetworkManager,
-    RestUtils
-)
+from eddy.plugins.blackbird.rest import NetworkManager
 # noinspection PyUnresolvedReferences
 from eddy.plugins.blackbird.schema import (
     RelationalSchemaParser,
@@ -138,7 +136,7 @@ class BlackbirdPlugin(AbstractPlugin):
         self.addAction(QtWidgets.QAction(
             QtGui.QIcon(':/blackbird/icons/128/ic_blackbird'), 'Generate Schema', self,
             objectName='generate_schema', toolTip='Generate database schema',
-            triggered=self.doGenerateDiagramSchema))
+            triggered=self.doGenerateSchema))
 
     # noinspection PyArgumentList
     def initMenus(self):
@@ -451,12 +449,15 @@ class BlackbirdPlugin(AbstractPlugin):
         pass
 
     @QtCore.pyqtSlot()
-    def doGenerateDiagramSchema(self):
+    def doGenerateSchema(self):
         """
-        Generate the schema for the active diagram.
+        Generate the schema for the selected diagrams.
         """
-        diagram = self.session.mdi.activeDiagram()
-        if diagram and self.translator.state() == QtCore.QProcess.Running:
+        dialog = DiagramSelectionDialog(self.session)
+        if not dialog.exec_():
+            return
+        diagrams = dialog.selectedDiagrams()
+        if len(diagrams) and self.translator.state() == QtCore.QProcess.Running:
             self.widget('progress').show()
             # EXPORT DIAGRAM TO OWL
             tmpfile = tempfile.NamedTemporaryFile('wb', delete=False)
@@ -464,7 +465,7 @@ class BlackbirdPlugin(AbstractPlugin):
                                                axioms={x for x in OWLAxiom},
                                                normalize=False,
                                                syntax=OWLSyntax.Functional,
-                                               selected_diagrams=[diagram])
+                                               diagrams=diagrams)
             worker.tmpfile = tmpfile
             connect(worker.sgnCompleted, self.onDiagramExportCompleted)
             connect(worker.sgnErrored, self.onDiagramExportFailure)
@@ -633,7 +634,7 @@ class BlackbirdPlugin(AbstractPlugin):
             json_schema_data = FileUtils.parseSchemaFile(filePath)
 
             # GET TABLE ACTIONS
-            getActionsText = RestUtils.getActionsBySchema("BOOKS_DB_SCHEMA")
+            getActionsText = '{}'  # Needs to be rewritten since we removed requests
             json_action_data = json.loads(getActionsText)
 
             # PARSE THE SCHEMA
@@ -659,7 +660,6 @@ class BlackbirdPlugin(AbstractPlugin):
             LOGGER.debug(fkDictStr)
             textFKs.setPlainText(fkDictStr)
             textFKs.setReadOnly(True)
-
 
         # SHOW THE DIALOG
         dialog.exec_()

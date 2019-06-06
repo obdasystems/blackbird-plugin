@@ -1,0 +1,10 @@
+# From PyPi
+pytest==4.6.1
+pytest-benchmark==3.2.2
+pytest-cov==2.7.1
+pytest-faulthandler==1.6.0
+pytest-instafail==0.4.1
+pytest-mock==1.10.4
+pytest-qt==3.2.2
+pytest-repeat==0.8.0
+pytest-xvfb==1.2.0; sys_platform != "win32"

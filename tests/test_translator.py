@@ -23,80 +23,92 @@
 ##########################################################################
 
 
+"""
+Blackbird translator tests.
+"""
+
 import os
-import sys
 import json
-import requests
+import pytest
 
 from PyQt5 import (
     QtCore,
-    QtTest,
+    QtNetwork,
 )
-from eddy.core.functions.fsystem import fread
 
-from tests import PluginTest, PluginTestFinder
+from eddy.core.functions.fsystem import fread
 
 # noinspection PyUnresolvedReferences
 from eddy.plugins.blackbird.translator import BlackbirdProcess
+# noinspection PyUnresolvedReferences
+from eddy.plugins.blackbird.rest import NetworkManager
 
 
-class TranslatorTest(PluginTest):
+@pytest.fixture(scope='module')
+def executable(spec):
     """
-    Blackbird translator test case.
+    Yields the path to the Blackbird executable.
     """
-    def setUp(self):
-        super().setUp()
-        self.executable = os.path.join(self.basepath, self.spec.get('blackbird', 'executable'))
+    basepath = os.path.join(os.path.dirname(__file__), os.pardir)
+    yield os.path.join(basepath, spec.get('blackbird', 'executable'))
 
-    def test_process_start_stop(self):
-        # GIVEN
-        process = BlackbirdProcess(self.executable)
-        readySpy = QtTest.QSignalSpy(process.sgnReady)
-        stopSpy = QtTest.QSignalSpy(process.sgnFinished)
-        try:
-            # WHEN
-            process.start()
-            # THEN
-            self.assertTrue(readySpy.wait())
-            self.assertEqual(1, len(readySpy))
-            # WHEN
-            process.terminate()
-            # THEN
-            self.assertTrue(stopSpy.wait())
-            self.assertEqual(1, len(stopSpy))
-        finally:
-            if process.state() != QtCore.QProcess.NotRunning:
-                process.kill()
 
-    def test_process_translate_owl(self):
-        # GIVEN
-        process = BlackbirdProcess(self.executable)
-        readySpy = QtTest.QSignalSpy(process.sgnReady)
-        stopSpy = QtTest.QSignalSpy(process.sgnFinished)
-        try:
-            # WHEN
+def test_process_start_stop(executable, qtbot):
+    # GIVEN
+    process = BlackbirdProcess(executable)
+    try:
+        # WHEN
+        with qtbot.waitSignal(process.sgnReady, timeout=3000):
             process.start()
-            # THEN
-            self.assertTrue(readySpy.wait())
-            self.assertEqual(1, len(readySpy))
-            # WHEN
-            owlfile = os.path.join(self.basepath, 'tests', 'test_export_owl_1', 'Diagram2.owl')
-            response = requests.post('http://localhost:8080/bbe/schema',
-                                     headers={'Content-Type': 'text/plain'},
-                                     data=fread(owlfile).encode('utf-8'))
-            # THEN
-            self.assertEqual(200, response.status_code)
-            # AND
-            schema = json.loads(response.text, encoding='utf-8')
-            self.assertIn('id', schema)
-            self.assertIn('schemaName', schema)
-            self.assertIn('tables', schema)
-            self.assertEqual(3, len(schema['tables']))
-            # WHEN
+        # THEN
+        assert process.state() == QtCore.QProcess.Running
+        # WHEN
+        with qtbot.waitSignal(process.sgnFinished, timeout=3000):
             process.terminate()
-            # THEN
-            self.assertTrue(stopSpy.wait())
-            self.assertEqual(1, len(stopSpy))
-        finally:
-            if process.state() != QtCore.QProcess.NotRunning:
-                process.kill()
+        # THEN
+        assert process.state() == QtCore.QProcess.NotRunning
+    finally:
+        if process.state() != QtCore.QProcess.NotRunning:
+            process.kill()
+
+
+@pytest.mark.parametrize('owlfilename,ntables', [
+    ('Diagram1.owl', 3),
+    ('Diagram2.owl', 3),
+    ('Diagram3.owl', 3),
+    ('Diagram4.owl', 3),
+    ('Diagram5.owl', 4),
+    ('Diagram6.owl', 4),
+])
+def test_process_translate_owl(executable, qtbot, owlfilename, ntables):
+    # GIVEN
+    process = BlackbirdProcess(executable)
+    nmanager = NetworkManager()
+    basepath = os.path.join(os.path.dirname(__file__), os.pardir)
+    owlfile = os.path.join(basepath, 'tests', 'test_export_owl_1', owlfilename)
+    try:
+        # WHEN
+        with qtbot.waitSignal(process.sgnReady, timeout=3000):
+            process.start()
+        # THEN
+        assert process.state() == QtCore.QProcess.Running
+        # WHEN
+        reply = nmanager.postSchema(fread(owlfile).encode('utf-8'))
+        with qtbot.waitSignal(reply.finished, timeout=3000):
+            pass
+        # THEN
+        assert reply.error() == QtNetwork.QNetworkReply.NoError
+        # AND
+        schema = json.loads(str(reply.readAll(), encoding='utf-8'))
+        assert 'id' in schema
+        assert 'schemaName' in schema
+        assert 'tables' in schema
+        assert ntables == len(schema['tables'])
+        # WHEN
+        with qtbot.waitSignal(process.sgnFinished, timeout=3000):
+            process.terminate()
+        # THEN
+        assert process.state() == QtCore.QProcess.NotRunning
+    finally:
+        if process.state() != QtCore.QProcess.NotRunning:
+            process.kill()
