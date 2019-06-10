@@ -24,6 +24,7 @@
 
 
 from enum import unique
+from json import JSONEncoder
 
 from PyQt5 import (
     QtCore,
@@ -33,6 +34,9 @@ from PyQt5 import (
 from eddy.core.datatypes.common import Enum_
 from eddy.core.output import getLogger
 
+# noinspection PyUnresolvedReferences
+from eddy.plugins.blackbird.schema import RelationalTableAction
+
 LOGGER = getLogger()
 
 
@@ -40,6 +44,14 @@ LOGGER = getLogger()
 class Resources(Enum_):
     Endpoint = 'http://localhost:8080/bbe'
     Schema = '{}/schema'.format(Endpoint)
+    SchemaByName = '{}/{}'.format(Schema,'{}')
+    SchemaHistoryByName = '{}/history'.format(SchemaByName)
+    SchemaApplyActionByName = '{}/action'.format(SchemaByName)
+    SchemaUndoByName = '{}/undo'.format(SchemaApplyActionByName)
+    SchemaTables = '{}/tables'.format(SchemaByName, '{}')
+    SchemaSingleTable = '{}/table/{}'.format(SchemaByName,'{}')
+    SchemaSingleTableActions = '{}/actions'.format(SchemaSingleTable)
+
     SchemaActions = '{}/{}/table/actions'.format(Schema, '{}')
 
 
@@ -60,20 +72,6 @@ class NetworkManager(QtNetwork.QNetworkAccessManager):
         reply = self.get(request)
         return reply
 
-    def getSchemaActions(self, schema):
-        """
-        Get the list of actions for the specified schema.
-        :type schema: str
-        :rtype: QNetworkReply
-        """
-        if not schema:
-            raise BlackbirdRequestError('Schema name must not be empty')
-        url = QtCore.QUrl(Resources.SchemaActions.value.format(schema))
-        request = QtNetwork.QNetworkRequest(url)
-        request.setAttribute(self.SchemaName, schema)
-        reply = self.get(request)
-        return reply
-
     def postSchema(self, owl):
         """
         Post the specified OWL ontology to generate a database schema
@@ -90,9 +88,150 @@ class NetworkManager(QtNetwork.QNetworkAccessManager):
         reply = self.post(request, bytes(owl))
         return reply
 
+    def getSchema(self, schemaName):
+        """
+        Get the schema identified by schemaName
+        :type schemaName: str
+        :rtype: QNetworkReply
+        """
+        if not schemaName:
+            raise BlackbirdRequestError('Schema name must not be empty')
+        url = QtCore.QUrl(Resources.Schema.value.format(schemaName))
+        request = QtNetwork.QNetworkRequest(url)
+        reply = self.get(request)
+        return reply
+
+    def getSchemaHistory(self, schemaName):
+        """
+        Get the transformation history of schema identified by schemaName
+        :type schemaName: str
+        :rtype: QNetworkReply
+        """
+        if not schemaName:
+            raise BlackbirdRequestError('Schema name must not be empty')
+        url = QtCore.QUrl(Resources.SchemaHistory.value.format(schemaName))
+        request = QtNetwork.QNetworkRequest(url)
+        reply = self.get(request)
+        return reply
+
+    def deleteSchema(self, schemaName):
+        """
+        Delete the schema identified by schemaName
+        :type schemaName: str
+        :rtype: QNetworkReply
+        """
+        if not schemaName:
+            raise BlackbirdRequestError('Schema name must not be empty')
+        url = QtCore.QUrl(Resources.Schema.value.format(schemaName))
+        request = QtNetwork.QNetworkRequest(url)
+        reply = self.delete(request)
+        return reply
+
+    def putActionToSchema(self, schemaName, action):
+        """
+        Apply action over the schema identified by schemaName
+        :type schemaName: str
+        :type action: RelationalTableAction
+        :rtype: QNetworkReply
+        """
+        if not schemaName:
+            raise BlackbirdRequestError('Schema name must not be empty')
+        if not action:
+            raise BlackbirdRequestError('Action must not be empty')
+        actionJsonStr = RelationalTableActionDecoder().encode(action)
+        url = QtCore.QUrl(Resources.SchemaApplyAction.value.format(schemaName))
+        request = QtNetwork.QNetworkRequest(url)
+        request.setHeader(QtNetwork.QNetworkRequest.ContentTypeHeader, 'application/json')
+        reply = self.put(request,bytes(actionJsonStr))
+        return reply
+
+    def putUndoToSchema(self, schemaName):
+        """
+        Undo the last action applied over the schema identified by schemaName
+        :type schemaName: str
+        :rtype: QNetworkReply
+        """
+        if not schemaName:
+            raise BlackbirdRequestError('Schema name must not be empty')
+        emptyJsonStr = ''
+        url = QtCore.QUrl(Resources.SchemaUndo.value.format(schemaName))
+        request = QtNetwork.QNetworkRequest(url)
+        request.setHeader(QtNetwork.QNetworkRequest.ContentTypeHeader, 'application/json')
+        reply = self.put(request,bytes(emptyJsonStr))
+        return reply
+
+    def getTableNames(self, schemaName):
+        """
+        Get all the names of the tables in the schema identified by schemaName
+        :type schemaName: str
+        :rtype: QNetworkReply
+        """
+        if not schemaName:
+            raise BlackbirdRequestError('Schema name must not be empty')
+        url = QtCore.QUrl(Resources.SchemaTables.value.format(schemaName))
+        request = QtNetwork.QNetworkRequest(url)
+        reply = self.get(request)
+        return reply
+
+    def getTable(self, schemaName, tableName):
+        """
+        Get the table identified by tableName in the schema identified by schemaName
+        :type schemaName: str
+        :type tableName: str
+        :rtype: QNetworkReply
+        """
+        if not schemaName:
+            raise BlackbirdRequestError('Schema name must not be empty')
+        if not tableName:
+            raise BlackbirdRequestError('Table name must not be empty')
+        url = QtCore.QUrl(Resources.SchemaSingleTable.value.format(schemaName, tableName))
+        request = QtNetwork.QNetworkRequest(url)
+        reply = self.get(request)
+        return reply
+
+    def getActions(self, schemaName, tableName):
+        """
+        Get the actions that can be applied over the table identified by tableName in the schema identified by schemaName
+        :type schemaName: str
+        :type tableName: str
+        :rtype: QNetworkReply
+        """
+        if not schemaName:
+            raise BlackbirdRequestError('Schema name must not be empty')
+        if not tableName:
+            raise BlackbirdRequestError('Table name must not be empty')
+        url = QtCore.QUrl(Resources.SchemaSingleTableActions.value.format(schemaName, tableName))
+        request = QtNetwork.QNetworkRequest(url)
+        reply = self.get(request)
+        return reply
+
+    #NO MORE USED (use putActionToSchemaByName instead)
+    def getSchemaActions(self, schema):
+        """
+        Get the list of actions for the specified schema.
+        :type schema: str
+        :rtype: QNetworkReply
+        """
+        if not schema:
+            raise BlackbirdRequestError('Schema name must not be empty')
+        url = QtCore.QUrl(Resources.SchemaActions.value.format(schema))
+        request = QtNetwork.QNetworkRequest(url)
+        request.setAttribute(self.SchemaName, schema)
+        reply = self.get(request)
+        return reply
+
+# A specialised JSONEncoder that encodes RelationalTableAction objects as JSON
+class RelationalTableActionDecoder(JSONEncoder):
+    def default(self, o):
+        if isinstance(o, RelationalTableAction):
+            return o.__dict__
+        else:
+            return JSONEncoder.default(self,o)
 
 class BlackbirdRequestError(Exception):
     """
     Raised when an error occurs during a network request.
     """
     pass
+
+
