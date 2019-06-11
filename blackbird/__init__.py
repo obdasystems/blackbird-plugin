@@ -48,6 +48,7 @@ from eddy.core.functions.signals import connect, disconnect
 from eddy.core.output import getLogger
 from eddy.core.plugin import AbstractPlugin
 from eddy.ui.dialogs import DiagramSelectionDialog
+from eddy.ui.dock import DockWidget
 from eddy.ui.progress import BusyProgressDialog
 
 # noinspection PyUnresolvedReferences
@@ -76,7 +77,10 @@ from eddy.plugins.blackbird.schema import (
 # noinspection PyUnresolvedReferences
 from eddy.plugins.blackbird.translator import BlackbirdProcess
 
-# Quando importi da altri file del progetto aggiungi sempre eddy.plugins. al path suggerito ed aggiungi riga noinspection
+# noinspection PyUnresolvedReferences
+from eddy.plugins.blackbird.schema import RelationalSchema
+# noinspection PyUnresolvedReferences
+from eddy.plugins.blackbird.widgets.Info import BBInfoWidget
 
 LOGGER = getLogger()
 
@@ -87,6 +91,7 @@ class BlackbirdPlugin(AbstractPlugin):
     """
     sgnStartTranslator = QtCore.pyqtSignal()
     sgnStopTranslator = QtCore.pyqtSignal()
+    sgnSchemaChanged = QtCore.pyqtSignal(RelationalSchema)
 
     def __init__(self, spec, session):
         """
@@ -203,6 +208,20 @@ class BlackbirdPlugin(AbstractPlugin):
         progress = BusyProgressDialog('Generating Schema...', parent=self.session)
         progress.setObjectName('progress')
         self.addWidget(progress)
+
+        # INITIALIZE THE WIDGET
+        widget = BBInfoWidget(self)
+        widget.setObjectName('blackbird_info')
+        self.addWidget(widget)
+
+        # CREATE DOCKING AREA WIDGET
+        widget = DockWidget('Schema Info', QtGui.QIcon(':/icons/18/ic_info_outline_black'), self.session)
+        widget.installEventFilter(self)
+        widget.setAllowedAreas(QtCore.Qt.LeftDockWidgetArea | QtCore.Qt.RightDockWidgetArea | QtCore.Qt.BottomDockWidgetArea)
+        widget.setObjectName('blackbird_info_dock')
+        widget.setWidget(self.widget('blackbird_info'))
+        self.addWidget(widget)
+        self.session.addDockWidget(QtCore.Qt.RightDockWidgetArea, self.widget('blackbird_info_dock'))
 
     #############################################
     #   EVENTS
@@ -337,6 +356,9 @@ class BlackbirdPlugin(AbstractPlugin):
                 dialog.show()
                 dialog.raise_()
                 #AGGANCIATI QUI CON IL PARSER
+                jsonSchema = json.loads(schema)
+                self.schema = RelationalSchemaParser.getSchema(jsonSchema, {})
+                self.sgnSchemaChanged.emit(self.schema)
             else:
                 self.session.addNotification('Error generating schema: {}'.format(reply.errorString()))
                 LOGGER.error('Error generating schema: {}'.format(reply.errorString()))

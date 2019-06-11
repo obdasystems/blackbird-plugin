@@ -52,8 +52,6 @@ class Resources(Enum_):
     SchemaSingleTable = '{}/table/{}'.format(SchemaByName,'{}')
     SchemaSingleTableActions = '{}/actions'.format(SchemaSingleTable)
 
-    SchemaActions = '{}/{}/table/actions'.format(Schema, '{}')
-
 
 class NetworkManager(QtNetwork.QNetworkAccessManager):
     """
@@ -205,20 +203,7 @@ class NetworkManager(QtNetwork.QNetworkAccessManager):
         reply = self.get(request)
         return reply
 
-    #NO MORE USED (use putActionToSchemaByName instead)
-    def getSchemaActions(self, schema):
-        """
-        Get the list of actions for the specified schema.
-        :type schema: str
-        :rtype: QNetworkReply
-        """
-        if not schema:
-            raise BlackbirdRequestError('Schema name must not be empty')
-        url = QtCore.QUrl(Resources.SchemaActions.value.format(schema))
-        request = QtNetwork.QNetworkRequest(url)
-        request.setAttribute(self.SchemaName, schema)
-        reply = self.get(request)
-        return reply
+
 
 # A specialised JSONEncoder that encodes RelationalTableAction objects as JSON
 class RelationalTableActionDecoder(JSONEncoder):

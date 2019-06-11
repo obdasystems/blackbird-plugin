@@ -397,21 +397,21 @@ class RelationalTableOriginEntity:
 
 class RelationalTableAction:
     def __init__(self, subject_table, action_type, object_tables):
-        self._subjectTable = subject_table
+        self._actionSubjectTableName = subject_table
         self._actionType = action_type
-        self._objectTables = object_tables
+        self._actionObjectsNames = object_tables
 
     @property
-    def subjectTable(self):
-        return self._subjectTable
+    def actionSubjectTableName(self):
+        return self._actionSubjectTableName
 
     @property
     def actionType(self):
         return self._actionType
 
     @property
-    def objectTables(self):
-        return self._objectTables
+    def actionObjectsNames(self):
+        return self._actionObjectsNames
 
     def __str__(self):
         objectTablesStr = ",".join(map(str, self.objectTables))
