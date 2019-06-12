@@ -81,6 +81,10 @@ from eddy.plugins.blackbird.translator import BlackbirdProcess
 from eddy.plugins.blackbird.schema import RelationalSchema
 # noinspection PyUnresolvedReferences
 from eddy.plugins.blackbird.widgets.Info import BBInfoWidget
+# noinspection PyUnresolvedReferences
+from eddy.plugins.blackbird.widgets.TableExplorer import BBTableExplorerWidget
+
+from blackbird.widgets.TableExplorer import TableExplorerWidget
 
 LOGGER = getLogger()
 
@@ -209,19 +213,90 @@ class BlackbirdPlugin(AbstractPlugin):
         progress.setObjectName('progress')
         self.addWidget(progress)
 
-        # INITIALIZE THE WIDGET
-        widget = BBInfoWidget(self)
-        widget.setObjectName('blackbird_info')
-        self.addWidget(widget)
+        # INITIALIZE THE INFO WIDGET
+        infoWidget = BBInfoWidget(self)
+        infoWidget.setObjectName('blackbird_info')
+        self.addWidget(infoWidget)
+        # CREATE DOCKING AREA INFO WIDGET
+        infoDockWidget = DockWidget('Schema Info', QtGui.QIcon(':/icons/18/ic_info_outline_black'), self.session)
+        infoDockWidget.installEventFilter(self)
+        infoDockWidget.setAllowedAreas(QtCore.Qt.LeftDockWidgetArea | QtCore.Qt.RightDockWidgetArea | QtCore.Qt.BottomDockWidgetArea)
+        infoDockWidget.setObjectName('blackbird_info_dock')
+        infoDockWidget.setWidget(self.widget('blackbird_info'))
+        self.addWidget(infoDockWidget)
+        self.session.addDockWidget(QtCore.Qt.RightDockWidgetArea, self.widget('blackbird_info_dock'))
+
+        # INITIALIZE THE TABLE EXPLORER WIDGET
+        tableExplorerWidget = TableExplorerWidget(self)
+        tableExplorerWidget.setObjectName('blackbird_table_explorer')
+        self.addWidget(tableExplorerWidget)
+        # CREATE TOGGLE ACTIONS
+        group = QtWidgets.QActionGroup(self, objectName='table_explorer_item_toggle')
+        group.setExclusive(False)
+        # for item in tableExplorerWidget.items:
+        #     action = QtWidgets.QAction(item.realName.title(), group, objectName=item.name, checkable=True)
+        #     action.setChecked(True)
+        #     action.setData(item)
+        #     action.setFont(Font('Roboto', 11))
+        #     connect(action.triggered, tableExplorerWidget.onMenuButtonClicked)
+        #     group.addAction(action)
+        self.addAction(group)
+
+        group = QtWidgets.QActionGroup(self, objectName='table_explorer_status_toggle')
+        group.setExclusive(False)
+        # for status in tableExplorerWidget.status:
+        #     action = QtWidgets.QAction(status.value if status.value else 'Default', group, objectName=status.name, checkable=True)
+        #     action.setChecked(True)
+        #     action.setData(status)
+        #     action.setFont(Font('Roboto', 11))
+        #     connect(action.triggered, tableExplorerWidget.onMenuButtonClicked)
+        #     group.addAction(action)
+        self.addAction(group)
+
+        # CREATE TOGGLE MENU
+        menu = QtWidgets.QMenu(objectName='table_explorer_toggle')
+        menu.addSection('Items')
+        menu.addActions(self.action('table_explorer_item_toggle').actions())
+        menu.addSection('Description')
+        menu.addActions(self.action('table_explorer_status_toggle').actions())
+        self.addMenu(menu)
+
+        # CREATE CONTROL WIDGET
+        button = QtWidgets.QToolButton(objectName='table_explorer_toggle')
+        button.setIcon(QtGui.QIcon(':/icons/18/ic_settings_black'))
+        button.setContentsMargins(0, 0, 0, 0)
+        button.setFixedSize(18, 18)
+        button.setFocusPolicy(QtCore.Qt.NoFocus)
+        button.setMenu(self.menu('table_explorer_toggle'))
+        button.setPopupMode(QtWidgets.QToolButton.InstantPopup)
+        self.addWidget(button)
 
         # CREATE DOCKING AREA WIDGET
-        widget = DockWidget('Schema Info', QtGui.QIcon(':/icons/18/ic_info_outline_black'), self.session)
-        widget.installEventFilter(self)
-        widget.setAllowedAreas(QtCore.Qt.LeftDockWidgetArea | QtCore.Qt.RightDockWidgetArea | QtCore.Qt.BottomDockWidgetArea)
-        widget.setObjectName('blackbird_info_dock')
-        widget.setWidget(self.widget('blackbird_info'))
-        self.addWidget(widget)
-        self.session.addDockWidget(QtCore.Qt.RightDockWidgetArea, self.widget('blackbird_info_dock'))
+        tableExplorerDockWidget = DockWidget('Schema Tables Explorer', QtGui.QIcon(':icons/18/ic_explore_black'), self.session)
+        tableExplorerDockWidget.addTitleBarButton(self.widget('table_explorer_toggle'))
+        tableExplorerDockWidget.installEventFilter(self)
+        tableExplorerDockWidget.setAllowedAreas(QtCore.Qt.LeftDockWidgetArea | QtCore.Qt.RightDockWidgetArea | QtCore.Qt.BottomDockWidgetArea)
+        tableExplorerDockWidget.setObjectName('table_explorer_dock')
+        tableExplorerDockWidget.setWidget(self.widget('blackbird_table_explorer'))
+        self.addWidget(tableExplorerDockWidget)
+
+        # CREATE SHORTCUTS
+        action = tableExplorerDockWidget.toggleViewAction()
+        action.setParent(self.session)
+        action.setShortcut(QtGui.QKeySequence('Alt+4'))
+
+        # CREATE ENTRY IN VIEW MENU
+        self.debug('Creating docking area widget toggle in "view" menu')
+        menu = self.session.menu('view')
+        menu.addAction(self.widget('table_explorer_dock').toggleViewAction())
+
+        # CONFIGURE SIGNALS
+        #connect(self.session.sgnReady, self.onSessionReady)
+
+        # CREATE DOCKING AREA TABLE EXPLORER WIDGET
+        self.session.addDockWidget(QtCore.Qt.RightDockWidgetArea, self.widget('table_explorer_dock'))
+
+
 
     #############################################
     #   EVENTS
@@ -236,7 +311,8 @@ class BlackbirdPlugin(AbstractPlugin):
         """
         if event.type() == QtCore.QEvent.Resize:
             widget = source.widget()
-            widget.redraw()
+            if "redraw" in dir(widget):
+                widget.redraw()
         return super().eventFilter(source, event)
 
     #############################################

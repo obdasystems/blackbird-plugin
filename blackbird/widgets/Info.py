@@ -1,10 +1,13 @@
+from abc import ABCMeta, abstractmethod
+
 from PyQt5 import QtWidgets, QtCore
+from eddy.core.datatypes.qt import Font
 from eddy.core.functions.misc import clamp, first
 from eddy.core.functions.signals import connect
 
 # noinspection PyUnresolvedReferences
 from eddy.plugins.blackbird.schema import RelationalSchema
-
+from eddy.ui.fields import IntegerField, StringField, ComboBox
 
 class BBInfoWidget(QtWidgets.QScrollArea):
     """
@@ -24,7 +27,8 @@ class BBInfoWidget(QtWidgets.QScrollArea):
         self.stacked.setContentsMargins(0, 0, 0, 0)
         self.infoEmpty = QtWidgets.QWidget(self.stacked)
 
-        self.schemaInfo = SchemaInfo(self)
+        #self.schemaInfo = SchemaInfo(self)
+        self.schemaInfo = SchemaInfo(plugin.session,self)
         connect(plugin.sgnSchemaChanged,self.onSchemaChanged)
 
         self.setContentsMargins(0, 0, 0, 0)
@@ -171,18 +175,192 @@ class BBInfoWidget(QtWidgets.QScrollArea):
     def onSchemaChanged(self, schema):
         tables = schema.tables
         foreignKeys = schema.foreignKeys
-        self.schemaInfo.updateInfos(len(tables),len(foreignKeys))
+        self.schemaInfo.updateData(len(tables),len(foreignKeys))
 
-class SchemaInfo(QtWidgets.QWidget):
-    def __init__(self, parent):
+
+#############################################
+#   INFO WIDGETS
+#################################
+
+
+class BBAbstractInfo(QtWidgets.QWidget):
+    """
+    This class implements the base information box.
+    """
+    __metaclass__ = ABCMeta
+
+    def __init__(self, session, parent=None):
+        """
+        Initialize the base information box.
+        :type session: Session
+        :type parent: QtWidgets.QWidget
+        """
         super().__init__(parent)
-        self.tableCountInfo = QtWidgets.QLabel(self)
-        self.fkCountInfo = QtWidgets.QLabel(self)
-        layout = QtWidgets.QVBoxLayout(self)
-        layout.addWidget(self.tableCountInfo)
-        layout.addWidget(self.fkCountInfo)
-        self.setLayout(layout)
+        self.session = session
+        self.setContentsMargins(0, 0, 0, 0)
 
-    def updateInfos(self, tableCount, fkCount):
-        self.tableCountInfo.setText(str(tableCount))
-        self.fkCountInfo.setText(str(fkCount))
+    #############################################
+    #   PROPERTIES
+    #################################
+
+    @property
+    def project(self):
+        """
+        Returns the project loaded in the current session.
+        :rtype: Project
+        """
+        return self.session.project
+
+    #############################################
+    #   INTERFACE
+    #################################
+
+    @abstractmethod
+    def updateData(self, **kwargs):
+        """
+        Fetch new information and fill the widget with data.
+        """
+        pass
+
+
+class SchemaInfo(BBAbstractInfo):
+    def __init__(self,session,parent=None):
+        super().__init__(session,parent)
+
+        self.tableCountKey = BBKey('Tables count')
+        self.tableCountKey.setFont(Font('Roboto', 12))
+        self.tableCountField = BBInteger(self)
+        self.tableCountField.setFont(Font('Roboto', 12))
+        self.tableCountField.setReadOnly(True)
+
+        self.fkCountKey = BBKey('FKs count')
+        self.fkCountKey.setFont(Font('Roboto', 12))
+        self.fkCountField = BBInteger(self)
+        self.fkCountField.setFont(Font('Roboto', 12))
+        self.fkCountField.setReadOnly(True)
+
+        self.header = BBHeader('Schema properties')
+        self.header.setFont(Font('Roboto',12))
+
+        self.layout = QtWidgets.QFormLayout()
+        self.layout.setSpacing(0)
+        self.layout.addRow(self.tableCountKey,self.tableCountField)
+        self.layout.addRow(self.fkCountKey,self.fkCountField)
+
+        self.mainLayout = QtWidgets.QVBoxLayout(self)
+        self.mainLayout.setAlignment(QtCore.Qt.AlignTop)
+        self.mainLayout.setContentsMargins(0, 0, 0, 0)
+        self.mainLayout.setSpacing(0)
+        self.mainLayout.addWidget(self.header)
+        self.mainLayout.addLayout(self.layout)
+
+    #############################################
+    #   INTERFACE
+    #################################
+
+    def updateData(self, tableCount, fkCount):
+        """
+        Fetch new information and fill the widget with data.
+        :type tableCount: int
+        :type fkCount: int
+        """
+        self.tableCountField.setValue(str(tableCount))
+        self.fkCountField.setValue(str(fkCount))
+
+
+
+#
+# #class SchemaInfo(QtWidgets.QWidget):
+#     def __init__(self, parent):
+#         super().__init__(parent)
+#         self.tableCountInfo = QtWidgets.QLabel(self)
+#         self.fkCountInfo = QtWidgets.QLabel(self)
+#         layout = QtWidgets.QVBoxLayout(self)
+#         layout.addWidget(self.tableCountInfo)
+#         layout.addWidget(self.fkCountInfo)
+#         self.setLayout(layout)
+
+
+    # def updateInfos(self, tableCount, fkCount):
+    #     self.tableCountInfo.setText(str(tableCount))
+    #     self.fkCountInfo.setText(str(fkCount))
+
+
+
+#############################################
+#   COMPONENTS
+#################################
+
+
+class BBHeader(QtWidgets.QLabel):
+    """
+    This class implements the header of properties section.
+    """
+    def __init__(self, *args):
+        """
+        Initialize the header.
+        """
+        super().__init__(*args)
+        self.setAlignment(QtCore.Qt.AlignLeft|QtCore.Qt.AlignVCenter)
+        self.setFixedHeight(24)
+
+
+class BBKey(QtWidgets.QLabel):
+    """
+    This class implements the key of an info field.
+    """
+    def __init__(self, *args):
+        """
+        Initialize the key.
+        """
+        super().__init__(*args)
+        self.setFixedSize(88, 20)
+
+
+class BBButton(QtWidgets.QPushButton):
+    """
+    This class implements the button to which associate a QtWidgets.QMenu instance of an info field.
+    """
+    def __init__(self,  *args):
+        """
+        Initialize the button.
+        """
+        super().__init__(*args)
+
+
+class BBInteger(IntegerField):
+    """
+    This class implements the integer value of an info field.
+    """
+    def __init__(self,  *args):
+        """
+        Initialize the field.
+        """
+        super().__init__(*args)
+        self.setFixedHeight(20)
+
+
+class BBString(StringField):
+    """
+    This class implements the string value of an info field.
+    """
+    def __init__(self,  *args):
+        """
+        Initialize the field.
+        """
+        super().__init__(*args)
+        self.setFixedHeight(20)
+
+
+class BBSelect(ComboBox):
+    """
+    This class implements the selection box of an info field.
+    """
+    def __init__(self,  *args):
+        """
+        Initialize the field.
+        """
+        super().__init__(*args)
+        self.setSizePolicy(QtWidgets.QSizePolicy.Ignored, QtWidgets.QSizePolicy.Ignored)
+        self.setFocusPolicy(QtCore.Qt.StrongFocus)
+        self.setScrollEnabled(False)
