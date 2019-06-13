@@ -82,9 +82,7 @@ from eddy.plugins.blackbird.schema import RelationalSchema
 # noinspection PyUnresolvedReferences
 from eddy.plugins.blackbird.widgets.Info import BBInfoWidget
 # noinspection PyUnresolvedReferences
-from eddy.plugins.blackbird.widgets.TableExplorer import BBTableExplorerWidget
-
-from blackbird.widgets.TableExplorer import TableExplorerWidget
+from eddy.plugins.blackbird.widgets.TableExplorer import TableExplorerWidget
 
 LOGGER = getLogger()
 

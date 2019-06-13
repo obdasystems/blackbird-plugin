@@ -32,7 +32,7 @@ class BBInfoWidget(QtWidgets.QScrollArea):
         connect(plugin.sgnSchemaChanged,self.onSchemaChanged)
 
         self.setContentsMargins(0, 0, 0, 0)
-        self.setMinimumSize(QtCore.QSize(216, 120))
+        self.setMinimumSize(QtCore.QSize(216, 12))
         self.setHorizontalScrollBarPolicy(QtCore.Qt.ScrollBarAlwaysOff)
         self.setVerticalScrollBarPolicy(QtCore.Qt.ScrollBarAsNeeded)
         self.setWidget(self.stacked)
@@ -42,12 +42,12 @@ class BBInfoWidget(QtWidgets.QScrollArea):
         BBInfoWidget {
           background: #FFFFFF;
         }
-        BBInfoWidget Header {
+        BBInfoWidget BBHeader {
           background: #5A5050;
           padding-left: 4px;
           color: #FFFFFF;
         }
-        BBInfoWidget Key {
+        BBInfoWidget BBKey {
           background: #BBDEFB;
           border-top: none;
           border-right: none;
@@ -55,16 +55,16 @@ class BBInfoWidget(QtWidgets.QScrollArea):
           border-left: none;
           padding: 0 0 0 4px;
         }
-        BBInfoWidget Button,
-        BBInfoWidget Button:focus,
-        BBInfoWidget Button:hover,
-        BBInfoWidget Button:hover:focus,
-        BBInfoWidget Button:pressed,
-        BBInfoWidget Button:pressed:focus,
-        BBInfoWidget Integer,
-        BBInfoWidget String,
-        BBInfoWidget Select,
-        BBInfoWidget Parent {
+        BBInfoWidget BBButton,
+        BBInfoWidget BBButton:focus,
+        BBInfoWidget BBButton:hover,
+        BBInfoWidget BBButton:hover:focus,
+        BBInfoWidget BBButton:pressed,
+        BBInfoWidget BBButton:pressed:focus,
+        BBInfoWidget BBInteger,
+        BBInfoWidget BBString,
+        BBInfoWidget BBSelect,
+        BBInfoWidget BBParent {
           background: #E3F2FD;
           border-top: none;
           border-right: none;
@@ -73,15 +73,15 @@ class BBInfoWidget(QtWidgets.QScrollArea):
           padding: 0 0 0 4px;
           text-align:left;
         }
-        BBInfoWidget Button::menu-indicator {
+        BBInfoWidget BBButton::menu-indicator {
           image: none;
         }
-        BBInfoWidget Select:!editable,
-        BBInfoWidget Select::drop-down:editable {
+        BBInfoWidget BBSelect:!editable,
+        BBInfoWidget BBSelect::drop-down:editable {
           background: #FFFFFF;
         }
-        BBInfoWidget Select:!editable:on,
-        BBInfoWidget Select::drop-down:editable:on {
+        BBInfoWidget BBSelect:!editable:on,
+        BBInfoWidget BBSelect::drop-down:editable:on {
           background: #FFFFFF;
         }
         BBInfoWidget QCheckBox {

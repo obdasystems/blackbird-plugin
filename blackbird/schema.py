@@ -123,7 +123,7 @@ class RelationalSchemaParser:
     def getOriginEntity(jsonEntity):
         fullIRI = jsonEntity["entityFullIRI"]
         shortIRI = jsonEntity["entityShortIRI"]
-        entityType = jsonEntity["entityType"]
+        entityType = EntityType.fromValue(jsonEntity["entityType"])
         return RelationalTableOriginEntity(fullIRI, shortIRI, entityType)
 
     @staticmethod
