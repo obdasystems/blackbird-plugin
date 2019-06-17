@@ -307,9 +307,10 @@ class TableExplorerWidget(QtWidgets.QWidget):
         :rtype: QtGui.QStandardItem
         """
         for i in self.model.findItems(self.parentKey(node), QtCore.Qt.MatchExactly):
-            n = i.child(0).data()
-            if node.type() is n.type():
-                return i
+            if i.child(0):
+                n = i.child(0).data()
+                if node.type() is n.type():
+                    return i
         return None
 
     def childFor(self, parent, diagram, node):

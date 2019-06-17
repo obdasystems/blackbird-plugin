@@ -226,6 +226,7 @@ class BlackbirdPlugin(AbstractPlugin):
 
         # INITIALIZE THE TABLE EXPLORER WIDGET
         tableExplorerWidget = TableExplorerWidget(self)
+
         tableExplorerWidget.setObjectName('blackbird_table_explorer')
         self.addWidget(tableExplorerWidget)
         # CREATE TOGGLE ACTIONS
@@ -290,9 +291,11 @@ class BlackbirdPlugin(AbstractPlugin):
 
         # CONFIGURE SIGNALS
         #connect(self.session.sgnReady, self.onSessionReady)
+        connect(self.widget('blackbird_table_explorer').sgnRelationalTableItemClicked, self.widget('blackbird_info').doSelectTable)
 
         # CREATE DOCKING AREA TABLE EXPLORER WIDGET
         self.session.addDockWidget(QtCore.Qt.RightDockWidgetArea, self.widget('table_explorer_dock'))
+
 
 
 
@@ -431,7 +434,7 @@ class BlackbirdPlugin(AbstractPlugin):
                 dialog.raise_()
                 #AGGANCIATI QUI CON IL PARSER
                 jsonSchema = json.loads(schema)
-                self.schema = RelationalSchemaParser.getSchema(jsonSchema, {})
+                self.schema = RelationalSchemaParser.getSchema(jsonSchema)
                 self.sgnSchemaChanged.emit(self.schema)
             else:
                 self.session.addNotification('Error generating schema: {}'.format(reply.errorString()))

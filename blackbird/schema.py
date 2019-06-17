@@ -57,31 +57,19 @@ class RelationalSchemaParser:
     #       return cls._instance
 
     @staticmethod
-    def getSchema(schema_json_data, actions_json_data):
-        schemaName = None
+    def getSchema(schema_json_data):
         tables = list()
-        #for item in schema_json_data:
-            #schemaName = item["schemaName"]
-            #jsonTables = item["tables"]
-            #for jsonTable in jsonTables:
-                #table = RelationalSchemaParser.getTable(jsonTable)
-                #tables.append(table)
+        schemaActions = list()
+        schemaForeignKeys = list()
         schemaName = schema_json_data["schemaName"]
         jsonTables = schema_json_data["tables"]
         for jsonTable in jsonTables:
-            table = RelationalSchemaParser.getTable(jsonTable)
+            table = RelationalSchemaParser.getTable(jsonTable, schemaActions, schemaForeignKeys)
             tables.append(table)
-        actions = list()
-        for item in actions_json_data:
-            subjectName = item["actionSubjectTableName"]
-            actionType = item["actionType"]
-            objectsNames = item["actionObjectsNames"]
-            action = RelationalTableAction(subjectName, actionType, objectsNames)
-            actions.append(action)
-        return RelationalSchema(schemaName, tables, actions)
+        return RelationalSchema(schemaName, tables, schemaActions, schemaForeignKeys)
 
     @staticmethod
-    def getTable(jsonTable):
+    def getTable(jsonTable, schemaActions, schemaForeignKeys):
         tableName = jsonTable["tableName"]
         entity = RelationalSchemaParser.getOriginEntity(jsonTable["entity"])
         columns = list()
@@ -106,8 +94,16 @@ class RelationalSchemaParser:
             for jsonFK in jsonFKs:
                 fk = RelationalSchemaParser.getForeignKey(jsonFK)
                 foreignKeys.append(fk)
+                schemaForeignKeys.append(fk)
         tableId = jsonTable["id"]
-        return RelationalTable(tableName, entity, columns, primaryKey, uniques, foreignKeys, tableId)
+        actions = list()
+        tableActions = jsonTable["tableActions"]
+        if tableActions:
+            for tableAction in tableActions:
+                action = RelationalSchemaParser.getTableAction(tableAction)
+                actions.append(action)
+                schemaActions.append(action)
+        return RelationalTable(tableName, entity, columns, primaryKey, uniques, foreignKeys, tableId, actions)
 
     @staticmethod
     def getColumn(jsonColumn):
@@ -134,7 +130,7 @@ class RelationalSchemaParser:
 
     @staticmethod
     def getUnique(jsonUnique):
-        name = jsonUnique["pkName"]
+        name = jsonUnique["uniqueName"]
         columnNames = jsonUnique["columnNames"]
         return UniqueConstraint(name, columnNames)
 
@@ -148,13 +144,20 @@ class RelationalSchemaParser:
         axiomType = jsonFK["axiomType"]
         return ForeignKeyConstraint(fkName, srcTableName, srcColumnNames, tgtTableName, tgtColumnNames, axiomType)
 
+    @staticmethod
+    def getTableAction(jsonAction):
+        subjectName = jsonAction["actionSubjectTableName"]
+        actionType = jsonAction["actionType"]
+        objectsNames = jsonAction["actionObjectsNames"]
+        return RelationalTableAction(subjectName, actionType, objectsNames)
+
 
 class RelationalSchema:
-    def __init__(self, name, tables, actions):
+    def __init__(self, name, tables, actions, foreignKeys):
         self._name = name
         self._tables = tables
         self._actions = actions
-        self._foreignKeys = list()
+        self._foreignKeys = foreignKeys
         if self._tables:
             for table in self._tables:
                 if table.foreignKeys:
@@ -189,7 +192,7 @@ class RelationalSchema:
 
 
 class RelationalTable:
-    def __init__(self, name, entity, columns, primary_key, uniques, foreign_keys, id):
+    def __init__(self, name, entity, columns, primary_key, uniques, foreign_keys, id, actions):
         self._name = name
         self._entity = entity
         self._columns = columns
@@ -197,6 +200,7 @@ class RelationalTable:
         self._uniques = uniques
         self._foreignKeys = foreign_keys
         self._id = id
+        self._actions = actions
 
     @property
     def name(self):
@@ -225,6 +229,10 @@ class RelationalTable:
     @property
     def id(self):
         return self._id
+
+    @property
+    def actions(self):
+        return  self._actions
 
     def getForeignKeyByName(self, fkName):
         if self._foreignKeys:

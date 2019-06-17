@@ -1,6 +1,8 @@
 from abc import ABCMeta, abstractmethod
 
 from PyQt5 import QtWidgets, QtCore
+from PyQt5.QtCore import Qt
+from PyQt5.QtWidgets import QTableWidget, QTableWidgetItem
 from eddy.core.datatypes.qt import Font
 from eddy.core.functions.misc import clamp, first
 from eddy.core.functions.signals import connect
@@ -8,6 +10,11 @@ from eddy.core.functions.signals import connect
 # noinspection PyUnresolvedReferences
 from eddy.plugins.blackbird.schema import RelationalSchema
 from eddy.ui.fields import IntegerField, StringField, ComboBox
+# noinspection PyUnresolvedReferences
+from eddy.plugins.blackbird.schema import RelationalTable
+# noinspection PyUnresolvedReferences
+from eddy.plugins.blackbird.schema import ForeignKeyConstraint
+
 
 class BBInfoWidget(QtWidgets.QScrollArea):
     """
@@ -28,11 +35,18 @@ class BBInfoWidget(QtWidgets.QScrollArea):
         self.infoEmpty = QtWidgets.QWidget(self.stacked)
 
         #self.schemaInfo = SchemaInfo(self)
-        self.schemaInfo = SchemaInfo(plugin.session,self)
+        self.schemaInfo = SchemaInfo(plugin.session,self.stacked)
         connect(plugin.sgnSchemaChanged,self.onSchemaChanged)
 
+        self.tableInfo = TableInfo(plugin.session,self.stacked)
+
+        self.fkInfo = None
+
+        self.stacked.addWidget(self.schemaInfo)
+        self.stacked.addWidget(self.tableInfo)
+
         self.setContentsMargins(0, 0, 0, 0)
-        self.setMinimumSize(QtCore.QSize(216, 12))
+        self.setMinimumSize(QtCore.QSize(216, 112))
         self.setHorizontalScrollBarPolicy(QtCore.Qt.ScrollBarAlwaysOff)
         self.setVerticalScrollBarPolicy(QtCore.Qt.ScrollBarAsNeeded)
         self.setWidget(self.stacked)
@@ -164,12 +178,25 @@ class BBInfoWidget(QtWidgets.QScrollArea):
         """
         self.diagram = diagram
 
-    def stack(self):
+    def stack(self, infoItem):
         """
         Set the current stacked widget.
         """
-        if self.schema:
-            self.stacked.setCurrentWidget(self.schemaInfo)
+        if infoItem:
+            if isinstance(infoItem, RelationalSchema):
+                show = self.schemaInfo
+            elif isinstance(infoItem, RelationalTable):
+                show = self.tableInfo
+            elif isinstance((infoItem, ForeignKeyConstraint)):
+                show = self.fkInfo
+
+            prev = self.stacked.currentWidget()
+            self.stacked.setCurrentWidget(show)
+            self.redraw()
+            if prev is not show:
+                scrollbar = self.verticalScrollBar()
+                scrollbar.setValue(0)
+
 
     @QtCore.pyqtSlot(RelationalSchema)
     def onSchemaChanged(self, schema):
@@ -177,6 +204,10 @@ class BBInfoWidget(QtWidgets.QScrollArea):
         foreignKeys = schema.foreignKeys
         self.schemaInfo.updateData(len(tables),len(foreignKeys))
 
+    @QtCore.pyqtSlot(RelationalTable)
+    def doSelectTable(self, table):
+        self.tableInfo.updateData(table)
+        self.stack(table)
 
 #############################################
 #   INFO WIDGETS
@@ -227,6 +258,9 @@ class SchemaInfo(BBAbstractInfo):
     def __init__(self,session,parent=None):
         super().__init__(session,parent)
 
+        self.header = BBHeader('Schema Info')
+        self.header.setFont(Font('Roboto', 12))
+
         self.tableCountKey = BBKey('Tables count')
         self.tableCountKey.setFont(Font('Roboto', 12))
         self.tableCountField = BBInteger(self)
@@ -238,9 +272,6 @@ class SchemaInfo(BBAbstractInfo):
         self.fkCountField = BBInteger(self)
         self.fkCountField.setFont(Font('Roboto', 12))
         self.fkCountField.setReadOnly(True)
-
-        self.header = BBHeader('Schema properties')
-        self.header.setFont(Font('Roboto',12))
 
         self.layout = QtWidgets.QFormLayout()
         self.layout.setSpacing(0)
@@ -267,25 +298,181 @@ class SchemaInfo(BBAbstractInfo):
         self.tableCountField.setValue(str(tableCount))
         self.fkCountField.setValue(str(fkCount))
 
+class TableInfo(BBAbstractInfo):
+    def __init__(self,session,parent=None):
+        super().__init__(session,parent)
 
+        self.header = BBHeader('Schema Info')
+        self.header.setFont(Font('Roboto', 12))
 
-#
-# #class SchemaInfo(QtWidgets.QWidget):
-#     def __init__(self, parent):
-#         super().__init__(parent)
-#         self.tableCountInfo = QtWidgets.QLabel(self)
-#         self.fkCountInfo = QtWidgets.QLabel(self)
-#         layout = QtWidgets.QVBoxLayout(self)
-#         layout.addWidget(self.tableCountInfo)
-#         layout.addWidget(self.fkCountInfo)
-#         self.setLayout(layout)
+        self.tableWidget = QTableWidget(self)
+        self.tableWidget.setColumnCount(6)
+        self.tableWidget.verticalHeader().setVisible(False)
+        self.tableWidget.horizontalHeader().setVisible(False)
+        self.tableWidget.resizeColumnsToContents()
 
+        self.mainLayout = QtWidgets.QVBoxLayout(self)
+        self.mainLayout.setAlignment(QtCore.Qt.AlignTop)
+        self.mainLayout.setContentsMargins(0, 0, 0, 0)
+        self.mainLayout.setSpacing(0)
+        self.mainLayout.addWidget(self.header)
+        self.mainLayout.addWidget(self.tableWidget)
 
-    # def updateInfos(self, tableCount, fkCount):
-    #     self.tableCountInfo.setText(str(tableCount))
-    #     self.fkCountInfo.setText(str(fkCount))
+    #############################################
+    #   INTERFACE
+    #################################
 
+    def updateData(self, table):
+        """
+        Fetch new information and fill the widget with data.
+        :type tableCount: RelationalTable
+        """
+        self.table = table
+        self.tableName = table.name
+        self.columns = table.columns
+        self.primaryKey = table.primaryKey
+        self.uniques = table.uniques
+        self.foreignKeys = table.foreignKeys
+        self.actions = table.actions
 
+        pkColNames = self.primaryKey.columns
+
+        fkIndexToRowIndexes = {}
+        iSrc = 0
+        for fk in self.foreignKeys:
+            if fk.srcTable == self.tableName:
+                fkColumnNames = fk.srcColumns
+                fkRowIndexes = []
+                for column in self.columns:
+                    if column.columnName in fkColumnNames:
+                        fkRowIndexes.append(self.columns.index(column))
+                fkIndexToRowIndexes[iSrc] = fkRowIndexes
+                iSrc += 1
+
+        uniqueIndexToRowIndexes = {}
+        iSrc = 0
+        for unq in self.uniques:
+            uniqueNames = unq.columns
+            uniqueRowIndexes = []
+            for column in self.columns:
+                if column.columnName in uniqueNames:
+                    uniqueRowIndexes.append(self.columns.index(column))
+            uniqueIndexToRowIndexes[iSrc] = uniqueRowIndexes
+            iSrc += 1
+
+        self.header.setText(self.tableName)
+        self.tableWidget.setColumnCount(6)
+        self.tableWidget.setRowCount(len(self.columns))
+
+        for column in self.columns:
+            rowIndex = self.columns.index(column)
+            nameStr = column.columnName
+            typeStr = column.columnType
+
+            nullable = column.isNullable
+            nullStr = " NULLABLE "
+            if not nullable:
+                nullStr = " NOT NULL "
+
+            pkStr = " - "
+            if nameStr in pkColNames:
+                pkStr = " PK "
+
+            fkStr = " - "
+            fks = []
+            for k,v in fkIndexToRowIndexes.items():
+                if rowIndex in v:
+                    fks.append(k)
+            if len(fks)>0:
+                fkIndexes = ",".join(map(str,fks))
+                fkStr = "FK {}".format(fkIndexes)
+
+            uqStr = " - "
+            uqs = []
+            for k,v in uniqueIndexToRowIndexes.items():
+                if rowIndex in v:
+                    uqs.append(k)
+            if len(uqs)>0:
+                uqsIndexes = ",".join(map(str,uqs))
+                uqStr = "UQ {}".format(uqsIndexes)
+
+            self.tableWidget.setItem(rowIndex, 0, QTableWidgetItem(pkStr))
+            self.tableWidget.setItem(rowIndex, 1, QTableWidgetItem(fkStr))
+            self.tableWidget.setItem(rowIndex, 2, QTableWidgetItem(uqStr))
+            self.tableWidget.setItem(rowIndex, 3, QTableWidgetItem(nameStr))
+            self.tableWidget.setItem(rowIndex, 4, QTableWidgetItem(typeStr))
+            self.tableWidget.setItem(rowIndex, 5, QTableWidgetItem(nullStr))
+
+        # Remove headers
+        self.tableWidget.verticalHeader().setVisible(False)
+        self.tableWidget.horizontalHeader().setVisible(False)
+
+        # Do the resize of the columns by content
+        self.tableWidget.resizeColumnsToContents()
+
+class ForeignKeyInfo(BBAbstractInfo):
+    def __init__(self,session,parent=None):
+        super().__init__(session,parent)
+
+        self.header = BBHeader('Schema Info')
+        self.header.setFont(Font('Roboto', 12))
+
+        self.fkNameKey = BBKey('FK Name')
+        self.fkNameKey.setFont(Font('Roboto', 12))
+        self.fkNameField = BBString(self)
+        self.fkNameField.setFont(Font('Roboto', 12))
+        self.fkNameField.setReadOnly(True)
+
+        self.srcTableKey = BBKey('SRC Table')
+        self.srcTableKey.setFont(Font('Roboto', 12))
+        self.srcTableField = BBString(self)
+        self.srcTableField.setFont(Font('Roboto', 12))
+        self.srcTableField.setReadOnly(True)
+
+        self.srcColumnsKey = BBKey('SRC Columns')
+        self.srcColumnsKey.setFont(Font('Roboto', 12))
+        self.srcColumnsField = BBString(self)
+        self.srcColumnsField.setFont(Font('Roboto', 12))
+        self.srcColumnsField.setReadOnly(True)
+
+        self.tgtTableKey = BBKey('TGT Table')
+        self.tgtTableKey.setFont(Font('Roboto', 12))
+        self.tgtTableField = BBString(self)
+        self.tgtTableField.setFont(Font('Roboto', 12))
+        self.tgtTableField.setReadOnly(True)
+
+        self.tgtColumnsKey = BBKey('TGT Columns')
+        self.tgtColumnsKey.setFont(Font('Roboto', 12))
+        self.tgtColumnsField = BBString(self)
+        self.tgtColumnsField.setFont(Font('Roboto', 12))
+        self.tgtColumnsField.setReadOnly(True)
+
+        self.layout = QtWidgets.QFormLayout()
+        self.layout.setSpacing(0)
+        self.layout.addRow(self.fkNameKey,self.fkNameField)
+        self.layout.addRow(self.srcTableKey,self.srcTableField)
+        self.layout.addRow(self.srcColumnsKey, self.srcColumnsField)
+        self.layout.addRow(self.tgtTableKey, self.tgtTableField)
+        self.layout.addRow(self.tgtColumnsKey, self.tgtColumnsField)
+
+        self.mainLayout = QtWidgets.QVBoxLayout(self)
+        self.mainLayout.setAlignment(QtCore.Qt.AlignTop)
+        self.mainLayout.setContentsMargins(0, 0, 0, 0)
+        self.mainLayout.setSpacing(0)
+        self.mainLayout.addWidget(self.header)
+        self.mainLayout.addLayout(self.layout)
+
+    #############################################
+    #   INTERFACE
+    #################################
+
+    def updateData(self, fk):
+        """
+        Fetch new information and fill the widget with data.
+        :type tableCount: ForeignKeyConstraint
+        """
+        self.tableCountField.setValue(str(tableCount))
+        self.fkCountField.setValue(str(fkCount))
 
 #############################################
 #   COMPONENTS
