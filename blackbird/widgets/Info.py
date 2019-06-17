@@ -447,6 +447,12 @@ class ForeignKeyInfo(BBAbstractInfo):
         self.tgtColumnsField.setFont(Font('Roboto', 12))
         self.tgtColumnsField.setReadOnly(True)
 
+        self.axiomKey = BBKey('Axiom Type')
+        self.axiomKey.setFont(Font('Roboto', 12))
+        self.axiomField = BBString(self)
+        self.axiomField.setFont(Font('Roboto', 12))
+        self.axiomField.setReadOnly(True)
+
         self.layout = QtWidgets.QFormLayout()
         self.layout.setSpacing(0)
         self.layout.addRow(self.fkNameKey,self.fkNameField)
@@ -471,8 +477,13 @@ class ForeignKeyInfo(BBAbstractInfo):
         Fetch new information and fill the widget with data.
         :type tableCount: ForeignKeyConstraint
         """
-        self.tableCountField.setValue(str(tableCount))
-        self.fkCountField.setValue(str(fkCount))
+        self.fkNameField.setValue(fk.name)
+        self.srcTableField.setValue(fk.srcTable)
+        srcColumnsStr = ', '.join(map(str, fk.srcColumns))
+        self.srcColumnsField.setValue(srcColumnsStr)
+        self.tgtTableField.setValue(fk.tgtTable)
+        tgtColumnsStr = ', '.join(map(str, fk.tgtColumns))
+        self.tgtColumnsField.setValue(tgtColumnsStr)
 
 #############################################
 #   COMPONENTS
