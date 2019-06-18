@@ -83,6 +83,8 @@ from eddy.plugins.blackbird.schema import RelationalSchema
 from eddy.plugins.blackbird.widgets.Info import BBInfoWidget
 # noinspection PyUnresolvedReferences
 from eddy.plugins.blackbird.widgets.TableExplorer import TableExplorerWidget
+# noinspection PyUnresolvedReferences
+from eddy.plugins.blackbird.widgets.ForeignKeyExplorer import ForeignKeyExplorerWidget
 
 LOGGER = getLogger()
 
@@ -211,7 +213,11 @@ class BlackbirdPlugin(AbstractPlugin):
         progress.setObjectName('progress')
         self.addWidget(progress)
 
-        # INITIALIZE THE INFO WIDGET
+        #####################################
+        #                                   #
+        # INITIALIZE THE SCHEMA INFO WIDGET #
+        #                                   #
+        #####################################
         infoWidget = BBInfoWidget(self)
         infoWidget.setObjectName('blackbird_info')
         self.addWidget(infoWidget)
@@ -224,7 +230,79 @@ class BlackbirdPlugin(AbstractPlugin):
         self.addWidget(infoDockWidget)
         self.session.addDockWidget(QtCore.Qt.RightDockWidgetArea, self.widget('blackbird_info_dock'))
 
-        # INITIALIZE THE TABLE EXPLORER WIDGET
+        ######################################
+        #                                    #
+        # INITIALIZE THE FOK EXPLORER WIDGET #
+        #                                    #
+        ######################################
+        fkExplorerWidget = ForeignKeyExplorerWidget(self)
+
+        fkExplorerWidget.setObjectName('blackbird_fk_explorer')
+        self.addWidget(fkExplorerWidget)
+        # CREATE TOGGLE ACTIONS
+        group = QtWidgets.QActionGroup(self, objectName='fk_explorer_item_toggle')
+        group.setExclusive(False)
+        # for item in fkExplorerWidget.items:
+        #     action = QtWidgets.QAction(item.realName.title(), group, objectName=item.name, checkable=True)
+        #     action.setChecked(True)
+        #     action.setData(item)
+        #     action.setFont(Font('Roboto', 11))
+        #     connect(action.triggered, fkExplorerWidget.onMenuButtonClicked)
+        #     group.addAction(action)
+        self.addAction(group)
+
+        group = QtWidgets.QActionGroup(self, objectName='fk_explorer_status_toggle')
+        group.setExclusive(False)
+        # for status in fkExplorerWidget.status:
+        #     action = QtWidgets.QAction(status.value if status.value else 'Default', group, objectName=status.name, checkable=True)
+        #     action.setChecked(True)
+        #     action.setData(status)
+        #     action.setFont(Font('Roboto', 11))
+        #     connect(action.triggered, fkExplorerWidget.onMenuButtonClicked)
+        #     group.addAction(action)
+        self.addAction(group)
+
+        # CREATE TOGGLE MENU
+        menu = QtWidgets.QMenu(objectName='fk_explorer_toggle')
+        menu.addSection('Items')
+        menu.addActions(self.action('fk_explorer_item_toggle').actions())
+        menu.addSection('Description')
+        menu.addActions(self.action('fk_explorer_status_toggle').actions())
+        self.addMenu(menu)
+
+        # CREATE CONTROL WIDGET
+        button = QtWidgets.QToolButton(objectName='fk_explorer_toggle')
+        button.setIcon(QtGui.QIcon(':/icons/18/ic_settings_black'))
+        button.setContentsMargins(0, 0, 0, 0)
+        button.setFixedSize(18, 18)
+        button.setFocusPolicy(QtCore.Qt.NoFocus)
+        button.setMenu(self.menu('fk_explorer_toggle'))
+        button.setPopupMode(QtWidgets.QToolButton.InstantPopup)
+        self.addWidget(button)
+
+        # CREATE DOCKING AREA WIDGET
+        fkExplorerDockWidget = DockWidget('Foreign Keys Explorer', QtGui.QIcon(':icons/18/ic_explore_black'), self.session)
+        fkExplorerDockWidget.addTitleBarButton(self.widget('fk_explorer_toggle'))
+        fkExplorerDockWidget.installEventFilter(self)
+        fkExplorerDockWidget.setAllowedAreas(QtCore.Qt.LeftDockWidgetArea | QtCore.Qt.RightDockWidgetArea | QtCore.Qt.BottomDockWidgetArea)
+        fkExplorerDockWidget.setObjectName('fk_explorer_dock')
+        fkExplorerDockWidget.setWidget(self.widget('blackbird_fk_explorer'))
+        self.addWidget(fkExplorerDockWidget)
+
+        # CREATE SHORTCUTS
+        action = fkExplorerDockWidget.toggleViewAction()
+        action.setParent(self.session)
+        action.setShortcut(QtGui.QKeySequence('Alt+4'))
+
+        # CREATE ENTRY IN VIEW MENU
+        menu = self.session.menu('view')
+        menu.addAction(self.widget('fk_explorer_dock').toggleViewAction())
+
+        ########################################
+        #                                      #
+        # INITIALIZE THE TABLE EXPLORER WIDGET #
+        #                                      #
+        ########################################
         tableExplorerWidget = TableExplorerWidget(self)
 
         tableExplorerWidget.setObjectName('blackbird_table_explorer')
@@ -271,10 +349,12 @@ class BlackbirdPlugin(AbstractPlugin):
         self.addWidget(button)
 
         # CREATE DOCKING AREA WIDGET
-        tableExplorerDockWidget = DockWidget('Schema Tables Explorer', QtGui.QIcon(':icons/18/ic_explore_black'), self.session)
+        tableExplorerDockWidget = DockWidget('Schema Tables Explorer', QtGui.QIcon(':icons/18/ic_explore_black'),
+                                             self.session)
         tableExplorerDockWidget.addTitleBarButton(self.widget('table_explorer_toggle'))
         tableExplorerDockWidget.installEventFilter(self)
-        tableExplorerDockWidget.setAllowedAreas(QtCore.Qt.LeftDockWidgetArea | QtCore.Qt.RightDockWidgetArea | QtCore.Qt.BottomDockWidgetArea)
+        tableExplorerDockWidget.setAllowedAreas(
+            QtCore.Qt.LeftDockWidgetArea | QtCore.Qt.RightDockWidgetArea | QtCore.Qt.BottomDockWidgetArea)
         tableExplorerDockWidget.setObjectName('table_explorer_dock')
         tableExplorerDockWidget.setWidget(self.widget('blackbird_table_explorer'))
         self.addWidget(tableExplorerDockWidget)
@@ -289,13 +369,22 @@ class BlackbirdPlugin(AbstractPlugin):
         menu = self.session.menu('view')
         menu.addAction(self.widget('table_explorer_dock').toggleViewAction())
 
-        # CONFIGURE SIGNALS
+        #####################
+        #                   #
+        # CONFIGURE SIGNALS #
+        #                   #
+        #####################
         #connect(self.session.sgnReady, self.onSessionReady)
         connect(self.widget('blackbird_table_explorer').sgnRelationalTableItemClicked, self.widget('blackbird_info').doSelectTable)
+        connect(self.widget('blackbird_fk_explorer').sgnForeignKeyItemClicked, self.widget('blackbird_info').doSelectForeignKey)
 
-        # CREATE DOCKING AREA TABLE EXPLORER WIDGET
+        #################
+        #               #
+        # DOCKING AREAS #
+        #               #
+        #################
         self.session.addDockWidget(QtCore.Qt.RightDockWidgetArea, self.widget('table_explorer_dock'))
-
+        self.session.addDockWidget(QtCore.Qt.RightDockWidgetArea, self.widget('fk_explorer_dock'))
 
 
 

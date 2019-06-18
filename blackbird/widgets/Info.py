@@ -40,10 +40,11 @@ class BBInfoWidget(QtWidgets.QScrollArea):
 
         self.tableInfo = TableInfo(plugin.session,self.stacked)
 
-        self.fkInfo = None
+        self.fkInfo = ForeignKeyInfo(plugin.session,self.stacked)
 
         self.stacked.addWidget(self.schemaInfo)
         self.stacked.addWidget(self.tableInfo)
+        self.stacked.addWidget(self.fkInfo)
 
         self.setContentsMargins(0, 0, 0, 0)
         self.setMinimumSize(QtCore.QSize(216, 112))
@@ -187,7 +188,7 @@ class BBInfoWidget(QtWidgets.QScrollArea):
                 show = self.schemaInfo
             elif isinstance(infoItem, RelationalTable):
                 show = self.tableInfo
-            elif isinstance((infoItem, ForeignKeyConstraint)):
+            elif isinstance(infoItem, ForeignKeyConstraint):
                 show = self.fkInfo
 
             prev = self.stacked.currentWidget()
@@ -203,11 +204,17 @@ class BBInfoWidget(QtWidgets.QScrollArea):
         tables = schema.tables
         foreignKeys = schema.foreignKeys
         self.schemaInfo.updateData(len(tables),len(foreignKeys))
+        self.stack(schema)
 
     @QtCore.pyqtSlot(RelationalTable)
     def doSelectTable(self, table):
         self.tableInfo.updateData(table)
         self.stack(table)
+
+    @QtCore.pyqtSlot(ForeignKeyConstraint)
+    def doSelectForeignKey(self, fk):
+        self.fkInfo.updateData(fk)
+        self.stack(fk)
 
 #############################################
 #   INFO WIDGETS
