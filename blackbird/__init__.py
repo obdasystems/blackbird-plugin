@@ -86,6 +86,8 @@ from eddy.plugins.blackbird.widgets.TableExplorer import TableExplorerWidget
 # noinspection PyUnresolvedReferences
 from eddy.plugins.blackbird.widgets.ForeignKeyExplorer import ForeignKeyExplorerWidget
 
+from blackbird.widgets.ActionExplorer import BBActionWidget
+
 LOGGER = getLogger()
 
 
@@ -230,9 +232,26 @@ class BlackbirdPlugin(AbstractPlugin):
         self.addWidget(infoDockWidget)
         self.session.addDockWidget(QtCore.Qt.RightDockWidgetArea, self.widget('blackbird_info_dock'))
 
+        #####################################
+        #                                   #
+        # INITIALIZE THE ACTION INFO WIDGET #
+        #                                   #
+        #####################################
+        actionWidget = BBActionWidget(self)
+        actionWidget.setObjectName('blackbird_action_info')
+        self.addWidget(actionWidget)
+        # CREATE DOCKING AREA ACTION INFO WIDGET
+        actionDockWidget = DockWidget('Action Info', QtGui.QIcon(':/icons/18/ic_info_outline_black'), self.session)
+        actionDockWidget.installEventFilter(self)
+        actionDockWidget.setAllowedAreas(QtCore.Qt.LeftDockWidgetArea | QtCore.Qt.RightDockWidgetArea | QtCore.Qt.BottomDockWidgetArea)
+        actionDockWidget.setObjectName('blackbird_action_info_dock')
+        actionDockWidget.setWidget(self.widget('blackbird_action_info'))
+        self.addWidget(actionDockWidget)
+        self.session.addDockWidget(QtCore.Qt.RightDockWidgetArea, self.widget('blackbird_action_info_dock'))
+
         ######################################
         #                                    #
-        # INITIALIZE THE FOK EXPLORER WIDGET #
+        # INITIALIZE THE FK EXPLORER WIDGET #
         #                                    #
         ######################################
         fkExplorerWidget = ForeignKeyExplorerWidget(self)
@@ -377,6 +396,7 @@ class BlackbirdPlugin(AbstractPlugin):
         #connect(self.session.sgnReady, self.onSessionReady)
         connect(self.widget('blackbird_table_explorer').sgnRelationalTableItemClicked, self.widget('blackbird_info').doSelectTable)
         connect(self.widget('blackbird_fk_explorer').sgnForeignKeyItemClicked, self.widget('blackbird_info').doSelectForeignKey)
+        #connect(self.widget('blackbird_table_explorer').sgnRelationalTableItemClicked,self.widget('blackbird_action_info').doSelectTable)
 
         #################
         #               #
