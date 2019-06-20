@@ -422,6 +422,6 @@ class RelationalTableAction:
         return self._actionObjectsNames
 
     def __str__(self):
-        objectTablesStr = ",".join(map(str, self.objectTables))
+        objectTablesStr = ",".join(map(str, self._actionObjectsNames))
         return 'actionSubjectTableName: {} \nActionType: {} \n' \
-               'actionObjectsNames: [{}]'.format(self.subjectTable, self.actionType, objectTablesStr)
+               'actionObjectsNames: [{}]'.format(self._actionSubjectTableName, self.actionType, objectTablesStr)

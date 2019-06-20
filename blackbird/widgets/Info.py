@@ -421,14 +421,14 @@ class ForeignKeyInfo(BBAbstractInfo):
     def __init__(self,session,parent=None):
         super().__init__(session,parent)
 
-        self.header = BBHeader('Schema Info')
+        self.header = BBHeader('')
         self.header.setFont(Font('Roboto', 12))
 
-        self.fkNameKey = BBKey('FK Name')
-        self.fkNameKey.setFont(Font('Roboto', 12))
-        self.fkNameField = BBString(self)
-        self.fkNameField.setFont(Font('Roboto', 12))
-        self.fkNameField.setReadOnly(True)
+        # self.fkNameKey = BBKey('FK Name')
+        # self.fkNameKey.setFont(Font('Roboto', 12))
+        # self.fkNameField = BBString(self)
+        # self.fkNameField.setFont(Font('Roboto', 12))
+        # self.fkNameField.setReadOnly(True)
 
         self.srcTableKey = BBKey('SRC Table')
         self.srcTableKey.setFont(Font('Roboto', 12))
@@ -462,7 +462,7 @@ class ForeignKeyInfo(BBAbstractInfo):
 
         self.layout = QtWidgets.QFormLayout()
         self.layout.setSpacing(0)
-        self.layout.addRow(self.fkNameKey,self.fkNameField)
+        #self.layout.addRow(self.fkNameKey,self.fkNameField)
         self.layout.addRow(self.srcTableKey,self.srcTableField)
         self.layout.addRow(self.srcColumnsKey, self.srcColumnsField)
         self.layout.addRow(self.tgtTableKey, self.tgtTableField)
@@ -484,7 +484,8 @@ class ForeignKeyInfo(BBAbstractInfo):
         Fetch new information and fill the widget with data.
         :type tableCount: ForeignKeyConstraint
         """
-        self.fkNameField.setValue(fk.name)
+        self.header.setText(fk.name)
+        #self.fkNameField.setValue(fk.name)
         self.srcTableField.setValue(fk.srcTable)
         srcColumnsStr = ', '.join(map(str, fk.srcColumns))
         self.srcColumnsField.setValue(srcColumnsStr)

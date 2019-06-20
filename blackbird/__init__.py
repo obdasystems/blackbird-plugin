@@ -85,8 +85,10 @@ from eddy.plugins.blackbird.widgets.Info import BBInfoWidget
 from eddy.plugins.blackbird.widgets.TableExplorer import TableExplorerWidget
 # noinspection PyUnresolvedReferences
 from eddy.plugins.blackbird.widgets.ForeignKeyExplorer import ForeignKeyExplorerWidget
-
-from blackbird.widgets.ActionExplorer import BBActionWidget
+# noinspection PyUnresolvedReferences
+from eddy.plugins.blackbird.schema import RelationalTableAction
+# noinspection PyUnresolvedReferences
+from eddy.plugins.blackbird.widgets.ActionExplorer import BBActionWidget
 
 LOGGER = getLogger()
 
@@ -396,7 +398,9 @@ class BlackbirdPlugin(AbstractPlugin):
         #connect(self.session.sgnReady, self.onSessionReady)
         connect(self.widget('blackbird_table_explorer').sgnRelationalTableItemClicked, self.widget('blackbird_info').doSelectTable)
         connect(self.widget('blackbird_fk_explorer').sgnForeignKeyItemClicked, self.widget('blackbird_info').doSelectForeignKey)
-        #connect(self.widget('blackbird_table_explorer').sgnRelationalTableItemClicked,self.widget('blackbird_action_info').doSelectTable)
+        connect(self.widget('blackbird_table_explorer').sgnRelationalTableItemClicked, self.widget('blackbird_action_info').doSelectTable)
+
+        connect(self.widget('blackbird_action_info').sgnActionButtonClicked, self.onSchemaActionApplied)
 
         #################
         #               #
@@ -514,6 +518,23 @@ class BlackbirdPlugin(AbstractPlugin):
                 <p>{}</p>""".format(e)))
             LOGGER.exception(e)
 
+    @QtCore.pyqtSlot(RelationalSchema,RelationalTableAction)
+    def onSchemaActionApplied(self,schema, action):
+        """
+        Executed when an action has been applied over the current schema.
+        """
+        try:
+            reply = self.nmanager.putActionToSchema(schema.name, action)
+            # We deal with network errors in the slot connected to the finished()
+            # signal since it always follows the error() signal
+            connect(reply.finished, self.onSchemaActionCompleted)
+        except Exception as e:
+            self.widget('progress').hide()
+            self.session.addNotification(dedent("""\
+                <b><font color="#7E0B17">ERROR</font></b>: Could not connect to Blackbird Engine.<br/>
+                <p>{}</p>""".format(e)))
+            LOGGER.exception(e)
+
     @QtCore.pyqtSlot()
     def onDiagramExportFailure(self):
         """
@@ -542,6 +563,31 @@ class BlackbirdPlugin(AbstractPlugin):
                 dialog.show()
                 dialog.raise_()
                 #AGGANCIATI QUI CON IL PARSER
+                jsonSchema = json.loads(schema)
+                self.schema = RelationalSchemaParser.getSchema(jsonSchema)
+                self.sgnSchemaChanged.emit(self.schema)
+            else:
+                self.session.addNotification('Error generating schema: {}'.format(reply.errorString()))
+                LOGGER.error('Error generating schema: {}'.format(reply.errorString()))
+        finally:
+            self.widget('progress').hide()
+
+    @QtCore.pyqtSlot()
+    def onSchemaActionCompleted(self):
+        """
+        Executed when an action over the current schema completes.
+        """
+        try:
+            reply = self.sender()
+            reply.deleteLater()
+            assert reply.isFinished()
+            # noinspection PyArgumentList
+            if reply.error() == QtNetwork.QNetworkReply.NoError:
+                schema = str(reply.readAll(), encoding='utf-8')
+                dialog = BlackbirdOutputDialog('', json.dumps(json.loads(schema), indent=2), self.session)
+                dialog.show()
+                dialog.raise_()
+                # AGGANCIATI QUI CON IL PARSER
                 jsonSchema = json.loads(schema)
                 self.schema = RelationalSchemaParser.getSchema(jsonSchema)
                 self.sgnSchemaChanged.emit(self.schema)

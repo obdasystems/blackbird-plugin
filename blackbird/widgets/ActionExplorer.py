@@ -1,8 +1,8 @@
 from abc import ABCMeta, abstractmethod
 
 from PyQt5 import QtWidgets, QtCore
-from PyQt5.QtCore import Qt
-from PyQt5.QtWidgets import QTableWidget, QTableWidgetItem
+from PyQt5.QtCore import Qt, pyqtSlot
+from PyQt5.QtWidgets import QTableWidget, QTableWidgetItem, QPushButton
 from eddy.core.datatypes.qt import Font
 from eddy.core.functions.misc import clamp, first
 from eddy.core.functions.signals import connect
@@ -18,14 +18,19 @@ from eddy.plugins.blackbird.schema import ForeignKeyConstraint
 from eddy.plugins.blackbird.schema import RelationalTableAction
 # noinspection PyUnresolvedReferences
 from eddy.plugins.blackbird.widgets.Info import BBAbstractInfo, BBHeader, BBKey, BBInteger, BBString
-
-from blackbird.widgets.Info import BBButton
+# noinspection PyUnresolvedReferences
+from eddy.plugins.blackbird.widgets.Info import BBButton
+# noinspection PyUnresolvedReferences
+from eddy.plugins.blackbird.dialogs import BlackbirdOutputDialog
 
 
 class BBActionWidget(QtWidgets.QScrollArea):
     """
-    This class implements the information box widget.
+    This class implements the action information box widget.
     """
+
+    # segnale emesso se schiaccio pulsante corrispondente ad action su schema
+    sgnActionButtonClicked = QtCore.pyqtSignal(RelationalSchema, RelationalTableAction)
     def __init__(self, plugin):
         """
         Initialize the info box.
@@ -34,13 +39,16 @@ class BBActionWidget(QtWidgets.QScrollArea):
         super().__init__(plugin.session)
 
         self.diagram = None
+        self._schema = None
         self.plugin = plugin
 
         self.stacked = QtWidgets.QStackedWidget(self)
         self.stacked.setContentsMargins(0, 0, 0, 0)
         self.infoEmpty = QtWidgets.QWidget(self.stacked)
 
+        #self.actionInfo = ActionInfo(plugin.session,self.stacked,self.plugin.schema)
         self.actionInfo = ActionInfo(plugin.session,self.stacked)
+        connect(self.actionInfo.sgnActionButtonClicked, self.doApplyAction)
         connect(plugin.sgnSchemaChanged,self.onSchemaChanged)
 
         self.stacked.addWidget(self.actionInfo)
@@ -118,7 +126,7 @@ class BBActionWidget(QtWidgets.QScrollArea):
 
     @property
     def schema(self):
-        return self.plugin.schema
+        return self._schema
 
     @property
     def project(self):
@@ -200,6 +208,7 @@ class BBActionWidget(QtWidgets.QScrollArea):
 
     @QtCore.pyqtSlot(RelationalSchema)
     def onSchemaChanged(self, schema):
+        self._schema = schema
         actions = schema.actions
         self.actionInfo.updateData(actions)
         self.stack(actions)
@@ -209,6 +218,11 @@ class BBActionWidget(QtWidgets.QScrollArea):
         actions = table.actions
         self.actionInfo.updateData(actions)
         self.stack(actions)
+        self.redraw()
+
+    @QtCore.pyqtSlot(RelationalTableAction)
+    def doApplyAction(self, action):
+        self.sgnActionButtonClicked.emit(self.schema,action)
 
 #############################################
 #   INFO WIDGETS
@@ -216,15 +230,28 @@ class BBActionWidget(QtWidgets.QScrollArea):
 
 
 class ActionInfo(BBAbstractInfo):
-    def __init__(self,session,parent=None):
+    # segnale emesso se schiaccio pulsante corrispondente ad action su schema
+    sgnActionButtonClicked = QtCore.pyqtSignal(RelationalTableAction)
+
+    def __init__(self,session,parent=None, schema=None):
         super().__init__(session,parent)
-
-        self.actions = []
-
+        self.widgets = []
+        self.layouts = []
         self.mainLayout = QtWidgets.QVBoxLayout(self)
         self.mainLayout.setAlignment(QtCore.Qt.AlignTop)
         self.mainLayout.setContentsMargins(0, 0, 0, 0)
         self.mainLayout.setSpacing(0)
+
+    #############################################
+    #   SLOTS
+    #################################
+    @pyqtSlot(RelationalTableAction)
+    def applyAction(self,action):
+        dialog = BlackbirdOutputDialog('ACTION CLICKED', '{}'.format(action), self.session)
+        dialog.show()
+        dialog.raise_()
+        self.sgnActionButtonClicked.emit(action)
+
 
     #############################################
     #   INTERFACE
@@ -236,6 +263,14 @@ class ActionInfo(BBAbstractInfo):
         :type actions: list
         :
         """
+        for widg in self.widgets:
+            self.mainLayout.removeWidget(widg)
+        self.widgets = []
+
+        for lay in self.layouts:
+            self.mainLayout.removeItem(lay)
+        self.layouts = []
+
         for index, action in enumerate(actions):
             subj = action.actionSubjectTableName
             type = action.actionType
@@ -275,12 +310,46 @@ class ActionInfo(BBAbstractInfo):
             objStr = ", ".join(map(str, objs))
             objsField.setValue(objStr)
 
+            button = ActionButton(action,'Apply {}'.format(index), self)
+            button.setFont(Font('Roboto', 12))
+            connect(button.sgnActionButtonClicked,self.applyAction)
+
             layout = QtWidgets.QFormLayout()
             layout.setSpacing(0)
             layout.addRow(subjKey, subjField)
             layout.addRow(typeKey, typeField)
             layout.addRow(objsKey, objsField)
+            layout.addRow(button, None)
 
+            self.widgets.append(header)
             self.mainLayout.addWidget(header)
-            self.mainLayout.addLayout(headerLayout)
+            #self.mainLayout.addLayout(headerLayout)
+            self.layouts.append(layout)
             self.mainLayout.addLayout(layout)
+
+#############################################
+#   COMPONENTS
+#################################
+class ActionButton(QtWidgets.QPushButton):
+    """
+    This class implements the button to apply an action to a schema
+    """
+    sgnActionButtonClicked = QtCore.pyqtSignal(RelationalTableAction)
+    def __init__(self, action, label, actionInfo):
+        """
+        Initialize the button.
+        """
+        super().__init__(label, actionInfo)
+        self._action = action
+        self._actionInfo = actionInfo
+        self.clicked.connect(self.applyAction)
+
+    @property
+    def action(self):
+        return self._action
+
+    def applyAction(self):
+        dialog = BlackbirdOutputDialog('ACTION CLICKED', '{}'.format(self.action), self)
+        dialog.show()
+        dialog.raise_()
+        self.sgnActionButtonClicked.emit(self.action)
