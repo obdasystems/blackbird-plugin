@@ -93,8 +93,10 @@ class RelationalSchemaParser:
         if jsonFKs:
             for jsonFK in jsonFKs:
                 fk = RelationalSchemaParser.getForeignKey(jsonFK)
-                foreignKeys.append(fk)
-                schemaForeignKeys.append(fk)
+                if not fk in foreignKeys:
+                    foreignKeys.append(fk)
+                if not fk in schemaForeignKeys:
+                    schemaForeignKeys.append(fk)
         tableId = jsonTable["id"]
         actions = list()
         tableActions = jsonTable["tableActions"]
@@ -405,23 +407,23 @@ class RelationalTableOriginEntity:
 
 class RelationalTableAction:
     def __init__(self, subject_table, action_type, object_tables):
-        self._actionSubjectTableName = subject_table
-        self._actionType = action_type
-        self._actionObjectsNames = object_tables
+        self.actionSubjectTableName = subject_table
+        self.actionType = action_type
+        self.actionObjectsNames = object_tables
 
-    @property
-    def actionSubjectTableName(self):
-        return self._actionSubjectTableName
-
-    @property
-    def actionType(self):
-        return self._actionType
-
-    @property
-    def actionObjectsNames(self):
-        return self._actionObjectsNames
+    # @property
+    # def actionSubjectTableName(self):
+    #     return self._actionSubjectTableName
+    #
+    # @property
+    # def actionType(self):
+    #     return self._actionType
+    #
+    # @property
+    # def actionObjectsNames(self):
+    #     return self._actionObjectsNames
 
     def __str__(self):
-        objectTablesStr = ",".join(map(str, self._actionObjectsNames))
+        objectTablesStr = ",".join(map(str, self.actionObjectsNames))
         return 'actionSubjectTableName: {} \nActionType: {} \n' \
-               'actionObjectsNames: [{}]'.format(self._actionSubjectTableName, self.actionType, objectTablesStr)
+               'actionObjectsNames: [{}]'.format(self.actionSubjectTableName, self.actionType, objectTablesStr)

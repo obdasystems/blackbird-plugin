@@ -108,12 +108,14 @@ class ForeignKeyExplorerWidget(QtWidgets.QWidget):
         Add a node in the tree view.
         :type schema: RelationalSchema
         """
+        self.model.clear()
         fks = schema.foreignKeys
         for fk in fks:
-            parent = QtGui.QStandardItem(fk.name)
-            parent.setIcon(self.fkIcon)
-            parent.setData(fk)
-            self.model.appendRow(parent)
+            if len(self.model.findItems(fk.name, QtCore.Qt.MatchExactly))==0:
+                parent = QtGui.QStandardItem(fk.name)
+                parent.setIcon(self.fkIcon)
+                parent.setData(fk)
+                self.model.appendRow(parent)
 
         # for fk in fks:
         #     parent =  self.parentFor(fk)

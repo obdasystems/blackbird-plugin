@@ -25,6 +25,8 @@
 
 from enum import unique
 from json import JSONEncoder
+import urllib
+from pprint import _safe_key
 
 from PyQt5 import (
     QtCore,
@@ -137,10 +139,13 @@ class NetworkManager(QtNetwork.QNetworkAccessManager):
         if not action:
             raise BlackbirdRequestError('Action must not be empty')
         actionJsonStr = RelationalTableActionDecoder().encode(action)
-        url = QtCore.QUrl(Resources.SchemaApplyAction.value.format(schemaName))
+        encodedSchemaName = self.encodeUrl(schemaName,'')
+
+        url = QtCore.QUrl(Resources.SchemaApplyActionByName.value.format(encodedSchemaName))
         request = QtNetwork.QNetworkRequest(url)
-        request.setHeader(QtNetwork.QNetworkRequest.ContentTypeHeader, 'application/json')
-        reply = self.put(request,bytes(actionJsonStr))
+        request.setHeader(QtNetwork.QNetworkRequest.ContentTypeHeader, 'application/json;charset=utf-8')
+        byteContent = bytes(actionJsonStr,encoding='utf8')
+        reply = self.put(request,byteContent)
         return reply
 
     def putUndoToSchema(self, schemaName):
@@ -203,6 +208,8 @@ class NetworkManager(QtNetwork.QNetworkAccessManager):
         reply = self.get(request)
         return reply
 
+    def encodeUrl(self, url,safe):
+        return urllib.parse.quote(url, safe)
 
 
 # A specialised JSONEncoder that encodes RelationalTableAction objects as JSON

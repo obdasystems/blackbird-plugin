@@ -182,6 +182,7 @@ class TableExplorerWidget(QtWidgets.QWidget):
         Add a node in the tree view.
         :type schema: RelationalSchema
         """
+        self.model.clear()
         tables = schema.tables
         for table in tables:
             parent =  self.parentFor(table)
