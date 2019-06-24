@@ -100,6 +100,7 @@ class BlackbirdPlugin(AbstractPlugin):
     sgnStartTranslator = QtCore.pyqtSignal()
     sgnStopTranslator = QtCore.pyqtSignal()
     sgnSchemaChanged = QtCore.pyqtSignal(RelationalSchema)
+    sgnActionCorrectlyApplied = QtCore.pyqtSignal()
 
     def __init__(self, spec, session):
         """
@@ -243,13 +244,16 @@ class BlackbirdPlugin(AbstractPlugin):
         actionWidget.setObjectName('blackbird_action_info')
         self.addWidget(actionWidget)
         # CREATE DOCKING AREA ACTION INFO WIDGET
-        actionDockWidget = DockWidget('Action Info', QtGui.QIcon(':/icons/18/ic_info_outline_black'), self.session)
+        actionDockWidget = DockWidget('Action Explorer', QtGui.QIcon(':/icons/18/ic_explore_black'), self.session)
         actionDockWidget.installEventFilter(self)
         actionDockWidget.setAllowedAreas(QtCore.Qt.LeftDockWidgetArea | QtCore.Qt.RightDockWidgetArea | QtCore.Qt.BottomDockWidgetArea)
         actionDockWidget.setObjectName('blackbird_action_info_dock')
         actionDockWidget.setWidget(self.widget('blackbird_action_info'))
         self.addWidget(actionDockWidget)
         self.session.addDockWidget(QtCore.Qt.RightDockWidgetArea, self.widget('blackbird_action_info_dock'))
+
+        menu = self.session.menu('view')
+        menu.addAction(self.widget('blackbird_action_info_dock').toggleViewAction())
 
         ######################################
         #                                    #
@@ -401,6 +405,7 @@ class BlackbirdPlugin(AbstractPlugin):
         connect(self.widget('blackbird_table_explorer').sgnRelationalTableItemClicked, self.widget('blackbird_action_info').doSelectTable)
 
         connect(self.widget('blackbird_action_info').sgnActionButtonClicked, self.onSchemaActionApplied)
+        connect(self.widget('blackbird_action_info').sgnUndoButtonClicked, self.onSchemaActionUndo)
 
         #################
         #               #
@@ -535,6 +540,23 @@ class BlackbirdPlugin(AbstractPlugin):
                 <p>{}</p>""".format(e)))
             LOGGER.exception(e)
 
+    @QtCore.pyqtSlot(RelationalSchema)
+    def onSchemaActionUndo(self, schema):
+        """
+        Executed when an action has been undone over the current schema.
+        """
+        try:
+            reply = self.nmanager.putUndoToSchema(schema.name)
+            # We deal with network errors in the slot connected to the finished()
+            # signal since it always follows the error() signal
+            connect(reply.finished, self.onSchemaUndoCompleted)
+        except Exception as e:
+            self.widget('progress').hide()
+            self.session.addNotification(dedent("""\
+                    <b><font color="#7E0B17">ERROR</font></b>: Could not connect to Blackbird Engine.<br/>
+                    <p>{}</p>""".format(e)))
+            LOGGER.exception(e)
+
     @QtCore.pyqtSlot()
     def onDiagramExportFailure(self):
         """
@@ -590,12 +612,40 @@ class BlackbirdPlugin(AbstractPlugin):
                 # AGGANCIATI QUI CON IL PARSER
                 jsonSchema = json.loads(schema)
                 self.schema = RelationalSchemaParser.getSchema(jsonSchema)
+                self.sgnActionCorrectlyApplied.emit()
                 self.sgnSchemaChanged.emit(self.schema)
             else:
-                self.session.addNotification('Error generating schema: {}'.format(reply.errorString()))
-                LOGGER.error('Error generating schema: {}'.format(reply.errorString()))
+                self.session.addNotification('Error applying action: {}'.format(reply.errorString()))
+                LOGGER.error('Error applying action: {}'.format(reply.errorString()))
         finally:
             self.widget('progress').hide()
+
+    @QtCore.pyqtSlot()
+    def onSchemaUndoCompleted(self):
+        """
+        Executed when an undo-action over the current schema completes.
+        """
+        try:
+            reply = self.sender()
+            reply.deleteLater()
+            assert reply.isFinished()
+            # noinspection PyArgumentList
+            if reply.error() == QtNetwork.QNetworkReply.NoError:
+                schema = str(reply.readAll(), encoding='utf-8')
+                dialog = BlackbirdOutputDialog('', json.dumps(json.loads(schema), indent=2), self.session)
+                dialog.show()
+                dialog.raise_()
+                # AGGANCIATI QUI CON IL PARSER
+                jsonSchema = json.loads(schema)
+                self.schema = RelationalSchemaParser.getSchema(jsonSchema)
+                self.sgnActionCorrectlyApplied.emit()
+                self.sgnSchemaChanged.emit(self.schema)
+            else:
+                self.session.addNotification('Error undoing action: {}'.format(reply.errorString()))
+                LOGGER.error('Error undoing action: {}'.format(reply.errorString()))
+        finally:
+            self.widget('progress').hide()
+
 
     @QtCore.pyqtSlot(QtCore.QProcess.ProcessError)
     def onTranslatorErrorOccurred(self, error):

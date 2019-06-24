@@ -109,7 +109,7 @@ class NetworkManager(QtNetwork.QNetworkAccessManager):
         """
         if not schemaName:
             raise BlackbirdRequestError('Schema name must not be empty')
-        url = QtCore.QUrl(Resources.SchemaHistory.value.format(schemaName))
+        url = QtCore.QUrl(Resources.SchemaHistoryByName.value.format(schemaName))
         request = QtNetwork.QNetworkRequest(url)
         reply = self.get(request)
         return reply
@@ -140,7 +140,6 @@ class NetworkManager(QtNetwork.QNetworkAccessManager):
             raise BlackbirdRequestError('Action must not be empty')
         actionJsonStr = RelationalTableActionDecoder().encode(action)
         encodedSchemaName = self.encodeUrl(schemaName,'')
-
         url = QtCore.QUrl(Resources.SchemaApplyActionByName.value.format(encodedSchemaName))
         request = QtNetwork.QNetworkRequest(url)
         request.setHeader(QtNetwork.QNetworkRequest.ContentTypeHeader, 'application/json;charset=utf-8')
@@ -157,10 +156,11 @@ class NetworkManager(QtNetwork.QNetworkAccessManager):
         if not schemaName:
             raise BlackbirdRequestError('Schema name must not be empty')
         emptyJsonStr = ''
-        url = QtCore.QUrl(Resources.SchemaUndo.value.format(schemaName))
+        encodedSchemaName = self.encodeUrl(schemaName, '')
+        url = QtCore.QUrl(Resources.SchemaUndoByName.value.format(encodedSchemaName))
         request = QtNetwork.QNetworkRequest(url)
         request.setHeader(QtNetwork.QNetworkRequest.ContentTypeHeader, 'application/json')
-        reply = self.put(request,bytes(emptyJsonStr))
+        reply = self.put(request,bytes(emptyJsonStr,encoding='utf8'))
         return reply
 
     def getTableNames(self, schemaName):

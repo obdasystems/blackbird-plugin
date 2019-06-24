@@ -31,6 +31,9 @@ class BBActionWidget(QtWidgets.QScrollArea):
 
     # segnale emesso se schiaccio pulsante corrispondente ad action su schema
     sgnActionButtonClicked = QtCore.pyqtSignal(RelationalSchema, RelationalTableAction)
+    # segnale emesso se schiaccio pulsante corrispondente ad undo
+    sgnUndoButtonClicked = QtCore.pyqtSignal(RelationalSchema)
+
     def __init__(self, plugin):
         """
         Initialize the info box.
@@ -49,7 +52,9 @@ class BBActionWidget(QtWidgets.QScrollArea):
         #self.actionInfo = ActionInfo(plugin.session,self.stacked,self.plugin.schema)
         self.actionInfo = ActionInfo(plugin.session,self.stacked)
         connect(self.actionInfo.sgnActionButtonClicked, self.doApplyAction)
+        connect(self.actionInfo.sgnUndoButtonClicked, self.doUndoAction)
         connect(plugin.sgnSchemaChanged,self.onSchemaChanged)
+        connect(plugin.sgnActionCorrectlyApplied, self.onActionCorrectlyApplied)
 
         self.stacked.addWidget(self.actionInfo)
 
@@ -210,13 +215,17 @@ class BBActionWidget(QtWidgets.QScrollArea):
     def onSchemaChanged(self, schema):
         self._schema = schema
         actions = schema.actions
-        self.actionInfo.updateData(actions)
+        self.actionInfo.updateData(actions, ActionInfo.allSchemaDomainLabel)
         self.stack(actions)
+
+    @QtCore.pyqtSlot()
+    def onActionCorrectlyApplied(self):
+        self.actionInfo.actionApplied = True
 
     @QtCore.pyqtSlot(RelationalTable)
     def doSelectTable(self, table):
         actions = table.actions
-        self.actionInfo.updateData(actions)
+        self.actionInfo.updateData(actions, table.name)
         self.stack(actions)
         self.redraw()
 
@@ -224,14 +233,22 @@ class BBActionWidget(QtWidgets.QScrollArea):
     def doApplyAction(self, action):
         self.sgnActionButtonClicked.emit(self.schema,action)
 
+    @QtCore.pyqtSlot()
+    def doUndoAction(self):
+        self.sgnUndoButtonClicked.emit(self.schema)
+
 #############################################
 #   INFO WIDGETS
 #################################
 
 
 class ActionInfo(BBAbstractInfo):
+    allSchemaDomainLabel = "whole schema"
+
     # segnale emesso se schiaccio pulsante corrispondente ad action su schema
     sgnActionButtonClicked = QtCore.pyqtSignal(RelationalTableAction)
+    # segnale emesso se schiaccio pulsante corrispondente ad aundo
+    sgnUndoButtonClicked = QtCore.pyqtSignal()
 
     def __init__(self,session,parent=None, schema=None):
         super().__init__(session,parent)
@@ -241,26 +258,42 @@ class ActionInfo(BBAbstractInfo):
         self.mainLayout.setAlignment(QtCore.Qt.AlignTop)
         self.mainLayout.setContentsMargins(0, 0, 0, 0)
         self.mainLayout.setSpacing(0)
+        self._actionApplied = False
+
+    @property
+    def actionApplied(self):
+        return self._actionApplied
+
+    @actionApplied.setter
+    def actionApplied(self,v):
+        self._actionApplied = v
 
     #############################################
     #   SLOTS
     #################################
     @pyqtSlot(RelationalTableAction)
     def applyAction(self,action):
-        dialog = BlackbirdOutputDialog('ACTION CLICKED', '{}'.format(action), self.session)
-        dialog.show()
-        dialog.raise_()
+        # dialog = BlackbirdOutputDialog('ACTION CLICKED', '{}'.format(action), self.session)
+        # dialog.show()
+        # dialog.raise_()
         self.sgnActionButtonClicked.emit(action)
 
+    @pyqtSlot()
+    def undoAction(self):
+        # dialog = BlackbirdOutputDialog('ACTION CLICKED', '{}'.format(action), self.session)
+        # dialog.show()
+        # dialog.raise_()
+        self.sgnUndoButtonClicked.emit()
 
     #############################################
     #   INTERFACE
     #################################
 
-    def updateData(self, actions):
+    def updateData(self, actions, domain):
         """
         Fetch new information and fill the widget with data.
         :type actions: list
+        :type domain: str
         :
         """
         for widg in self.widgets:
@@ -271,61 +304,111 @@ class ActionInfo(BBAbstractInfo):
             self.mainLayout.removeItem(lay)
         self.layouts = []
 
-        for index, action in enumerate(actions):
-            subj = action.actionSubjectTableName
-            type = action.actionType
-            objs = action.actionObjectsNames
+        if self.actionApplied:
+            undoHeader = BBHeader('Undo last action applied over the schema')
+            undoHeader.setFont(Font('Roboto', 12))
+            undoButton = UndoButton(self)
+            undoButton.setFont(Font('Roboto', 12))
+            connect(undoButton.sgnUndoButtonClicked, self.undoAction)
+            undoLayout = QtWidgets.QFormLayout()
+            undoLayout.setSpacing(0)
+            undoLayout.addRow(undoButton)
+            self.widgets.append(undoHeader)
+            self.mainLayout.addWidget(undoHeader)
+            self.layouts.append(undoLayout)
+            self.mainLayout.addLayout(undoLayout)
+            # emptyKey = BBKey('')
+            # emptyKey.setFont(Font('Roboto', 12))
+            # emptyLayout = QtWidgets.QFormLayout()
+            # emptyLayout.setSpacing(0)
+            # emptyLayout.addRow(emptyKey, emptyKey)
+            # self.layouts.append(emptyLayout)
+            # self.mainLayout.addLayout(emptyLayout)
 
-            header = BBHeader('Action {}'.format(index))
-            header.setFont(Font('Roboto', 12))
 
-            button = BBButton()
-            button.setFont(Font('Roboto', 12))
-            button.setText('Apply')
-            button.setEnabled(True)
+        domainHeader = BBHeader('Actions applicable on {}'.format(domain))
+        domainHeader.setFont(Font('Roboto', 12))
+        # emptyKey = BBKey('')
+        # emptyKey.setFont(Font('Roboto', 12))
+        # emptyField = BBString(self)
+        # emptyField.setFont(Font('Roboto', 12))
+        # emptyField.setReadOnly(True)
+        # emptyField.setValue('')
+        # emptyLayout = QtWidgets.QFormLayout()
+        # emptyLayout.setSpacing(0)
+        # emptyLayout.addRow(emptyKey, emptyField)
+        self.widgets.append(domainHeader)
+        self.mainLayout.addWidget(domainHeader)
+        # self.layouts.append(emptyLayout)
+        # self.mainLayout.addLayout(emptyLayout)
 
-            headerLayout = QtWidgets.QFormLayout()
-            headerLayout.setSpacing(0)
-            headerLayout.addRow(header, button)
+        if len(actions)>0:
+            for index, action in enumerate(actions):
+                subj = action.actionSubjectTableName
+                type = action.actionType
+                objs = action.actionObjectsNames
 
-            subjKey = BBKey('Subject')
-            subjKey.setFont(Font('Roboto', 12))
-            subjField = BBString(self)
-            subjField.setFont(Font('Roboto', 12))
-            subjField.setReadOnly(True)
-            subjField.setValue(subj)
+                header = BBHeader('Action {}'.format(index))
+                header.setFont(Font('Roboto', 12))
 
-            typeKey = BBKey('Type')
-            typeKey.setFont(Font('Roboto', 12))
-            typeField = BBString(self)
-            typeField.setFont(Font('Roboto', 12))
-            typeField.setReadOnly(True)
-            typeField.setValue(type)
+                button = BBButton()
+                button.setFont(Font('Roboto', 12))
+                button.setText('Apply')
+                button.setEnabled(True)
 
-            objsKey = BBKey('Objects')
-            objsKey.setFont(Font('Roboto', 12))
-            objsField = BBString(self)
-            objsField.setFont(Font('Roboto', 12))
-            objsField.setReadOnly(True)
-            objStr = ", ".join(map(str, objs))
-            objsField.setValue(objStr)
+                headerLayout = QtWidgets.QFormLayout()
+                headerLayout.setSpacing(0)
+                headerLayout.addRow(header, button)
 
-            button = ActionButton(action,'Apply {}'.format(index), self)
-            button.setFont(Font('Roboto', 12))
-            connect(button.sgnActionButtonClicked,self.applyAction)
+                subjKey = BBKey('Subject')
+                subjKey.setFont(Font('Roboto', 12))
+                subjField = BBString(self)
+                subjField.setFont(Font('Roboto', 12))
+                subjField.setReadOnly(True)
+                subjField.setValue(subj)
 
-            layout = QtWidgets.QFormLayout()
-            layout.setSpacing(0)
-            layout.addRow(subjKey, subjField)
-            layout.addRow(typeKey, typeField)
-            layout.addRow(objsKey, objsField)
-            layout.addRow(button, None)
+                typeKey = BBKey('Type')
+                typeKey.setFont(Font('Roboto', 12))
+                typeField = BBString(self)
+                typeField.setFont(Font('Roboto', 12))
+                typeField.setReadOnly(True)
+                typeField.setValue(type)
 
-            self.widgets.append(header)
-            self.mainLayout.addWidget(header)
-            #self.mainLayout.addLayout(headerLayout)
-            self.layouts.append(layout)
-            self.mainLayout.addLayout(layout)
+                objsKey = BBKey('Objects')
+                objsKey.setFont(Font('Roboto', 12))
+                objsField = BBString(self)
+                objsField.setFont(Font('Roboto', 12))
+                objsField.setReadOnly(True)
+                objStr = ", ".join(map(str, objs))
+                objsField.setValue(objStr)
+
+                button = ActionButton(action,'Apply {}'.format(index), self)
+                button.setFont(Font('Roboto', 12))
+                connect(button.sgnActionButtonClicked,self.applyAction)
+
+                layout = QtWidgets.QFormLayout()
+                layout.setSpacing(0)
+                layout.addRow(subjKey, subjField)
+                layout.addRow(typeKey, typeField)
+                layout.addRow(objsKey, objsField)
+                layout.addRow(button)
+
+                self.widgets.append(header)
+                self.mainLayout.addWidget(header)
+                self.layouts.append(layout)
+                self.mainLayout.addLayout(layout)
+        else:
+            emptyKey = BBKey('NO ACTIONS')
+            emptyKey.setFont(Font('Roboto', 12))
+            emptyField = BBString(self)
+            emptyField.setFont(Font('Roboto', 12))
+            emptyField.setReadOnly(True)
+            emptyField.setValue('NO ACTIONS')
+            emptyLayout = QtWidgets.QFormLayout()
+            emptyLayout.setSpacing(0)
+            emptyLayout.addRow(emptyKey, emptyField)
+            self.layouts.append(emptyLayout)
+            self.mainLayout.addLayout(emptyLayout)
 
 #############################################
 #   COMPONENTS
@@ -349,7 +432,28 @@ class ActionButton(QtWidgets.QPushButton):
         return self._action
 
     def applyAction(self):
-        dialog = BlackbirdOutputDialog('ACTION CLICKED', '{}'.format(self.action), self)
-        dialog.show()
-        dialog.raise_()
         self.sgnActionButtonClicked.emit(self.action)
+
+class UndoButton(QtWidgets.QPushButton):
+    """
+    This class implements the button to undo the last action applied over a schema
+    """
+    sgnUndoButtonClicked = QtCore.pyqtSignal()
+
+    def __init__(self, actionInfo):
+        """
+        Initialize the button.
+        """
+        super().__init__('Undo', actionInfo)
+        self._actionInfo = actionInfo
+        self.clicked.connect(self.undoAction)
+
+    @property
+    def action(self):
+        return self._action
+
+    def undoAction(self):
+        # dialog = BlackbirdOutputDialog('ACTION CLICKED', '{}'.format(self.action), self)
+        # dialog.show()
+        # dialog.raise_()
+        self.sgnUndoButtonClicked.emit()
