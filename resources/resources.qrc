@@ -4,6 +4,9 @@
         <file alias="ic_blackbird">icons/128/ic_blackbird@1x.png</file>
         <file alias="ic_blackbird@2x">icons/128/ic_blackbird@2x.png</file>
     </qresource>
+    <qresource prefix="/blackbird/icons/24">
+        <file alias="ic_blackbird_fk">icons/24/ic_fk_red_24.png</file>
+    </qresource>
     <qresource prefix="/blackbird/images">
         <file alias="im_blackbird_logo">images/im_blackbird_logo.png</file>
         <file alias="im_blackbird_name">images/im_blackbird_name.png</file>

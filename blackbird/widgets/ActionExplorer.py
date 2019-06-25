@@ -217,6 +217,7 @@ class BBActionWidget(QtWidgets.QScrollArea):
         actions = schema.actions
         self.actionInfo.updateData(actions, ActionInfo.allSchemaDomainLabel)
         self.stack(actions)
+        self.update()
 
     @QtCore.pyqtSlot()
     def onActionCorrectlyApplied(self):
@@ -409,6 +410,7 @@ class ActionInfo(BBAbstractInfo):
             emptyLayout.addRow(emptyKey, emptyField)
             self.layouts.append(emptyLayout)
             self.mainLayout.addLayout(emptyLayout)
+
 
 #############################################
 #   COMPONENTS

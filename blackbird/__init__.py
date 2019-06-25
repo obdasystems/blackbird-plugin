@@ -218,6 +218,14 @@ class BlackbirdPlugin(AbstractPlugin):
         progress.setObjectName('progress')
         self.addWidget(progress)
 
+        actionProgress = BusyProgressDialog('Applying Action to Schema...', parent=self.session)
+        actionProgress.setObjectName('action_progress')
+        self.addWidget(actionProgress)
+
+        undoProgress = BusyProgressDialog('Undoing Action to Schema...', parent=self.session)
+        undoProgress.setObjectName('undo_progress')
+        self.addWidget(undoProgress)
+
         #####################################
         #                                   #
         # INITIALIZE THE SCHEMA INFO WIDGET #
@@ -307,6 +315,7 @@ class BlackbirdPlugin(AbstractPlugin):
 
         # CREATE DOCKING AREA WIDGET
         fkExplorerDockWidget = DockWidget('Foreign Keys Explorer', QtGui.QIcon(':icons/18/ic_explore_black'), self.session)
+
         fkExplorerDockWidget.addTitleBarButton(self.widget('fk_explorer_toggle'))
         fkExplorerDockWidget.installEventFilter(self)
         fkExplorerDockWidget.setAllowedAreas(QtCore.Qt.LeftDockWidgetArea | QtCore.Qt.RightDockWidgetArea | QtCore.Qt.BottomDockWidgetArea)
@@ -529,12 +538,13 @@ class BlackbirdPlugin(AbstractPlugin):
         Executed when an action has been applied over the current schema.
         """
         try:
+            self.widget('action_progress').show()
             reply = self.nmanager.putActionToSchema(schema.name, action)
             # We deal with network errors in the slot connected to the finished()
             # signal since it always follows the error() signal
             connect(reply.finished, self.onSchemaActionCompleted)
         except Exception as e:
-            self.widget('progress').hide()
+            self.widget('action_progress').hide()
             self.session.addNotification(dedent("""\
                 <b><font color="#7E0B17">ERROR</font></b>: Could not connect to Blackbird Engine.<br/>
                 <p>{}</p>""".format(e)))
@@ -546,12 +556,13 @@ class BlackbirdPlugin(AbstractPlugin):
         Executed when an action has been undone over the current schema.
         """
         try:
+            self.widget('undo_progress').show()
             reply = self.nmanager.putUndoToSchema(schema.name)
             # We deal with network errors in the slot connected to the finished()
             # signal since it always follows the error() signal
             connect(reply.finished, self.onSchemaUndoCompleted)
         except Exception as e:
-            self.widget('progress').hide()
+            self.widget('undo_progress').hide()
             self.session.addNotification(dedent("""\
                     <b><font color="#7E0B17">ERROR</font></b>: Could not connect to Blackbird Engine.<br/>
                     <p>{}</p>""".format(e)))
@@ -618,7 +629,7 @@ class BlackbirdPlugin(AbstractPlugin):
                 self.session.addNotification('Error applying action: {}'.format(reply.errorString()))
                 LOGGER.error('Error applying action: {}'.format(reply.errorString()))
         finally:
-            self.widget('progress').hide()
+            self.widget('action_progress').hide()
 
     @QtCore.pyqtSlot()
     def onSchemaUndoCompleted(self):
@@ -644,7 +655,7 @@ class BlackbirdPlugin(AbstractPlugin):
                 self.session.addNotification('Error undoing action: {}'.format(reply.errorString()))
                 LOGGER.error('Error undoing action: {}'.format(reply.errorString()))
         finally:
-            self.widget('progress').hide()
+            self.widget('undo_progress').hide()
 
 
     @QtCore.pyqtSlot(QtCore.QProcess.ProcessError)

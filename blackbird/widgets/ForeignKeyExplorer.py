@@ -42,7 +42,7 @@ class ForeignKeyExplorerWidget(QtWidgets.QWidget):
         self.classIcon = QtGui.QIcon(':/icons/18/ic_treeview_concept')
         self.objPropIcon = QtGui.QIcon(':/icons/18/ic_treeview_role')
         self.dataPropIcon = QtGui.QIcon(':/icons/18/ic_treeview_attribute')
-        self.fkIcon = QtGui.QIcon(':/icons/24/ic_fk_red_24')
+        self.fkIcon = QtGui.QIcon(':blackbird/icons/24/ic_blackbird_fk')
 
         self.searchShortcut = QtWidgets.QShortcut(QtGui.QKeySequence('Ctrl+f'), plugin.session)
         self.search = StringField(self)
