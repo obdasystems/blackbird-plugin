@@ -26,6 +26,7 @@
 import os
 import re
 import signal
+import sys
 import zipfile
 from io import StringIO
 
@@ -35,6 +36,7 @@ from eddy.core.functions.fsystem import fexists, isdir, fread, fwrite, fremove
 from eddy.core.functions.misc import first
 from eddy.core.functions.path import expandPath
 from eddy.core.functions.signals import connect
+from eddy.core.jvm import findJavaHome
 from eddy.core.output import getLogger
 
 LOGGER = getLogger()
@@ -55,7 +57,24 @@ class BlackbirdProcess(QtCore.QProcess):
         Initialize the BlackbirdProcess instance.
         """
         super().__init__(parent)
-        self.setProgram('java')
+        javaHome = findJavaHome() or ''
+        # Will resort to look for the java executable in PATH
+        self.javaExe = 'java' if not sys.platform.startswith('win32') else 'java.exe'
+        # If we hava JAVA_HOME set then try to use the bundled java executable
+        if isdir(javaHome):
+            # For Java <= 1.8 we use the JDK's private jre path,
+            # this was done for compatibility with pyjnius that uses
+            # that fixes the path to libjvm at compile time.
+            if fexists(os.path.join(javaHome, 'jre', 'bin', self.javaExe)):
+                self.javaExe = os.path.join(javaHome, 'jre', 'bin', self.javaExe)
+            # For java > 1.8 there is no private JRE, so we use the standard path
+            elif fexists(os.path.join(javaHome, 'bin', self.javaExe)):
+                self.javaExe = os.path.join(javaHome, 'bin', self.javaExe)
+            # No java executable under JAVA_HOME so we log an error.
+            # We still try to look for java in PATH though
+            else:
+                LOGGER.error('Unable to locate java executable in JAVA_HOME: {}'.format(javaHome))
+        self.setProgram(self.javaExe)
         self.setArguments(['-jar', path])
         self.buffer = StringIO()
         self.runtimeDir = QtCore.QStandardPaths.writableLocation(QtCore.QStandardPaths.RuntimeLocation)
