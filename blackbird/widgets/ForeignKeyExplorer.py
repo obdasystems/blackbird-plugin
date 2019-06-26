@@ -7,6 +7,7 @@ from eddy.core.functions.misc import first, rstrip
 from eddy.core.functions.signals import connect
 from eddy.core.items.edges.common.base import AbstractEdge
 from eddy.core.items.nodes.common.base import AbstractNode
+from eddy.core.output import getLogger
 from eddy.ui.fields import StringField
 
 # noinspection PyUnresolvedReferences
@@ -18,6 +19,7 @@ from eddy.plugins.blackbird.schema import RelationalTable
 # noinspection PyUnresolvedReferences
 from eddy.plugins.blackbird.schema import ForeignKeyConstraint
 
+LOGGER = getLogger()
 
 class ForeignKeyExplorerWidget(QtWidgets.QWidget):
     """
@@ -111,11 +113,17 @@ class ForeignKeyExplorerWidget(QtWidgets.QWidget):
         self.model.clear()
         fks = schema.foreignKeys
         for fk in fks:
-            if len(self.model.findItems(fk.name, QtCore.Qt.MatchExactly))==0:
-                parent = QtGui.QStandardItem(fk.name)
-                parent.setIcon(self.fkIcon)
-                parent.setData(fk)
-                self.model.appendRow(parent)
+            parent = QtGui.QStandardItem(fk.name)
+            parent.setIcon(self.fkIcon)
+            parent.setData(fk)
+            self.model.appendRow(parent)
+            # if len(self.model.findItems(fk.name, QtCore.Qt.MatchExactly))==0:
+            #     parent = QtGui.QStandardItem(fk.name)
+            #     parent.setIcon(self.fkIcon)
+            #     parent.setData(fk)
+            #     self.model.appendRow(parent)
+            # else:
+            #     LOGGER.debug('Found duplicate fk with name {}'.format(fk.name))
 
         # for fk in fks:
         #     parent =  self.parentFor(fk)

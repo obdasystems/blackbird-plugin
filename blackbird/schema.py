@@ -26,7 +26,9 @@
 from enum import unique
 
 from eddy.core.datatypes.common import IntEnum_
+from eddy.core.output import getLogger
 
+LOGGER = getLogger()
 
 @unique
 class EntityType(IntEnum_):
@@ -66,11 +68,26 @@ class RelationalSchemaParser:
         for jsonTable in jsonTables:
             table = RelationalSchemaParser.getTable(jsonTable, schemaActions, schemaForeignKeys)
             tables.append(table)
+
+        LOGGER.debug('############# Size of schemaForeignKeys={}'.format(len(schemaForeignKeys)))
+
+        fkNames = list()
+        for fk in schemaForeignKeys:
+            fkNames.append(fk.name)
+        LOGGER.debug('############# Size of fkNames={}'.format(len(fkNames)))
+        fkNames.sort()
+
+
+        LOGGER.debug('############# Printing schemaForeignKeys:')
+        for index, fk in enumerate(fkNames):
+            LOGGER.debug('[{}] {}'.format(index, fk))
+
         return RelationalSchema(schemaName, tables, schemaActions, schemaForeignKeys)
 
     @staticmethod
     def getTable(jsonTable, schemaActions, schemaForeignKeys):
         tableName = jsonTable["tableName"]
+        LOGGER.debug('############# Parsing table {}'.format(tableName))
         entity = RelationalSchemaParser.getOriginEntity(jsonTable["entity"])
         columns = list()
         jsonColumns = jsonTable["columns"]
@@ -92,6 +109,8 @@ class RelationalSchemaParser:
         jsonFKs = jsonTable["foreignKeyConstraints"]
         if jsonFKs:
             for jsonFK in jsonFKs:
+                fkName = jsonFK["fkName"]
+                LOGGER.debug('### Parsing FK {}'.format(fkName))
                 fk = RelationalSchemaParser.getForeignKey(jsonFK)
                 if not fk in foreignKeys:
                     foreignKeys.append(fk)
@@ -159,7 +178,8 @@ class RelationalSchema:
         self._name = name
         self._tables = tables
         self._actions = actions
-        self._foreignKeys = foreignKeys
+        #self._foreignKeys = foreignKeys
+        self._foreignKeys = list()
         if self._tables:
             for table in self._tables:
                 if table.foreignKeys:

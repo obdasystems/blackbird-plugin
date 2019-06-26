@@ -309,7 +309,7 @@ class TableInfo(BBAbstractInfo):
     def __init__(self,session,parent=None):
         super().__init__(session,parent)
 
-        self.header = BBHeader('Schema Info')
+        self.header = BBHeader('')
         self.header.setFont(Font('Roboto', 12))
 
         self.tableWidget = QTableWidget(self)
@@ -467,6 +467,7 @@ class ForeignKeyInfo(BBAbstractInfo):
         self.layout.addRow(self.srcColumnsKey, self.srcColumnsField)
         self.layout.addRow(self.tgtTableKey, self.tgtTableField)
         self.layout.addRow(self.tgtColumnsKey, self.tgtColumnsField)
+        self.layout.addRow(self.axiomKey, self.axiomField)
 
         self.mainLayout = QtWidgets.QVBoxLayout(self)
         self.mainLayout.setAlignment(QtCore.Qt.AlignTop)
@@ -492,6 +493,7 @@ class ForeignKeyInfo(BBAbstractInfo):
         self.tgtTableField.setValue(fk.tgtTable)
         tgtColumnsStr = ', '.join(map(str, fk.tgtColumns))
         self.tgtColumnsField.setValue(tgtColumnsStr)
+        self.axiomField.setValue(fk.axiomType)
 
 #############################################
 #   COMPONENTS

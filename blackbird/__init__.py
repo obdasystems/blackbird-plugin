@@ -592,12 +592,14 @@ class BlackbirdPlugin(AbstractPlugin):
             if reply.error() == QtNetwork.QNetworkReply.NoError:
                 owltext = str(reply.request().attribute(NetworkManager.OWL), encoding='utf-8')
                 schema = str(reply.readAll(), encoding='utf-8')
-                dialog = BlackbirdOutputDialog(owltext, json.dumps(json.loads(schema), indent=2), self.session)
-                dialog.show()
-                dialog.raise_()
+
                 #AGGANCIATI QUI CON IL PARSER
                 jsonSchema = json.loads(schema)
                 self.schema = RelationalSchemaParser.getSchema(jsonSchema)
+                dialog = BlackbirdOutputDialog(owltext, json.dumps(json.loads(schema),indent=2),self.schema, self.session)
+                dialog.show()
+                dialog.raise_()
+                LOGGER.debug(self.schema)
                 self.sgnSchemaChanged.emit(self.schema)
             else:
                 self.session.addNotification('Error generating schema: {}'.format(reply.errorString()))

@@ -133,7 +133,7 @@ class BlackbirdOutputDialog(QtWidgets.QDialog):
     Subclass of QtWidgets.QDialog that shows a side-by-side view
     of the input and output of the schema generation process.
     """
-    def __init__(self, owl, schema, parent=None, **kwargs):
+    def __init__(self, owl, schema, parsedSchema, parent=None, **kwargs):
         """
         Initialize the dialog.
         """
@@ -144,11 +144,13 @@ class BlackbirdOutputDialog(QtWidgets.QDialog):
         #################################
 
         owlLabel = QtWidgets.QLabel('OWL', self)
-        schemaLabel = QtWidgets.QLabel('Schema', self)
+        schemaLabel = QtWidgets.QLabel('JSON', self)
+        pythonLabel = QtWidgets.QLabel('Python', self)
 
         headerLayout = QtWidgets.QHBoxLayout(self)
         headerLayout.addWidget(owlLabel, 1, QtCore.Qt.AlignLeading)
         headerLayout.addWidget(schemaLabel, 1, QtCore.Qt.AlignLeading)
+        headerLayout.addWidget(pythonLabel, 1, QtCore.Qt.AlignLeading)
 
         headerWidget = QtWidgets.QWidget(self)
         headerWidget.setLayout(headerLayout)
@@ -165,11 +167,19 @@ class BlackbirdOutputDialog(QtWidgets.QDialog):
         schemaText.setReadOnly(True)
         schemaText.setText(schema)
 
+        pythonText = QtWidgets.QTextEdit(self)
+        pythonText.setFont(Font('Roboto', 14))
+        pythonText.setObjectName('python_text')
+        pythonText.setReadOnly(True)
+        pythonText.setText(parsedSchema.__str__())
+
         innerLayout = QtWidgets.QHBoxLayout(self)
         innerLayout.setContentsMargins(8, 0, 8, 8)
         innerLayout.addWidget(owlText)
         innerLayout.addSpacing(8)
         innerLayout.addWidget(schemaText)
+        innerLayout.addSpacing(8)
+        innerLayout.addWidget(pythonText)
 
         textWidget = QtWidgets.QWidget(self)
         textWidget.setLayout(innerLayout)
@@ -222,4 +232,8 @@ class BlackbirdOutputDialog(QtWidgets.QDialog):
             fwrite(owl, os.path.join(directory, 'ontology.owl'))
             schema = self.findChild(QtWidgets.QTextEdit, 'schema_text').toPlainText()
             fwrite(schema, os.path.join(directory, 'schema.json'))
+            python = self.findChild(QtWidgets.QTextEdit, 'python_text').toPlainText()
+            fwrite(python, os.path.join(directory, 'parsedObject.txt'))
             openPath(directory)
+
+
