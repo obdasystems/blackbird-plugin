@@ -106,14 +106,15 @@ class BlackbirdOntologyEntityManager(QtCore.QObject):
     Initialize the manager.
 
     :type relational_schema: RelationalSchema
-    :type parent: Project
+    :type session: Session
     """
 
     # noinspection PyArgumentList
-    def __init__(self, relational_schema, parent, **kwargs):
-        super().__init__(parent, **kwargs)
-        self._parent = parent
-        self._ontologyDiagrams = parent.diagrams()
+    def __init__(self, relational_schema, session, **kwargs):
+        super().__init__(session, **kwargs)
+        self._session = session
+        self._eddyProject = self._session.project
+        self._ontologyDiagrams = self._eddyProject.diagrams()
         self._relationalSchema = relational_schema
         self._tables = relational_schema.tables
         self._foreignKeys = relational_schema.foreignKeys
@@ -125,15 +126,6 @@ class BlackbirdOntologyEntityManager(QtCore.QObject):
     @property
     def diagramToTables(self):
         return self._diagramToTables
-
-    def diagramToTablesString(self):
-        res = ''
-        for diagram in self._diagramToTables:
-            res += '##### DIAGRAM {} #####\n'.format(diagram.name)
-            tableDict = self._diagramToTables[diagram]
-            for table in tableDict:
-                res += '\t## {} --> {}\n'.format(table.name,tableDict[table])
-        return res
 
     def diagramToTablesString(self):
         res = ''

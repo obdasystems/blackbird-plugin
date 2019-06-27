@@ -40,11 +40,13 @@ from PyQt5 import (
 from eddy import ORGANIZATION, APPNAME, WORKSPACE
 from eddy.core.datatypes.owl import OWLAxiom, OWLSyntax
 from eddy.core.datatypes.qt import Font
+from eddy.core.diagram import Diagram
 from eddy.core.exporters.owl2 import OWLOntologyExporterWorker
 from eddy.core.functions.fsystem import fread, fexists
 from eddy.core.functions.misc import first
 from eddy.core.functions.path import expandPath
 from eddy.core.functions.signals import connect, disconnect
+from eddy.core.items.nodes.concept import ConceptNode
 from eddy.core.output import getLogger
 from eddy.core.plugin import AbstractPlugin
 from eddy.ui.dialogs import DiagramSelectionDialog
@@ -89,6 +91,7 @@ from eddy.plugins.blackbird.widgets.ForeignKeyExplorer import ForeignKeyExplorer
 from eddy.plugins.blackbird.schema import RelationalTableAction
 # noinspection PyUnresolvedReferences
 from eddy.plugins.blackbird.widgets.ActionExplorer import BBActionWidget
+from eddy.ui.view import DiagramView
 
 LOGGER = getLogger()
 
@@ -111,6 +114,7 @@ class BlackbirdPlugin(AbstractPlugin):
         super().__init__(spec, session)
         self.nmanager = NetworkManager(self)
         self.translator = None
+        self.bbOntologyEntityMgr = None
 
     # noinspection PyArgumentList
     def initActions(self):
@@ -424,6 +428,37 @@ class BlackbirdPlugin(AbstractPlugin):
         self.session.addDockWidget(QtCore.Qt.RightDockWidgetArea, self.widget('table_explorer_dock'))
         self.session.addDockWidget(QtCore.Qt.RightDockWidgetArea, self.widget('fk_explorer_dock'))
 
+    def initDiagramDialog(self):
+        self.tempDialog = QtWidgets.QDialog(self.session)
+
+        eddyProject = self.session.project
+
+        ontDiagramToShow = None
+        ontDiagrams = eddyProject.diagrams()
+        for ontDiagram in ontDiagrams:
+            ontDiagramToShow = ontDiagram
+            break
+        if ontDiagramToShow:
+            bbDiagram = Diagram('{}_SCHEMA'.format(ontDiagramToShow.name),eddyProject)
+
+            diagramToTablesDict = self.bbOntologyEntityMgr.diagramToTables
+            relTableToDiagramNodes = diagramToTablesDict[ontDiagramToShow]
+
+            for table,ontNodeList in relTableToDiagramNodes.items():
+                tableName = table.name
+                for ontNode in ontNodeList:
+                    relNode = ConceptNode(ontNode.width(), ontNode.height(), remaining_characters=tableName, diagram=bbDiagram)
+                    relNode.setPos(ontNode.pos())
+                    relNode.setText(tableName)
+                    bbDiagram.addItem(relNode)
+
+            diagramView = DiagramView(bbDiagram, self.session)
+
+            tempDialogLayout = QtWidgets.QVBoxLayout()
+            tempDialogLayout.addWidget(diagramView)
+            self.tempDialog.setLayout(tempDialogLayout)
+            self.tempDialog.show()
+
 
 
     #############################################
@@ -512,6 +547,10 @@ class BlackbirdPlugin(AbstractPlugin):
         if not self.translator.state() == QtCore.QProcess.Running:
             self.sgnStartTranslator.emit()
 
+        #TODO CANCELLA
+        # INITIALIZE THE TEMPORARY DIALOG TO SHOW THE VIEW
+        #self.initDiagramDialog()
+
     @QtCore.pyqtSlot()
     def onDiagramExportCompleted(self):
         """
@@ -592,10 +631,12 @@ class BlackbirdPlugin(AbstractPlugin):
             if reply.error() == QtNetwork.QNetworkReply.NoError:
                 owltext = str(reply.request().attribute(NetworkManager.OWL), encoding='utf-8')
                 schema = str(reply.readAll(), encoding='utf-8')
-
                 #AGGANCIATI QUI CON IL PARSER
                 jsonSchema = json.loads(schema)
                 self.schema = RelationalSchemaParser.getSchema(jsonSchema)
+
+                self.initializeOntologyEntityManager()
+                self.initDiagramDialog()
                 dialog = BlackbirdOutputDialog(owltext, json.dumps(json.loads(schema),indent=2),self.schema, self.session)
                 dialog.show()
                 dialog.raise_()
@@ -980,3 +1021,16 @@ class BlackbirdPlugin(AbstractPlugin):
 
         # SHOW THE DIALOG
         dialog.exec_()
+
+
+    #############################################
+    #   INTERFACE
+    #################################
+    def initializeOntologyEntityManager(self):
+        """
+        Initialize the ontology visual elements manager.
+        """
+        self.bbOntologyEntityMgr = BlackbirdOntologyEntityManager(self.schema,self.session)
+        LOGGER.debug('############# Initializing BlackbirdOntologyEntityManager')
+        LOGGER.debug(self.bbOntologyEntityMgr.diagramToTablesString())
+        LOGGER.debug(self.bbOntologyEntityMgr.diagramToForeignKeysString())
