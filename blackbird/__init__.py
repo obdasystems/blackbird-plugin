@@ -46,6 +46,9 @@ from eddy.core.functions.fsystem import fread, fexists
 from eddy.core.functions.misc import first
 from eddy.core.functions.path import expandPath
 from eddy.core.functions.signals import connect, disconnect
+from eddy.core.items.edges.common.base import AbstractEdge
+from eddy.core.items.edges.inclusion import InclusionEdge
+from eddy.core.items.nodes.common.base import AbstractNode
 from eddy.core.items.nodes.concept import ConceptNode
 from eddy.core.output import getLogger
 from eddy.core.plugin import AbstractPlugin
@@ -441,9 +444,11 @@ class BlackbirdPlugin(AbstractPlugin):
         if ontDiagramToShow:
             bbDiagram = Diagram('{}_SCHEMA'.format(ontDiagramToShow.name),eddyProject)
 
+            ontNodeToBBNodeDict = {}
+
+            # ADDING NODES
             diagramToTablesDict = self.bbOntologyEntityMgr.diagramToTables
             relTableToDiagramNodes = diagramToTablesDict[ontDiagramToShow]
-
             for table,ontNodeList in relTableToDiagramNodes.items():
                 tableName = table.name
                 for ontNode in ontNodeList:
@@ -451,6 +456,58 @@ class BlackbirdPlugin(AbstractPlugin):
                     relNode.setPos(ontNode.pos())
                     relNode.setText(tableName)
                     bbDiagram.addItem(relNode)
+                    ontNodeToBBNodeDict[ontNode] = relNode
+
+            #ADDING EDGES
+            diagramToForeignKeysDict = self.bbOntologyEntityMgr.diagramToForeignKeys
+            fkToDiagramElements = diagramToForeignKeysDict[ontDiagramToShow]
+            for fk,fkVisualElementList in fkToDiagramElements.items():
+                fkName = fk.name
+                for innerList in fkVisualElementList:
+                    if len(innerList)==1:
+                        fkVisualElement = innerList[0]
+                        src = ontNodeToBBNodeDict[fkVisualElement.src]
+                        tgt = ontNodeToBBNodeDict[fkVisualElement.tgt]
+                        edges = fkVisualElement.edges
+                        if len(edges)==1:
+                            edge = edges[0]
+                            fkBreakpoints = edge.breakpoints
+                            fkEdge = InclusionEdge(source=src, target=tgt, breakpoints=fkBreakpoints, diagram=bbDiagram)
+                            canDraw = fkEdge.canDraw()
+                            bbDiagram.addItem(fkEdge)
+
+                            fkEdge.source.setAnchor(fkEdge, QtCore.QPointF(fkVisualElement.src.anchor(edge)))
+                            fkEdge.target.setAnchor(fkEdge, QtCore.QPointF(fkVisualElement.tgt.anchor(edge)))
+
+                            fkEdge.source.addEdge(fkEdge)
+                            fkEdge.target.addEdge(fkEdge)
+
+                            fkEdge.updateEdge(visible=True)
+                        else:
+                            srcAnchor = QtCore.QPointF(fkVisualElement.src.anchor(edges[0]))
+                            tgtAnchor = QtCore.QPointF(fkVisualElement.tgt.anchor(edges[-1]))
+                            fkBreakpoints = []
+
+                            for item in fkVisualElement.orderedInnerItems:
+                                if isinstance(item,AbstractNode):
+                                    fkBreakpoints.append(item.mapToScene(item.center()))
+                                elif isinstance(item,AbstractEdge):
+                                    fkBreakpoints.extend(item.breakpoints)
+
+                            fkEdge = InclusionEdge(source=src, target=tgt, breakpoints=fkBreakpoints, diagram=bbDiagram)
+                            bbDiagram.addItem(fkEdge)
+
+                            fkEdge.source.setAnchor(fkEdge, srcAnchor)
+                            fkEdge.target.setAnchor(fkEdge, tgtAnchor)
+
+                            fkEdge.source.addEdge(fkEdge)
+                            fkEdge.target.addEdge(fkEdge)
+
+
+                            fkEdge.updateEdge(visible=True)
+                    else:
+                        for fkVisualElement in innerList:
+                            length = len(innerList)
 
             diagramView = DiagramView(bbDiagram, self.session)
 
