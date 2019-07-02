@@ -27,7 +27,7 @@ author: OBDA Systems
 contact: info@obdasystems.com
 id: blackbird
 name: Blackbird
-version: 0.1
+version: 0.1.1
 
 [blackbird]
 executable=blackbird.jar
