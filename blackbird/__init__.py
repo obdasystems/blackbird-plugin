@@ -452,6 +452,7 @@ class BlackbirdPlugin(AbstractPlugin):
             #bbDiagram = Diagram('{}_SCHEMA'.format(ontDiagramToShow.name),eddyProject)
             bbDiagram = BlackBirdDiagram('{}_SCHEMA'.format(ontDiagramToShow.name), eddyProject)
 
+
             ontNodeToBBNodeDict = {}
 
             # ADDING NODES

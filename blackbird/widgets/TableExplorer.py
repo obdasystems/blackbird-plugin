@@ -191,13 +191,13 @@ class TableExplorerWidget(QtWidgets.QWidget):
                 parent.setIcon(self.iconFor(table))
                 parent.setData(table)
                 self.model.appendRow(parent)
-            #child = QtGui.QStandardItem(self.childKey(diagram, node))
-            #child.setData(node)
-            # CHECK FOR DUPLICATE NODES
-            #children = [parent.child(i) for i in range(parent.rowCount())]
-            #if not any([child.text() == c.text() for c in children]):
-            #    parent.appendRow(child)
-            # APPLY FILTERS AND SORT
+            # child = QtGui.QStandardItem(self.childKey(diagram, node))
+            # child.setData(node)
+            # #CHECK FOR DUPLICATE NODES
+            # children = [parent.child(i) for i in range(parent.rowCount())]
+            # if not any([child.text() == c.text() for c in children]):
+            #     parent.appendRow(child)
+            #APPLY FILTERS AND SORT
             if self.sender() != self.plugin:
                 self.proxy.invalidateFilter()
                 self.proxy.sort(0, QtCore.Qt.AscendingOrder)
@@ -210,22 +210,22 @@ class TableExplorerWidget(QtWidgets.QWidget):
         :type diagram: QGraphicsScene
         :type node: AbstractItem
         """
-        if node.type() in self.items:
-            parent = self.parentFor(node)
-            if not parent:
-                parent = QtGui.QStandardItem(self.parentKey(node))
-                parent.setIcon(self.iconFor(node))
-                self.model.appendRow(parent)
-            child = QtGui.QStandardItem(self.childKey(diagram, node))
-            child.setData(node)
-            # CHECK FOR DUPLICATE NODES
-            children = [parent.child(i) for i in range(parent.rowCount())]
-            if not any([child.text() == c.text() for c in children]):
-                parent.appendRow(child)
-            # APPLY FILTERS AND SORT
-            if self.sender() != self.plugin:
-                self.proxy.invalidateFilter()
-                self.proxy.sort(0, QtCore.Qt.AscendingOrder)
+        parent = self.parentFor(node)
+        if not parent:
+            parent = QtGui.QStandardItem(self.parentKey(node))
+            parent.setIcon(self.iconFor(node))
+            self.model.appendRow(parent)
+        child = QtGui.QStandardItem(self.childKey(diagram, node))
+        child.setData(node)
+        # CHECK FOR DUPLICATE NODES
+        children = [parent.child(i) for i in range(parent.rowCount())]
+        if not any([child.text() == c.text() for c in children]):
+            parent.appendRow(child)
+        # APPLY FILTERS AND SORT
+        if self.sender() != self.plugin:
+            self.proxy.invalidateFilter()
+            self.proxy.sort(0, QtCore.Qt.AscendingOrder)
+        pass
 
     # A REGIME diagram:BBDiagram, node:BBNode (SERVE SOLO DOPO CHE HO COMINCIATO A DISEGNARE)
     @QtCore.pyqtSlot('QGraphicsScene', 'QGraphicsItem')
@@ -235,14 +235,15 @@ class TableExplorerWidget(QtWidgets.QWidget):
         :type diagram: QGraphicsScene
         :type node: AbstractItem
         """
-        if node.type() in self.items:
-            parent = self.parentFor(node)
-            if parent:
-                child = self.childFor(parent, diagram, node)
-                if child:
-                    parent.removeRow(child.index().row())
-                if not parent.rowCount():
-                    self.model.removeRow(parent.index().row())
+        # if node.type() in self.items:
+        #     parent = self.parentFor(node)
+        #     if parent:
+        #         child = self.childFor(parent, diagram, node)
+        #         if child:
+        #             parent.removeRow(child.index().row())
+        #         if not parent.rowCount():
+        #             self.model.removeRow(parent.index().row())
+        pass
 
     @QtCore.pyqtSlot(str)
     def doFilterItem(self, key):
@@ -339,7 +340,8 @@ class TableExplorerWidget(QtWidgets.QWidget):
         #DA CAMBIARE CON DIAGRAMMI BLACKBIRD ED OPPORTUNA FORMATTAZIONE
         predicate = node.text().replace('\n', '')
         diagram = rstrip(diagram.name, File.Graphol.extension)
-        return '{0} ({1} - {2})'.format(predicate, diagram, node.id)
+        return '({1} - {2})'.format(diagram, node.id)
+        #return '{0} ({1} - {2})'.format(predicate, diagram, node.id)
 
 
     @staticmethod
