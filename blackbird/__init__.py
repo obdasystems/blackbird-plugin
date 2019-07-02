@@ -96,6 +96,13 @@ from eddy.plugins.blackbird.schema import RelationalTableAction
 from eddy.plugins.blackbird.widgets.ActionExplorer import BBActionWidget
 from eddy.ui.view import DiagramView
 
+# noinspection PyUnresolvedReferences
+from eddy.plugins.blackbird.diagram import BlackBirdDiagram
+# noinspection PyUnresolvedReferences
+from eddy.plugins.blackbird.items.edges import ForeignKeyEdge
+# noinspection PyUnresolvedReferences
+from eddy.plugins.blackbird.items.nodes import TableNode
+
 LOGGER = getLogger()
 
 
@@ -442,7 +449,8 @@ class BlackbirdPlugin(AbstractPlugin):
             ontDiagramToShow = ontDiagram
             break
         if ontDiagramToShow:
-            bbDiagram = Diagram('{}_SCHEMA'.format(ontDiagramToShow.name),eddyProject)
+            #bbDiagram = Diagram('{}_SCHEMA'.format(ontDiagramToShow.name),eddyProject)
+            bbDiagram = BlackBirdDiagram('{}_SCHEMA'.format(ontDiagramToShow.name), eddyProject)
 
             ontNodeToBBNodeDict = {}
 
@@ -452,7 +460,9 @@ class BlackbirdPlugin(AbstractPlugin):
             for table,ontNodeList in relTableToDiagramNodes.items():
                 tableName = table.name
                 for ontNode in ontNodeList:
-                    relNode = ConceptNode(ontNode.width(), ontNode.height(), remaining_characters=tableName, diagram=bbDiagram)
+                    #relNode = ConceptNode(ontNode.width(), ontNode.height(), remaining_characters=tableName, diagram=bbDiagram)
+                    relNode = TableNode(ontNode.width(), ontNode.height(), remaining_characters=tableName,
+                                          relational_table=table ,diagram=bbDiagram)
                     relNode.setPos(ontNode.pos())
                     relNode.setText(tableName)
                     bbDiagram.addItem(relNode)
@@ -472,7 +482,9 @@ class BlackbirdPlugin(AbstractPlugin):
                         if len(edges)==1:
                             edge = edges[0]
                             fkBreakpoints = edge.breakpoints
-                            fkEdge = InclusionEdge(source=src, target=tgt, breakpoints=fkBreakpoints, diagram=bbDiagram)
+                            #fkEdge = InclusionEdge(source=src, target=tgt, breakpoints=fkBreakpoints, diagram=bbDiagram)
+                            fkEdge = ForeignKeyEdge(foreign_key=fk ,source=src, target=tgt, breakpoints=fkBreakpoints, diagram=bbDiagram)
+
                             canDraw = fkEdge.canDraw()
                             bbDiagram.addItem(fkEdge)
 
@@ -494,7 +506,10 @@ class BlackbirdPlugin(AbstractPlugin):
                                 elif isinstance(item,AbstractEdge):
                                     fkBreakpoints.extend(item.breakpoints)
 
-                            fkEdge = InclusionEdge(source=src, target=tgt, breakpoints=fkBreakpoints, diagram=bbDiagram)
+                            #fkEdge = InclusionEdge(source=src, target=tgt, breakpoints=fkBreakpoints, diagram=bbDiagram)
+                            fkEdge = ForeignKeyEdge(foreign_key=fk, source=src, target=tgt, breakpoints=fkBreakpoints,
+                                                    diagram=bbDiagram)
+
                             bbDiagram.addItem(fkEdge)
 
                             fkEdge.source.setAnchor(fkEdge, srcAnchor)
