@@ -439,52 +439,47 @@ class BlackbirdPlugin(AbstractPlugin):
         self.session.addDockWidget(QtCore.Qt.RightDockWidgetArea, self.widget('fk_explorer_dock'))
 
     def initDiagramDialog(self):
-        self.tempDialog = QtWidgets.QDialog(self.session)
-
+        self.tempDiagramDialogList = []
         eddyProject = self.session.project
 
-        ontDiagramToShow = None
         ontDiagrams = eddyProject.diagrams()
         for ontDiagram in ontDiagrams:
-            ontDiagramToShow = ontDiagram
-            break
-        if ontDiagramToShow:
-            #bbDiagram = Diagram('{}_SCHEMA'.format(ontDiagramToShow.name),eddyProject)
-            bbDiagram = BlackBirdDiagram('{}_SCHEMA'.format(ontDiagramToShow.name), eddyProject)
-
+            tempDialog = QtWidgets.QDialog(self.session)
+            bbDiagram = BlackBirdDiagram('{}_SCHEMA'.format(ontDiagram.name), eddyProject)
 
             ontNodeToBBNodeDict = {}
 
             # ADDING NODES
             diagramToTablesDict = self.bbOntologyEntityMgr.diagramToTables
-            relTableToDiagramNodes = diagramToTablesDict[ontDiagramToShow]
-            for table,ontNodeList in relTableToDiagramNodes.items():
+            relTableToDiagramNodes = diagramToTablesDict[ontDiagram]
+            for table, ontNodeList in relTableToDiagramNodes.items():
                 tableName = table.name
                 for ontNode in ontNodeList:
-                    #relNode = ConceptNode(ontNode.width(), ontNode.height(), remaining_characters=tableName, diagram=bbDiagram)
+                    # relNode = ConceptNode(ontNode.width(), ontNode.height(), remaining_characters=tableName, diagram=bbDiagram)
                     relNode = TableNode(ontNode.width(), ontNode.height(), remaining_characters=tableName,
-                                          relational_table=table ,diagram=bbDiagram)
+                                        relational_table=table, diagram=bbDiagram)
                     relNode.setPos(ontNode.pos())
                     relNode.setText(tableName)
                     bbDiagram.addItem(relNode)
                     ontNodeToBBNodeDict[ontNode] = relNode
 
-            #ADDING EDGES
+            # ADDING EDGES
             diagramToForeignKeysDict = self.bbOntologyEntityMgr.diagramToForeignKeys
-            fkToDiagramElements = diagramToForeignKeysDict[ontDiagramToShow]
-            for fk,fkVisualElementList in fkToDiagramElements.items():
+            fkToDiagramElements = diagramToForeignKeysDict[ontDiagram]
+            for fk, fkVisualElementList in fkToDiagramElements.items():
                 fkName = fk.name
                 for innerList in fkVisualElementList:
-                    if len(innerList)==1:
+                    if len(innerList) == 1:
                         fkVisualElement = innerList[0]
                         src = ontNodeToBBNodeDict[fkVisualElement.src]
                         tgt = ontNodeToBBNodeDict[fkVisualElement.tgt]
                         edges = fkVisualElement.edges
-                        if len(edges)==1:
+                        if len(edges) == 1:
                             edge = edges[0]
                             fkBreakpoints = edge.breakpoints
-                            #fkEdge = InclusionEdge(source=src, target=tgt, breakpoints=fkBreakpoints, diagram=bbDiagram)
-                            fkEdge = ForeignKeyEdge(foreign_key=fk ,source=src, target=tgt, breakpoints=fkBreakpoints, diagram=bbDiagram)
+                            # fkEdge = InclusionEdge(source=src, target=tgt, breakpoints=fkBreakpoints, diagram=bbDiagram)
+                            fkEdge = ForeignKeyEdge(foreign_key=fk, source=src, target=tgt, breakpoints=fkBreakpoints,
+                                                    diagram=bbDiagram)
 
                             canDraw = fkEdge.canDraw()
                             bbDiagram.addItem(fkEdge)
@@ -502,12 +497,12 @@ class BlackbirdPlugin(AbstractPlugin):
                             fkBreakpoints = []
 
                             for item in fkVisualElement.orderedInnerItems:
-                                if isinstance(item,AbstractNode):
+                                if isinstance(item, AbstractNode):
                                     fkBreakpoints.append(item.mapToScene(item.center()))
-                                elif isinstance(item,AbstractEdge):
+                                elif isinstance(item, AbstractEdge):
                                     fkBreakpoints.extend(item.breakpoints)
 
-                            #fkEdge = InclusionEdge(source=src, target=tgt, breakpoints=fkBreakpoints, diagram=bbDiagram)
+                            # fkEdge = InclusionEdge(source=src, target=tgt, breakpoints=fkBreakpoints, diagram=bbDiagram)
                             fkEdge = ForeignKeyEdge(foreign_key=fk, source=src, target=tgt, breakpoints=fkBreakpoints,
                                                     diagram=bbDiagram)
 
@@ -519,7 +514,6 @@ class BlackbirdPlugin(AbstractPlugin):
                             fkEdge.source.addEdge(fkEdge)
                             fkEdge.target.addEdge(fkEdge)
 
-
                             fkEdge.updateEdge(visible=True)
                     else:
                         for fkVisualElement in innerList:
@@ -529,8 +523,107 @@ class BlackbirdPlugin(AbstractPlugin):
 
             tempDialogLayout = QtWidgets.QVBoxLayout()
             tempDialogLayout.addWidget(diagramView)
-            self.tempDialog.setLayout(tempDialogLayout)
-            self.tempDialog.show()
+            tempDialog.setLayout(tempDialogLayout)
+            tempDialog.setWindowTitle('{}_SCHEMA'.format(ontDiagram.name))
+            self.tempDiagramDialogList.append(tempDialog)
+
+        for tempDialog in self.tempDiagramDialogList:
+            tempDialog.show()
+
+
+        ######################
+        # self.tempDialog = QtWidgets.QDialog(self.session)
+        #
+        # eddyProject = self.session.project
+        #
+        # ontDiagramToShow = None
+        # ontDiagrams = eddyProject.diagrams()
+        # for ontDiagram in ontDiagrams:
+        #     ontDiagramToShow = ontDiagram
+        #     break
+        # if ontDiagramToShow:
+        #     #bbDiagram = Diagram('{}_SCHEMA'.format(ontDiagramToShow.name),eddyProject)
+        #     bbDiagram = BlackBirdDiagram('{}_SCHEMA'.format(ontDiagramToShow.name), eddyProject)
+        #
+        #
+        #     ontNodeToBBNodeDict = {}
+        #
+        #     # ADDING NODES
+        #     diagramToTablesDict = self.bbOntologyEntityMgr.diagramToTables
+        #     relTableToDiagramNodes = diagramToTablesDict[ontDiagramToShow]
+        #     for table,ontNodeList in relTableToDiagramNodes.items():
+        #         tableName = table.name
+        #         for ontNode in ontNodeList:
+        #             #relNode = ConceptNode(ontNode.width(), ontNode.height(), remaining_characters=tableName, diagram=bbDiagram)
+        #             relNode = TableNode(ontNode.width(), ontNode.height(), remaining_characters=tableName,
+        #                                   relational_table=table ,diagram=bbDiagram)
+        #             relNode.setPos(ontNode.pos())
+        #             relNode.setText(tableName)
+        #             bbDiagram.addItem(relNode)
+        #             ontNodeToBBNodeDict[ontNode] = relNode
+        #
+        #     #ADDING EDGES
+        #     diagramToForeignKeysDict = self.bbOntologyEntityMgr.diagramToForeignKeys
+        #     fkToDiagramElements = diagramToForeignKeysDict[ontDiagramToShow]
+        #     for fk,fkVisualElementList in fkToDiagramElements.items():
+        #         fkName = fk.name
+        #         for innerList in fkVisualElementList:
+        #             if len(innerList)==1:
+        #                 fkVisualElement = innerList[0]
+        #                 src = ontNodeToBBNodeDict[fkVisualElement.src]
+        #                 tgt = ontNodeToBBNodeDict[fkVisualElement.tgt]
+        #                 edges = fkVisualElement.edges
+        #                 if len(edges)==1:
+        #                     edge = edges[0]
+        #                     fkBreakpoints = edge.breakpoints
+        #                     #fkEdge = InclusionEdge(source=src, target=tgt, breakpoints=fkBreakpoints, diagram=bbDiagram)
+        #                     fkEdge = ForeignKeyEdge(foreign_key=fk ,source=src, target=tgt, breakpoints=fkBreakpoints, diagram=bbDiagram)
+        #
+        #                     canDraw = fkEdge.canDraw()
+        #                     bbDiagram.addItem(fkEdge)
+        #
+        #                     fkEdge.source.setAnchor(fkEdge, QtCore.QPointF(fkVisualElement.src.anchor(edge)))
+        #                     fkEdge.target.setAnchor(fkEdge, QtCore.QPointF(fkVisualElement.tgt.anchor(edge)))
+        #
+        #                     fkEdge.source.addEdge(fkEdge)
+        #                     fkEdge.target.addEdge(fkEdge)
+        #
+        #                     fkEdge.updateEdge(visible=True)
+        #                 else:
+        #                     srcAnchor = QtCore.QPointF(fkVisualElement.src.anchor(edges[0]))
+        #                     tgtAnchor = QtCore.QPointF(fkVisualElement.tgt.anchor(edges[-1]))
+        #                     fkBreakpoints = []
+        #
+        #                     for item in fkVisualElement.orderedInnerItems:
+        #                         if isinstance(item,AbstractNode):
+        #                             fkBreakpoints.append(item.mapToScene(item.center()))
+        #                         elif isinstance(item,AbstractEdge):
+        #                             fkBreakpoints.extend(item.breakpoints)
+        #
+        #                     #fkEdge = InclusionEdge(source=src, target=tgt, breakpoints=fkBreakpoints, diagram=bbDiagram)
+        #                     fkEdge = ForeignKeyEdge(foreign_key=fk, source=src, target=tgt, breakpoints=fkBreakpoints,
+        #                                             diagram=bbDiagram)
+        #
+        #                     bbDiagram.addItem(fkEdge)
+        #
+        #                     fkEdge.source.setAnchor(fkEdge, srcAnchor)
+        #                     fkEdge.target.setAnchor(fkEdge, tgtAnchor)
+        #
+        #                     fkEdge.source.addEdge(fkEdge)
+        #                     fkEdge.target.addEdge(fkEdge)
+        #
+        #
+        #                     fkEdge.updateEdge(visible=True)
+        #             else:
+        #                 for fkVisualElement in innerList:
+        #                     length = len(innerList)
+        #
+        #     diagramView = DiagramView(bbDiagram, self.session)
+        #
+        #     tempDialogLayout = QtWidgets.QVBoxLayout()
+        #     tempDialogLayout.addWidget(diagramView)
+        #     self.tempDialog.setLayout(tempDialogLayout)
+        #     self.tempDialog.show()
 
 
 
