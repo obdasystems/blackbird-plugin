@@ -64,6 +64,7 @@ class RelationalSchemaParser:
         schemaActions = list()
         schemaForeignKeys = list()
         schemaName = schema_json_data["schemaName"]
+        schemaId= schema_json_data["id"]
         jsonTables = schema_json_data["tables"]
         for jsonTable in jsonTables:
             table = RelationalSchemaParser.getTable(jsonTable, schemaActions, schemaForeignKeys)
@@ -82,7 +83,7 @@ class RelationalSchemaParser:
         for index, fk in enumerate(fkNames):
             LOGGER.debug('[{}] {}'.format(index, fk))
 
-        return RelationalSchema(schemaName, tables, schemaActions, schemaForeignKeys)
+        return RelationalSchema(schemaName, schemaId, tables, schemaActions)
 
     @staticmethod
     def getTable(jsonTable, schemaActions, schemaForeignKeys):
@@ -129,7 +130,7 @@ class RelationalSchemaParser:
     @staticmethod
     def getColumn(jsonColumn):
         columnName = jsonColumn["columnName"]
-        entityIRI = jsonColumn["entityIRI"]
+        entityIRI = RelationalSchemaParser.getOriginEntity(jsonColumn["entityIRI"])
         columnType = jsonColumn["columnType"]
         position = jsonColumn["position"]
         nullable = jsonColumn["nullable"]
@@ -174,8 +175,9 @@ class RelationalSchemaParser:
 
 
 class RelationalSchema:
-    def __init__(self, name, tables, actions, foreignKeys):
+    def __init__(self, name, id, tables, actions):
         self._name = name
+        self._id = id
         self._tables = tables
         self._actions = actions
         #self._foreignKeys = foreignKeys
@@ -184,6 +186,10 @@ class RelationalSchema:
             for table in self._tables:
                 if table.foreignKeys:
                     self._foreignKeys.extend(table.foreignKeys)
+
+    @property
+    def id(self):
+        return self._id
 
     @property
     def name(self):
@@ -210,7 +216,7 @@ class RelationalSchema:
     def __str__(self):
         tablesStr = "\n\n".join(map(str, self.tables))
         actionsStr = "\n".join(map(str, self.actions))
-        return 'Name: {}\nTables: [\n{}\n]\nActions: [{}]'.format(self.name, tablesStr, actionsStr)
+        return 'Name: {}\nID: {}\nTables: [\n{}\n]\nActions: [{}]'.format(self.name, self.id, tablesStr, actionsStr)
 
 
 class RelationalTable:
