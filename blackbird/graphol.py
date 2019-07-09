@@ -52,11 +52,12 @@ class SchemaToDiagramElements(QtCore.QObject):
 
 
 class ForeignKeyVisualElements:
-    def __init__(self, src, tgt, edges, inners=None):
+    def __init__(self, src, tgt, edges, inners=None, invertBreakpoints=None):
         self._src = src
         self._tgt = tgt
         self._inners = inners
         self._edges = edges
+        self._invertBreakpoints = invertBreakpoints
         self._orderedInnerItems = []
         self.buildOrderedInnerItems()
 
@@ -65,6 +66,10 @@ class ForeignKeyVisualElements:
             self._orderedInnerItems.append(self._edges[i])
             if self._inners and i<len(self._inners):
                 self._orderedInnerItems.append(self._inners[i])
+
+    @property
+    def invertBreakpoints(self):
+        return self._invertBreakpoints
 
     @property
     def orderedInnerItems(self):
@@ -122,11 +127,14 @@ class BlackbirdOntologyEntityManager(QtCore.QObject):
     """
 
     # noinspection PyArgumentList
-    def __init__(self, relational_schema, session, **kwargs):
+    def __init__(self, relational_schema, session, diagrams, **kwargs):
         super().__init__(session, **kwargs)
         self._session = session
         self._eddyProject = self._session.project
-        self._ontologyDiagrams = self._eddyProject.diagrams()
+        if diagrams and len(diagrams):
+            self._ontologyDiagrams = diagrams
+        else:
+            self._ontologyDiagrams = self._eddyProject.diagrams()
         self._relationalSchema = relational_schema
         self._tables = relational_schema.tables
         self._foreignKeys = relational_schema.foreignKeys
@@ -362,7 +370,7 @@ class BlackbirdOntologyEntityManager(QtCore.QObject):
                     currVE = ForeignKeyVisualElements(firstSrc, firstTgt, [edge])
                     result.append(currVE)
                 elif firstTgt in srcOccurrencesInDiagram and firstSrc in tgtOccurrencesInDiagram:
-                    currVE = ForeignKeyVisualElements(firstTgt, firstSrc, [edge])
+                    currVE = ForeignKeyVisualElements(firstTgt, firstSrc, [edge], invertBreakpoints=[edge])
                     result.append(currVE)
             elif edge.type() == Item.InputEdge:
                 if firstSrc in srcOccurrencesInDiagram and (
@@ -374,7 +382,7 @@ class BlackbirdOntologyEntityManager(QtCore.QObject):
                             currVE = ForeignKeyVisualElements(firstSrc, secondTgt, [edge, secondEdge], [firstTgt])
                             result.append(currVE)
                         elif secondTgt == firstTgt and secondSrc in tgtOccurrencesInDiagram:
-                            currVE = ForeignKeyVisualElements(firstSrc, secondSrc, [edge, secondEdge], [firstTgt])
+                            currVE = ForeignKeyVisualElements(firstSrc, secondSrc, [edge, secondEdge], [firstTgt], [secondEdge])
                             result.append(currVE)
         return result
 

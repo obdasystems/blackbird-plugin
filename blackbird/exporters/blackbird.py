@@ -20,7 +20,8 @@ class BlackBirdProjectExporter(AbstractProjectExporter):
     -----------------------
     - projectname/
     -   blackbird/
-    -       projectname_{VERSION}.blackbird     # contains information on the ontology
+    -       {VERSION}/
+    -           projectname_{VERSION}.blackbird     # contains information on the schema
     -   ...
     """
 
