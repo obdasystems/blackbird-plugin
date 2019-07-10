@@ -353,7 +353,7 @@ class BlackbirdOntologyEntityManager(QtCore.QObject):
 
     # A-->B, R-->P, U1-->U2
     #SOLVED
-    #TODO MODIFICA PER USARE SOLO EDGES RITORNATI DA node.edges() invece di scandire sempre tutti gli archi del grafo
+    #TODO MODIFICA PER USARE SOLO EDGES RITORNATI DA node.edges() PARTENDO DA NODI IN srcOccurrencesInDiagram invece di scandire sempre tutti gli archi del grafo
     def getEntityIsaEntityVEs(self, srcOccurrencesInDiagram, tgtOccurrencesInDiagram, ontDiagram):
         LOGGER.debug('Call to getEntityIsaEntityVEs')
         result = list()
@@ -432,7 +432,7 @@ class BlackbirdOntologyEntityManager(QtCore.QObject):
                             #innerTgt = innerEdge.target
                             #if innerSrc in tgtOccurrencesInDiagram and innerTgt == currSrc:
                             if innerSrc in tgtOccurrencesInDiagram:
-                                currVE = ForeignKeyVisualElements(firstOpTgt , innerSrc, [edge, innerEdge], [currSrc])
+                                currVE = ForeignKeyVisualElements(firstOpTgt , innerSrc, [edge, innerEdge], [currSrc],[edge])
                                 result.append(currVE)
 
                 #UNION OR DISJOINT UNION (NOT TESTED)
@@ -489,7 +489,7 @@ class BlackbirdOntologyEntityManager(QtCore.QObject):
                                 result.append(currVE)
                             #elif innerSrc in tgtOccurrencesInDiagram and innerTgt == currRestrTgt:
                             elif innerSrc in tgtOccurrencesInDiagram:
-                                currVE = ForeignKeyVisualElements(currSrc, innerSrc, [edge, innerEdge], [currRestrTgt])
+                                currVE = ForeignKeyVisualElements(currSrc, innerSrc, [edge, innerEdge], [currRestrTgt], [innerEdge])
                                 result.append(currVE)
         return result
 

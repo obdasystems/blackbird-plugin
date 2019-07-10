@@ -589,7 +589,11 @@ class BlackbirdPlugin(AbstractPlugin):
                 if isinstance(item, AbstractNode):
                     fkBreakpoints.append(item.mapToScene(item.center()))
                 elif isinstance(item, AbstractEdge):
-                    fkBreakpoints.extend(item.breakpoints)
+                    if invertBreakpoints and item in invertBreakpoints:
+                        currBreakpoints = item.breakpoints[::-1]
+                    else:
+                        currBreakpoints = item.breakpoints
+                    fkBreakpoints.extend(currBreakpoints)
 
             # fkEdge = InclusionEdge(source=src, target=tgt, breakpoints=fkBreakpoints, diagram=bbDiagram)
             fkEdge = ForeignKeyEdge(foreign_key=fk, source=src, target=tgt, breakpoints=fkBreakpoints,
