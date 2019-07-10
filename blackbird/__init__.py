@@ -479,60 +479,63 @@ class BlackbirdPlugin(AbstractPlugin):
             for fk, fkVisualElementList in fkToDiagramElements.items():
                 fkName = fk.name
                 for innerList in fkVisualElementList:
-                    if len(innerList) == 1:
-                        fkVisualElement = innerList[0]
-                        src = ontNodeToBBNodeDict[fkVisualElement.src]
-                        tgt = ontNodeToBBNodeDict[fkVisualElement.tgt]
-                        edges = fkVisualElement.edges
-                        invertBreakpoints = fkVisualElement.invertBreakpoints
-                        if len(edges) == 1:
-                            edge = edges[0]
+                    for fkVisualElement in innerList:
+                        self.addFkEdgeToDiagram(fk,fkVisualElement, bbDiagram, ontNodeToBBNodeDict)
 
-                            if invertBreakpoints and edge in invertBreakpoints:
-                                fkBreakpoints = edge.breakpoints[::-1]
-                            else:
-                                fkBreakpoints = edge.breakpoints
-
-                            fkEdge = ForeignKeyEdge(foreign_key=fk, source=src, target=tgt, breakpoints=fkBreakpoints,
-                                                    diagram=bbDiagram)
-
-                            canDraw = fkEdge.canDraw()
-                            bbDiagram.addItem(fkEdge)
-
-                            fkEdge.source.setAnchor(fkEdge, QtCore.QPointF(fkVisualElement.src.anchor(edge)))
-                            fkEdge.target.setAnchor(fkEdge, QtCore.QPointF(fkVisualElement.tgt.anchor(edge)))
-
-                            fkEdge.source.addEdge(fkEdge)
-                            fkEdge.target.addEdge(fkEdge)
-
-                            fkEdge.updateEdge(visible=True)
-                        else:
-                            srcAnchor = QtCore.QPointF(fkVisualElement.src.anchor(edges[0]))
-                            tgtAnchor = QtCore.QPointF(fkVisualElement.tgt.anchor(edges[-1]))
-                            fkBreakpoints = []
-
-                            for item in fkVisualElement.orderedInnerItems:
-                                if isinstance(item, AbstractNode):
-                                    fkBreakpoints.append(item.mapToScene(item.center()))
-                                elif isinstance(item, AbstractEdge):
-                                    fkBreakpoints.extend(item.breakpoints)
-
-                            # fkEdge = InclusionEdge(source=src, target=tgt, breakpoints=fkBreakpoints, diagram=bbDiagram)
-                            fkEdge = ForeignKeyEdge(foreign_key=fk, source=src, target=tgt, breakpoints=fkBreakpoints,
-                                                    diagram=bbDiagram)
-
-                            bbDiagram.addItem(fkEdge)
-
-                            fkEdge.source.setAnchor(fkEdge, srcAnchor)
-                            fkEdge.target.setAnchor(fkEdge, tgtAnchor)
-
-                            fkEdge.source.addEdge(fkEdge)
-                            fkEdge.target.addEdge(fkEdge)
-
-                            fkEdge.updateEdge(visible=True)
-                    else:
-                        for fkVisualElement in innerList:
-                            length = len(innerList)
+                    # if len(innerList) == 1:
+                    #     fkVisualElement = innerList[0]
+                    #     src = ontNodeToBBNodeDict[fkVisualElement.src]
+                    #     tgt = ontNodeToBBNodeDict[fkVisualElement.tgt]
+                    #     edges = fkVisualElement.edges
+                    #     invertBreakpoints = fkVisualElement.invertBreakpoints
+                    #     if len(edges) == 1:
+                    #         edge = edges[0]
+                    #
+                    #         if invertBreakpoints and edge in invertBreakpoints:
+                    #             fkBreakpoints = edge.breakpoints[::-1]
+                    #         else:
+                    #             fkBreakpoints = edge.breakpoints
+                    #
+                    #         fkEdge = ForeignKeyEdge(foreign_key=fk, source=src, target=tgt, breakpoints=fkBreakpoints,
+                    #                                 diagram=bbDiagram)
+                    #
+                    #         canDraw = fkEdge.canDraw()
+                    #         bbDiagram.addItem(fkEdge)
+                    #
+                    #         fkEdge.source.setAnchor(fkEdge, QtCore.QPointF(fkVisualElement.src.anchor(edge)))
+                    #         fkEdge.target.setAnchor(fkEdge, QtCore.QPointF(fkVisualElement.tgt.anchor(edge)))
+                    #
+                    #         fkEdge.source.addEdge(fkEdge)
+                    #         fkEdge.target.addEdge(fkEdge)
+                    #
+                    #         fkEdge.updateEdge(visible=True)
+                    #     else:
+                    #         srcAnchor = QtCore.QPointF(fkVisualElement.src.anchor(edges[0]))
+                    #         tgtAnchor = QtCore.QPointF(fkVisualElement.tgt.anchor(edges[-1]))
+                    #         fkBreakpoints = []
+                    #
+                    #         for item in fkVisualElement.orderedInnerItems:
+                    #             if isinstance(item, AbstractNode):
+                    #                 fkBreakpoints.append(item.mapToScene(item.center()))
+                    #             elif isinstance(item, AbstractEdge):
+                    #                 fkBreakpoints.extend(item.breakpoints)
+                    #
+                    #         # fkEdge = InclusionEdge(source=src, target=tgt, breakpoints=fkBreakpoints, diagram=bbDiagram)
+                    #         fkEdge = ForeignKeyEdge(foreign_key=fk, source=src, target=tgt, breakpoints=fkBreakpoints,
+                    #                                 diagram=bbDiagram)
+                    #
+                    #         bbDiagram.addItem(fkEdge)
+                    #
+                    #         fkEdge.source.setAnchor(fkEdge, srcAnchor)
+                    #         fkEdge.target.setAnchor(fkEdge, tgtAnchor)
+                    #
+                    #         fkEdge.source.addEdge(fkEdge)
+                    #         fkEdge.target.addEdge(fkEdge)
+                    #
+                    #         fkEdge.updateEdge(visible=True)
+                    # else:
+                    #     for fkVisualElement in innerList:
+                    #         length = len(innerList)
 
             diagramView = DiagramView(bbDiagram, self.session)
 
@@ -545,8 +548,62 @@ class BlackbirdPlugin(AbstractPlugin):
         for tempDialog in self.tempDiagramDialogList:
             tempDialog.show()
 
+    def addFkEdgeToDiagram(self,fk, fkVisualElement,bbDiagram, ontNodeToBBNodeDict):
+        """
+        Add to diagram the FK corresponding to the fkVisualElement based on the dictionary ontNodeToBBNodeDict
+        :type fk: ForeignKeyConstraint
+        :type fkVisualElement: ForeignKeyVisualElements
+        :type diagram: BlackBirdDiagram
+        :type ontNodeToBBNodeDict: dict
+        """
+        src = ontNodeToBBNodeDict[fkVisualElement.src]
+        tgt = ontNodeToBBNodeDict[fkVisualElement.tgt]
+        edges = fkVisualElement.edges
+        invertBreakpoints = fkVisualElement.invertBreakpoints
+        if len(edges) == 1:
+            edge = edges[0]
 
+            if invertBreakpoints and edge in invertBreakpoints:
+                fkBreakpoints = edge.breakpoints[::-1]
+            else:
+                fkBreakpoints = edge.breakpoints
 
+            fkEdge = ForeignKeyEdge(foreign_key=fk, source=src, target=tgt, breakpoints=fkBreakpoints,
+                                    diagram=bbDiagram)
+
+            bbDiagram.addItem(fkEdge)
+
+            fkEdge.source.setAnchor(fkEdge, QtCore.QPointF(fkVisualElement.src.anchor(edge)))
+            fkEdge.target.setAnchor(fkEdge, QtCore.QPointF(fkVisualElement.tgt.anchor(edge)))
+
+            fkEdge.source.addEdge(fkEdge)
+            fkEdge.target.addEdge(fkEdge)
+
+            fkEdge.updateEdge(visible=True)
+        else:
+            srcAnchor = QtCore.QPointF(fkVisualElement.src.anchor(edges[0]))
+            tgtAnchor = QtCore.QPointF(fkVisualElement.tgt.anchor(edges[-1]))
+            fkBreakpoints = []
+
+            for item in fkVisualElement.orderedInnerItems:
+                if isinstance(item, AbstractNode):
+                    fkBreakpoints.append(item.mapToScene(item.center()))
+                elif isinstance(item, AbstractEdge):
+                    fkBreakpoints.extend(item.breakpoints)
+
+            # fkEdge = InclusionEdge(source=src, target=tgt, breakpoints=fkBreakpoints, diagram=bbDiagram)
+            fkEdge = ForeignKeyEdge(foreign_key=fk, source=src, target=tgt, breakpoints=fkBreakpoints,
+                                    diagram=bbDiagram)
+
+            bbDiagram.addItem(fkEdge)
+
+            fkEdge.source.setAnchor(fkEdge, srcAnchor)
+            fkEdge.target.setAnchor(fkEdge, tgtAnchor)
+
+            fkEdge.source.addEdge(fkEdge)
+            fkEdge.target.addEdge(fkEdge)
+
+            fkEdge.updateEdge(visible=True)
     #############################################
     #   EVENTS
     #################################

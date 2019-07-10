@@ -376,14 +376,22 @@ class BlackbirdOntologyEntityManager(QtCore.QObject):
                 if firstSrc in srcOccurrencesInDiagram and (
                         firstTgt.type() == Item.UnionNode or firstTgt.type() == Item.DisjointUnionNode):
                     for secondEdge in firstTgt.edges:
-                        secondSrc = secondEdge.source
-                        secondTgt = secondEdge.target
-                        if secondSrc == firstTgt and secondTgt in tgtOccurrencesInDiagram:
-                            currVE = ForeignKeyVisualElements(firstSrc, secondTgt, [edge, secondEdge], [firstTgt])
-                            result.append(currVE)
-                        elif secondTgt == firstTgt and secondSrc in tgtOccurrencesInDiagram:
-                            currVE = ForeignKeyVisualElements(firstSrc, secondSrc, [edge, secondEdge], [firstTgt], [secondEdge])
-                            result.append(currVE)
+                        if secondEdge.type() == Item.EquivalenceEdge:
+                            secondSrc = secondEdge.source
+                            secondTgt = secondEdge.target
+                            if secondSrc == firstTgt and secondTgt in tgtOccurrencesInDiagram:
+                                currVE = ForeignKeyVisualElements(firstSrc, secondTgt, [edge, secondEdge], [firstTgt])
+                                result.append(currVE)
+                            elif secondTgt == firstTgt and secondSrc in tgtOccurrencesInDiagram:
+                                currVE = ForeignKeyVisualElements(firstSrc, secondSrc, [edge, secondEdge], [firstTgt], [secondEdge])
+                                result.append(currVE)
+                        if secondEdge.type() == Item.InclusionEdge:
+                            secondSrc = secondEdge.source
+                            secondTgt = secondEdge.target
+                            if secondSrc == firstTgt and secondTgt in tgtOccurrencesInDiagram:
+                                currVE = ForeignKeyVisualElements(firstSrc, secondTgt, [edge, secondEdge], [firstTgt])
+                                result.append(currVE)
+
         return result
 
     # A-->exist(R) , A-->exist(U)
