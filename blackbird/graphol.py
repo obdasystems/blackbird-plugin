@@ -353,7 +353,6 @@ class BlackbirdOntologyEntityManager(QtCore.QObject):
 
     # A-->B, R-->P, U1-->U2
     #SOLVED
-    #TODO MODIFICA PER USARE SOLO EDGES RITORNATI DA node.edges() PARTENDO DA NODI IN srcOccurrencesInDiagram invece di scandire sempre tutti gli archi del grafo
     def getEntityIsaEntityVEs(self, srcOccurrencesInDiagram, tgtOccurrencesInDiagram, ontDiagram):
         LOGGER.debug('Call to getEntityIsaEntityVEs')
         result = list()
@@ -391,11 +390,10 @@ class BlackbirdOntologyEntityManager(QtCore.QObject):
                             if secondSrc == firstTgt and secondTgt in tgtOccurrencesInDiagram:
                                 currVE = ForeignKeyVisualElements(firstSrc, secondTgt, [edge, secondEdge], [firstTgt])
                                 result.append(currVE)
-
         return result
 
     # A-->exist(R) , A-->exist(U)
-    # SOLVED (PARTIALLY)
+    # SOLVED
     def getClassIsaExistRoleOrAttributeVEs(self, srcOccurrencesInDiagram, tgtOccurrencesInDiagram, ontDiagram):
         LOGGER.debug('Call to getClassIsaExistRoleOrAttributeVEs')
         result = list()
@@ -403,16 +401,29 @@ class BlackbirdOntologyEntityManager(QtCore.QObject):
         for edge in edges:
             if edge.type() == Item.InclusionEdge:
                 currSrc = edge.source
-                currRestrTgt = edge.target
-                if currSrc in srcOccurrencesInDiagram and currRestrTgt.type() is Item.DomainRestrictionNode:
-                    for innerEdge in currRestrTgt.edges:
+                firstOpTgt = edge.target
+                if currSrc in srcOccurrencesInDiagram and firstOpTgt.type() is Item.DomainRestrictionNode:
+                    for innerEdge in firstOpTgt.edges:
                         if innerEdge.type() == Item.InputEdge:
                             innerSrc = innerEdge.source
                             #innerTgt = innerEdge.target
                             #if innerSrc in tgtOccurrencesInDiagram and innerTgt == currRestrTgt:
                             if innerSrc in tgtOccurrencesInDiagram:
-                                currVE = ForeignKeyVisualElements(currSrc, innerSrc, [edge, innerEdge], [currRestrTgt])
+                                currVE = ForeignKeyVisualElements(currSrc, innerSrc, [edge, innerEdge], [firstOpTgt])
                                 result.append(currVE)
+                # UNION OR DISJOINT UNION
+                elif currSrc in srcOccurrencesInDiagram and (firstOpTgt.type() is Item.UnionNode or firstOpTgt.type() is Item.DisjointUnionNode):
+                    for firstInnerEdge in firstOpTgt.edges:
+                        if firstInnerEdge.type() == Item.InputEdge:
+                            firstInnerSrc = firstInnerEdge.source
+                            firstInnerTgt = firstInnerEdge.target
+                            if firstInnerTgt==firstOpTgt and firstInnerSrc.type() is Item.DomainRestrictionNode:
+                                for secInnerEdge in firstInnerSrc.edges:
+                                    secInnerSrc = secInnerEdge.source
+                                    if secInnerSrc in tgtOccurrencesInDiagram:
+                                        currVE= ForeignKeyVisualElements(currSrc , secInnerSrc, [edge, firstInnerEdge, secInnerEdge], [firstOpTgt,firstInnerTgt])
+                                        result.append(currVE)
+
             elif edge.type() == Item.EquivalenceEdge:
                 currSrc = edge.source
                 firstOpTgt = edge.target
@@ -435,28 +446,29 @@ class BlackbirdOntologyEntityManager(QtCore.QObject):
                                 currVE = ForeignKeyVisualElements(firstOpTgt , innerSrc, [edge, innerEdge], [currSrc],[edge])
                                 result.append(currVE)
 
-                #UNION OR DISJOINT UNION (NOT TESTED)
+                #UNION OR DISJOINT UNION
                 elif currSrc in srcOccurrencesInDiagram and (firstOpTgt.type() is Item.UnionNode or firstOpTgt.type() is Item.DisjointUnionNode):
                     for firstInnerEdge in firstOpTgt.edges:
                         if firstInnerEdge.type() == Item.InputEdge:
                             firstInnerSrc = firstInnerEdge.source
                             firstInnerTgt = firstInnerEdge.target
-                            if firstInnerSrc is Item.DomainRestrictionNode:
+                            if firstInnerTgt==firstOpTgt and firstInnerSrc.type() is Item.DomainRestrictionNode:
                                 for secInnerEdge in firstInnerSrc.edges:
                                     secInnerSrc = secInnerEdge.source
                                     if secInnerSrc in tgtOccurrencesInDiagram:
-                                        currVE= ForeignKeyVisualElements(currSrc , secInnerSrc, [edge, firstInnerEdge, secInnerEdge], [firstOpTgt,firstInnerTgt])
+                                        currVE= ForeignKeyVisualElements(currSrc , secInnerSrc, [edge, firstInnerEdge, secInnerEdge], [firstOpTgt,firstInnerSrc])
                                         result.append(currVE)
+
                 elif firstOpTgt in srcOccurrencesInDiagram and (currSrc.type() is Item.UnionNode or currSrc.type() is Item.DisjointUnionNode):
                     for firstInnerEdge in currSrc.edges:
                         if firstInnerEdge.type() == Item.InputEdge:
                             firstInnerSrc = firstInnerEdge.source
                             firstInnerTgt = firstInnerEdge.target
-                            if firstInnerSrc is Item.DomainRestrictionNode:
+                            if firstInnerTgt==currSrc and firstInnerSrc.type() is Item.DomainRestrictionNode:
                                 for secInnerEdge in firstInnerSrc.edges:
                                     secInnerSrc = secInnerEdge.source
                                     if secInnerSrc in tgtOccurrencesInDiagram:
-                                        currVE = ForeignKeyVisualElements(firstOpTgt, secInnerSrc,[edge, firstInnerEdge, secInnerEdge],[currSrc, firstInnerTgt])
+                                        currVE = ForeignKeyVisualElements(firstOpTgt, secInnerSrc,[edge, firstInnerEdge, secInnerEdge],[currSrc, firstInnerSrc],[edge])
                                         result.append(currVE)
 
         return result
@@ -483,14 +495,35 @@ class BlackbirdOntologyEntityManager(QtCore.QObject):
                         elif innerEdge.type() == Item.EquivalenceEdge:
                             innerSrc = innerEdge.source
                             innerTgt = innerEdge.target
-                            #if innerTgt in tgtOccurrencesInDiagram and innerSrc == currRestrTgt:
                             if innerTgt in tgtOccurrencesInDiagram:
                                 currVE = ForeignKeyVisualElements(currSrc, innerTgt, [edge, innerEdge], [currRestrTgt])
                                 result.append(currVE)
-                            #elif innerSrc in tgtOccurrencesInDiagram and innerTgt == currRestrTgt:
                             elif innerSrc in tgtOccurrencesInDiagram:
                                 currVE = ForeignKeyVisualElements(currSrc, innerSrc, [edge, innerEdge], [currRestrTgt], [innerEdge])
                                 result.append(currVE)
+                        # UNION OR DISJOINT UNION
+                        elif innerEdge.type() == Item.InputEdge:
+                            innerSrc = innerEdge.source
+                            innerTgt = innerEdge.target
+                            if innerSrc==currRestrTgt and (innerTgt.type() is Item.UnionNode or innerTgt.type() is Item.DisjointUnionNode):
+                                for secInnerEdge in innerTgt.edges:
+                                    if secInnerEdge.type() == Item.InclusionEdge:
+                                        secInnerSrc = secInnerEdge.source
+                                        secInnerTgt = secInnerEdge.target
+                                        if secInnerSrc==innerTgt and secInnerTgt in tgtOccurrencesInDiagram:
+                                            currVE = ForeignKeyVisualElements(currSrc, secInnerTgt, [edge, innerEdge,secInnerEdge],[currRestrTgt,innerTgt])
+                                            result.append(currVE)
+                                    if secInnerEdge.type() == Item.EquivalenceEdge:
+                                        secInnerSrc = secInnerEdge.source
+                                        secInnerTgt = secInnerEdge.target
+                                        if secInnerSrc==innerTgt and secInnerTgt in tgtOccurrencesInDiagram:
+                                            currVE = ForeignKeyVisualElements(currSrc, secInnerTgt, [edge, innerEdge,secInnerEdge],[currRestrTgt,innerTgt])
+                                            result.append(currVE)
+                                        elif secInnerTgt==innerTgt and  secInnerSrc in tgtOccurrencesInDiagram:
+                                            currVE = ForeignKeyVisualElements(currSrc, secInnerSrc, [edge, innerEdge, secInnerEdge], [currRestrTgt, innerTgt], [secInnerEdge])
+                                            result.append(currVE)
+
+
         return result
 
     # exist(R)-->exist(P), exist(R)-->exist(U), exist(U)-->exist(R), exist(U1)-->exist(U2)
