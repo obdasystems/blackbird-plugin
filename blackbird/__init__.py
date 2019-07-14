@@ -103,6 +103,8 @@ from eddy.plugins.blackbird.diagram import BlackBirdDiagram
 from eddy.plugins.blackbird.items.edges import ForeignKeyEdge
 # noinspection PyUnresolvedReferences
 from eddy.plugins.blackbird.items.nodes import TableNode
+# noinspection PyUnresolvedReferences
+from eddy.plugins.blackbird.widgets.ProjectExplorer import BlackbirdProjectExplorerWidget
 
 LOGGER = getLogger()
 
@@ -418,6 +420,78 @@ class BlackbirdPlugin(AbstractPlugin):
         menu = self.session.menu('view')
         menu.addAction(self.widget('table_explorer_dock').toggleViewAction())
 
+        ##########################################
+        #                                        #
+        # INITIALIZE THE PROJECT EXPLORER WIDGET #
+        #                                        #
+        ##########################################
+        projExplorerWidget = BlackbirdProjectExplorerWidget(self)
+
+        projExplorerWidget.setObjectName('blackbird_project_explorer')
+        self.addWidget(projExplorerWidget)
+        # CREATE TOGGLE ACTIONS
+        group = QtWidgets.QActionGroup(self, objectName='blackbird_project_explorer_item_toggle')
+        group.setExclusive(False)
+        # for item in projExplorerWidget.items:
+        #     action = QtWidgets.QAction(item.realName.title(), group, objectName=item.name, checkable=True)
+        #     action.setChecked(True)
+        #     action.setData(item)
+        #     action.setFont(Font('Roboto', 11))
+        #     connect(action.triggered, projExplorerWidget.onMenuButtonClicked)
+        #     group.addAction(action)
+        self.addAction(group)
+
+        group = QtWidgets.QActionGroup(self, objectName='blackbird_project_explorer_status_toggle')
+        group.setExclusive(False)
+        # for status in projExplorerWidget.status:
+        #     action = QtWidgets.QAction(status.value if status.value else 'Default', group, objectName=status.name, checkable=True)
+        #     action.setChecked(True)
+        #     action.setData(status)
+        #     action.setFont(Font('Roboto', 11))
+        #     connect(action.triggered, projExplorerWidget.onMenuButtonClicked)
+        #     group.addAction(action)
+        self.addAction(group)
+
+        # CREATE TOGGLE MENU
+        menu = QtWidgets.QMenu(objectName='blackbird_project_explorer_toggle')
+        menu.addSection('Items')
+        menu.addActions(self.action('blackbird_project_explorer_item_toggle').actions())
+        menu.addSection('Description')
+        menu.addActions(self.action('blackbird_project_explorer_status_toggle').actions())
+        self.addMenu(menu)
+
+        # CREATE CONTROL WIDGET
+        button = QtWidgets.QToolButton(objectName='blackbird_project_explorer_toggle')
+        button.setIcon(QtGui.QIcon(':/icons/18/ic_settings_black'))
+        button.setContentsMargins(0, 0, 0, 0)
+        button.setFixedSize(18, 18)
+        button.setFocusPolicy(QtCore.Qt.NoFocus)
+        button.setMenu(self.menu('blackbird_project_explorer_toggle'))
+        button.setPopupMode(QtWidgets.QToolButton.InstantPopup)
+        self.addWidget(button)
+
+        # CREATE DOCKING AREA WIDGET
+        projExplorerDockWidget = DockWidget('Blackbird Project Explorer', QtGui.QIcon(':icons/18/ic_storage_black'),
+                                          self.session)
+
+        projExplorerDockWidget.addTitleBarButton(self.widget('blackbird_project_explorer_toggle'))
+        projExplorerDockWidget.installEventFilter(self)
+        projExplorerDockWidget.setAllowedAreas(
+            QtCore.Qt.LeftDockWidgetArea | QtCore.Qt.RightDockWidgetArea | QtCore.Qt.BottomDockWidgetArea)
+        projExplorerDockWidget.setObjectName('blackbird_project_explorer_dock')
+        projExplorerDockWidget.setWidget(self.widget('blackbird_project_explorer'))
+        self.addWidget(projExplorerDockWidget)
+
+        # CREATE SHORTCUTS
+        action = projExplorerDockWidget.toggleViewAction()
+        action.setParent(self.session)
+        action.setShortcut(QtGui.QKeySequence('Alt+4'))
+
+        # CREATE ENTRY IN VIEW MENU
+        menu = self.session.menu('view')
+        menu.addAction(self.widget('blackbird_project_explorer_dock').toggleViewAction())
+
+
         #####################
         #                   #
         # CONFIGURE SIGNALS #
@@ -431,12 +505,15 @@ class BlackbirdPlugin(AbstractPlugin):
         connect(self.widget('blackbird_action_info').sgnActionButtonClicked, self.onSchemaActionApplied)
         connect(self.widget('blackbird_action_info').sgnUndoButtonClicked, self.onSchemaActionUndo)
 
+
+
         #################
         #               #
         # DOCKING AREAS #
         #               #
         #################
         self.session.addDockWidget(QtCore.Qt.RightDockWidgetArea, self.widget('table_explorer_dock'))
+        self.session.addDockWidget(QtCore.Qt.RightDockWidgetArea, self.widget('blackbird_project_explorer_dock'))
         self.session.addDockWidget(QtCore.Qt.RightDockWidgetArea, self.widget('fk_explorer_dock'))
 
     def initDiagramDialog(self):
@@ -446,6 +523,8 @@ class BlackbirdPlugin(AbstractPlugin):
         eddyProject = self.session.project
 
         ontDiagrams = None
+
+        self.widget('blackbird_project_explorer').setProject(eddyProject)
 
         if self.diagSelInOntGen and len(self.diagSelInOntGen):
             ontDiagrams = self.diagSelInOntGen
@@ -477,65 +556,11 @@ class BlackbirdPlugin(AbstractPlugin):
             diagramToForeignKeysDict = self.bbOntologyEntityMgr.diagramToForeignKeys
             fkToDiagramElements = diagramToForeignKeysDict[ontDiagram]
             for fk, fkVisualElementList in fkToDiagramElements.items():
-                fkName = fk.name
                 for innerList in fkVisualElementList:
                     for fkVisualElement in innerList:
                         self.addFkEdgeToDiagram(fk,fkVisualElement, bbDiagram, ontNodeToBBNodeDict)
 
-                    # if len(innerList) == 1:
-                    #     fkVisualElement = innerList[0]
-                    #     src = ontNodeToBBNodeDict[fkVisualElement.src]
-                    #     tgt = ontNodeToBBNodeDict[fkVisualElement.tgt]
-                    #     edges = fkVisualElement.edges
-                    #     invertBreakpoints = fkVisualElement.invertBreakpoints
-                    #     if len(edges) == 1:
-                    #         edge = edges[0]
-                    #
-                    #         if invertBreakpoints and edge in invertBreakpoints:
-                    #             fkBreakpoints = edge.breakpoints[::-1]
-                    #         else:
-                    #             fkBreakpoints = edge.breakpoints
-                    #
-                    #         fkEdge = ForeignKeyEdge(foreign_key=fk, source=src, target=tgt, breakpoints=fkBreakpoints,
-                    #                                 diagram=bbDiagram)
-                    #
-                    #         canDraw = fkEdge.canDraw()
-                    #         bbDiagram.addItem(fkEdge)
-                    #
-                    #         fkEdge.source.setAnchor(fkEdge, QtCore.QPointF(fkVisualElement.src.anchor(edge)))
-                    #         fkEdge.target.setAnchor(fkEdge, QtCore.QPointF(fkVisualElement.tgt.anchor(edge)))
-                    #
-                    #         fkEdge.source.addEdge(fkEdge)
-                    #         fkEdge.target.addEdge(fkEdge)
-                    #
-                    #         fkEdge.updateEdge(visible=True)
-                    #     else:
-                    #         srcAnchor = QtCore.QPointF(fkVisualElement.src.anchor(edges[0]))
-                    #         tgtAnchor = QtCore.QPointF(fkVisualElement.tgt.anchor(edges[-1]))
-                    #         fkBreakpoints = []
-                    #
-                    #         for item in fkVisualElement.orderedInnerItems:
-                    #             if isinstance(item, AbstractNode):
-                    #                 fkBreakpoints.append(item.mapToScene(item.center()))
-                    #             elif isinstance(item, AbstractEdge):
-                    #                 fkBreakpoints.extend(item.breakpoints)
-                    #
-                    #         # fkEdge = InclusionEdge(source=src, target=tgt, breakpoints=fkBreakpoints, diagram=bbDiagram)
-                    #         fkEdge = ForeignKeyEdge(foreign_key=fk, source=src, target=tgt, breakpoints=fkBreakpoints,
-                    #                                 diagram=bbDiagram)
-                    #
-                    #         bbDiagram.addItem(fkEdge)
-                    #
-                    #         fkEdge.source.setAnchor(fkEdge, srcAnchor)
-                    #         fkEdge.target.setAnchor(fkEdge, tgtAnchor)
-                    #
-                    #         fkEdge.source.addEdge(fkEdge)
-                    #         fkEdge.target.addEdge(fkEdge)
-                    #
-                    #         fkEdge.updateEdge(visible=True)
-                    # else:
-                    #     for fkVisualElement in innerList:
-                    #         length = len(innerList)
+            self.widget('blackbird_project_explorer').doAddDiagram(bbDiagram)
 
             diagramView = DiagramView(bbDiagram, self.session)
 
