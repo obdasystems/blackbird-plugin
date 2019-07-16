@@ -105,6 +105,8 @@ from eddy.plugins.blackbird.items.edges import ForeignKeyEdge
 from eddy.plugins.blackbird.items.nodes import TableNode
 # noinspection PyUnresolvedReferences
 from eddy.plugins.blackbird.widgets.ProjectExplorer import BlackbirdProjectExplorerWidget
+# noinspection PyUnresolvedReferences
+from eddy.plugins.blackbird.schema import RelationalTable, ForeignKeyConstraint
 
 LOGGER = getLogger()
 
@@ -118,6 +120,14 @@ class BlackbirdPlugin(AbstractPlugin):
     sgnSchemaChanged = QtCore.pyqtSignal(RelationalSchema)
     sgnActionCorrectlyApplied = QtCore.pyqtSignal()
 
+    sgnFocusDiagram = QtCore.pyqtSignal('QGraphicsScene')
+    sgnFocusItem = QtCore.pyqtSignal('QGraphicsItem')
+    sgnNodeAdded = QtCore.pyqtSignal(BlackBirdDiagram,TableNode)
+    sgnEdgeAdded = QtCore.pyqtSignal(BlackBirdDiagram,ForeignKeyEdge)
+    sgnFocusTable = QtCore.pyqtSignal(RelationalTable)
+    sgnFocusForeignKey = QtCore.pyqtSignal(ForeignKeyConstraint)
+
+
     def __init__(self, spec, session):
         """
         Initialises a new instance of the Blackbird plugin.
@@ -128,6 +138,66 @@ class BlackbirdPlugin(AbstractPlugin):
         self.nmanager = NetworkManager(self)
         self.translator = None
         self.bbOntologyEntityMgr = None
+
+
+    #############################################
+    #   HOOKS
+    #################################
+
+    def dispose(self):
+        """
+        Executed whenever the plugin is going to be destroyed.
+        """
+        # STOP BLACKBIRD PROCESS
+        self.sgnStopTranslator.emit()
+
+        # DISCONNECT FROM CURRENT PROJECT
+        self.debug('Disconnecting from project: %s', self.project.name)
+        disconnect(self.project.sgnUpdated, self.onProjectUpdated)
+        disconnect(self.project.sgnDiagramAdded, self.onDiagramAdded)
+        disconnect(self.project.sgnDiagramRemoved, self.onDiagramRemoved)
+        disconnect(self.project.sgnItemAdded, self.onProjectItemAdded)
+        disconnect(self.project.sgnItemRemoved, self.onProjectItemRemoved)
+
+        # DISCONNECT FROM ACTIVE SESSION
+        self.debug('Disconnecting from active session')
+        disconnect(self.session.sgnReady, self.onSessionReady)
+        disconnect(self.session.sgnUpdateState, self.doUpdateState)
+
+    def start(self):
+        """
+        Perform initialization tasks for the plugin.
+        """
+        # INITIALIZE THE WIDGET
+        self.debug('Starting Blackbird plugin')
+
+        # INITIALIZE ACTIONS AND MENUS
+        self.initActions()
+        self.initMenus()
+        self.initToolBars()
+        self.initWidgets()
+
+
+        # INITIALIZE BLACKBIRD TRANSLATOR
+        self.initSubprocess()
+
+        self.initSignals()
+
+        # CONFIGURE SIGNAL/SLOTS
+        # self.debug('Connecting to active session')
+        # connect(self.session.sgnReady, self.onSessionReady)
+        # connect(self.session.sgnUpdateState, self.doUpdateState)
+
+
+    def initSignals(self):
+        """
+        Connect session specific signals to their slots.
+        """
+        self.debug('Connecting to active session')
+        connect(self.session.sgnReady, self.onSessionReady)
+        connect(self.session.sgnUpdateState, self.doUpdateState)
+        connect(self.sgnFocusDiagram, self.doFocusDiagram)
+        connect(self.sgnFocusItem, self.doFocusItem)
 
     # noinspection PyArgumentList
     def initActions(self):
@@ -498,9 +568,9 @@ class BlackbirdPlugin(AbstractPlugin):
         #                   #
         #####################
         #connect(self.session.sgnReady, self.onSessionReady)
-        connect(self.widget('blackbird_table_explorer').sgnRelationalTableItemClicked, self.widget('blackbird_info').doSelectTable)
-        connect(self.widget('blackbird_fk_explorer').sgnForeignKeyItemClicked, self.widget('blackbird_info').doSelectForeignKey)
-        connect(self.widget('blackbird_table_explorer').sgnRelationalTableItemClicked, self.widget('blackbird_action_info').doSelectTable)
+        #connect(self.widget('blackbird_table_explorer').sgnRelationalTableItemClicked, self.widget('blackbird_info').doSelectTable)
+        #connect(self.widget('blackbird_fk_explorer').sgnForeignKeyItemClicked, self.widget('blackbird_info').doSelectForeignKey)
+        #connect(self.widget('blackbird_table_explorer').sgnRelationalTableItemClicked, self.widget('blackbird_action_info').doSelectTable)
 
         connect(self.widget('blackbird_action_info').sgnActionButtonClicked, self.onSchemaActionApplied)
         connect(self.widget('blackbird_action_info').sgnUndoButtonClicked, self.onSchemaActionUndo)
@@ -516,7 +586,7 @@ class BlackbirdPlugin(AbstractPlugin):
         self.session.addDockWidget(QtCore.Qt.RightDockWidgetArea, self.widget('blackbird_project_explorer_dock'))
         self.session.addDockWidget(QtCore.Qt.RightDockWidgetArea, self.widget('fk_explorer_dock'))
 
-    def initDiagramDialog(self):
+    def initDiagrams(self):
         self.tempDiagramDialogList = []
         for tempDiagram in self.tempDiagramDialogList:
             tempDiagram.close()
@@ -550,6 +620,7 @@ class BlackbirdPlugin(AbstractPlugin):
                     relNode.setPos(ontNode.pos())
                     relNode.setText(tableName)
                     bbDiagram.addItem(relNode)
+                    self.sgnNodeAdded.emit(bbDiagram,relNode)
                     ontNodeToBBNodeDict[ontNode] = relNode
 
             # ADDING EDGES
@@ -570,10 +641,10 @@ class BlackbirdPlugin(AbstractPlugin):
             tempDialog.setWindowTitle('{}_SCHEMA'.format(ontDiagram.name))
             self.tempDiagramDialogList.append(tempDialog)
 
-        for tempDialog in self.tempDiagramDialogList:
-            tempDialog.show()
+        #for tempDialog in self.tempDiagramDialogList:
+            #tempDialog.show()
 
-    def addFkEdgeToDiagram(self,fk, fkVisualElement,bbDiagram, ontNodeToBBNodeDict):
+    def addFkEdgeToDiagram(self,fk, fkVisualElement, bbDiagram, ontNodeToBBNodeDict):
         """
         Add to diagram the FK corresponding to the fkVisualElement based on the dictionary ontNodeToBBNodeDict
         :type fk: ForeignKeyConstraint
@@ -597,6 +668,7 @@ class BlackbirdPlugin(AbstractPlugin):
                                     diagram=bbDiagram)
 
             bbDiagram.addItem(fkEdge)
+            self.sgnEdgeAdded.emit(bbDiagram,fkEdge)
 
             fkEdge.source.setAnchor(fkEdge, QtCore.QPointF(fkVisualElement.src.anchor(edge)))
             fkEdge.target.setAnchor(fkEdge, QtCore.QPointF(fkVisualElement.tgt.anchor(edge)))
@@ -625,6 +697,7 @@ class BlackbirdPlugin(AbstractPlugin):
                                     diagram=bbDiagram)
 
             bbDiagram.addItem(fkEdge)
+            self.sgnEdgeAdded.emit(bbDiagram,fkEdge)
 
             fkEdge.source.setAnchor(fkEdge, srcAnchor)
             fkEdge.target.setAnchor(fkEdge, tgtAnchor)
@@ -814,7 +887,7 @@ class BlackbirdPlugin(AbstractPlugin):
                 # TODO popola widget con project explorer
 
                 self.initializeOntologyEntityManager()
-                self.initDiagramDialog()
+                self.initDiagrams()
                 dialog = BlackbirdOutputDialog(owltext, json.dumps(json.loads(schema),indent=2),self.schema, self.session)
                 dialog.show()
                 dialog.raise_()
@@ -841,7 +914,7 @@ class BlackbirdPlugin(AbstractPlugin):
                 jsonSchema = json.loads(schema)
                 self.schema = RelationalSchemaParser.getSchema(jsonSchema)
                 self.initializeOntologyEntityManager()
-                self.initDiagramDialog()
+                self.initDiagrams()
                 dialog = BlackbirdOutputDialog('', json.dumps(json.loads(schema), indent=2),self.schema , self.session)
                 dialog.show()
                 dialog.raise_()
@@ -880,7 +953,6 @@ class BlackbirdPlugin(AbstractPlugin):
         finally:
             self.widget('undo_progress').hide()
 
-
     @QtCore.pyqtSlot(QtCore.QProcess.ProcessError)
     def onTranslatorErrorOccurred(self, error):
         """
@@ -888,8 +960,8 @@ class BlackbirdPlugin(AbstractPlugin):
         :type error: ProcessError
         """
         self.session.addNotification(dedent("""\
-        <b><font color="#7E0B17">ERROR</font></b>: Could not start Blackbird Engine: {}
-        """.format(error)))
+            <b><font color="#7E0B17">ERROR</font></b>: Could not start Blackbird Engine: {}
+            """.format(error)))
         LOGGER.error('Could not start Blackbird Engine: {}'.format(error))
 
     @QtCore.pyqtSlot()
@@ -899,6 +971,50 @@ class BlackbirdPlugin(AbstractPlugin):
         """
         self.session.addNotification('Blackbird Engine Ready')
         LOGGER.info('Blackbird Engine Ready')
+
+    @QtCore.pyqtSlot('QGraphicsScene')
+    def doFocusDiagram(self, diagram):
+        """
+        Focus the given diagram in the MDI area.
+        :type diagram: Diagram
+        """
+        subwindow = self.session.mdi.subWindowForDiagram(diagram)
+        if not subwindow:
+            view = self.session.createDiagramView(diagram)
+            subwindow = self.session.createMdiSubWindow(view)
+            subwindow.setWindowIcon(QtGui.QIcon(':/blackbird/icons/128/ic_blackbird'))
+            subwindow.showMaximized()
+        self.session.mdi.setActiveSubWindow(subwindow)
+        self.session.mdi.update()
+        #self.session.sgnDiagramFocused.emit(diagram)
+
+    @QtCore.pyqtSlot('QGraphicsItem')
+    def doFocusItem(self, item):
+        """
+        Focus an item in its diagram.
+        :type item: AbstractItem
+        """
+        self.sgnFocusDiagram.emit(item.diagram)
+        self.session.mdi.activeDiagram().clearSelection()
+        self.session.  mdi.activeView().centerOn(item)
+        item.setSelected(True)
+
+    @QtCore.pyqtSlot(RelationalTable)
+    def doFocusTable(self, table):
+        """
+        Focus on a Table.
+        :type table: RelationalTable
+        """
+        self.sgnFocusTable.emit(table)
+
+    @QtCore.pyqtSlot(ForeignKeyConstraint)
+    def doFocusForeignKey(self, fk):
+        """
+        Focus on a fk).
+        :type fk): ForeignKeyConstraint
+        """
+        self.sgnFocusForeignKey.emit(fk)
+
 
     @QtCore.pyqtSlot()
     def doOpen(self):
@@ -1070,50 +1186,7 @@ class BlackbirdPlugin(AbstractPlugin):
         isDiagramActive = self.session.mdi.activeDiagram() is not None
         self.action('generate_schema').setEnabled(isDiagramActive)
 
-    #############################################
-    #   HOOKS
-    #################################
 
-    def dispose(self):
-        """
-        Executed whenever the plugin is going to be destroyed.
-        """
-        # STOP BLACKBIRD PROCESS
-        self.sgnStopTranslator.emit()
-
-        # DISCONNECT FROM CURRENT PROJECT
-        self.debug('Disconnecting from project: %s', self.project.name)
-        disconnect(self.project.sgnUpdated, self.onProjectUpdated)
-        disconnect(self.project.sgnDiagramAdded, self.onDiagramAdded)
-        disconnect(self.project.sgnDiagramRemoved, self.onDiagramRemoved)
-        disconnect(self.project.sgnItemAdded, self.onProjectItemAdded)
-        disconnect(self.project.sgnItemRemoved, self.onProjectItemRemoved)
-
-        # DISCONNECT FROM ACTIVE SESSION
-        self.debug('Disconnecting from active session')
-        disconnect(self.session.sgnReady, self.onSessionReady)
-        disconnect(self.session.sgnUpdateState, self.doUpdateState)
-
-    def start(self):
-        """
-        Perform initialization tasks for the plugin.
-        """
-        # INITIALIZE THE WIDGET
-        self.debug('Starting Blackbird plugin')
-
-        # INITIALIZE ACTIONS AND MENUS
-        self.initActions()
-        self.initMenus()
-        self.initToolBars()
-        self.initWidgets()
-
-        # INITIALIZE BLACKBIRD TRANSLATOR
-        self.initSubprocess()
-
-        # CONFIGURE SIGNAL/SLOTS
-        self.debug('Connecting to active session')
-        connect(self.session.sgnReady, self.onSessionReady)
-        connect(self.session.sgnUpdateState, self.doUpdateState)
 
     #############################################
     #   UTILITIES

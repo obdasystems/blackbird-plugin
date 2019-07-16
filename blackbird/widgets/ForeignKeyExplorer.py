@@ -5,7 +5,6 @@ from eddy.core.datatypes.qt import Font
 from eddy.core.datatypes.system import File
 from eddy.core.functions.misc import first, rstrip
 from eddy.core.functions.signals import connect
-from eddy.core.items.edges.common.base import AbstractEdge
 from eddy.core.items.nodes.common.base import AbstractNode
 from eddy.core.output import getLogger
 from eddy.ui.fields import StringField
@@ -18,6 +17,10 @@ from eddy.plugins.blackbird.schema import RelationalSchema
 from eddy.plugins.blackbird.schema import RelationalTable
 # noinspection PyUnresolvedReferences
 from eddy.plugins.blackbird.schema import ForeignKeyConstraint
+# noinspection PyUnresolvedReferences
+from eddy.plugins.blackbird.diagram import BlackBirdDiagram
+# noinspection PyUnresolvedReferences
+from eddy.plugins.blackbird.items.edges import ForeignKeyEdge
 
 LOGGER = getLogger()
 
@@ -25,27 +28,22 @@ class ForeignKeyExplorerWidget(QtWidgets.QWidget):
     """
     This class implements the schema explorer used to list schema foreign keys.
     """
-    # segnale emesso se clicco su ARCO corrispondente a foreign key in tree view-->aggiorna info widget con info foreign corrispondente, vai a edge su diagramma
-    sgnGraphicalEdgeItemClicked = QtCore.pyqtSignal(QtWidgets.QGraphicsItem)
-    # segnale emesso se clicco su NOME FK in tree view-->aggiorna info widget con info FK corrispondente
+    sgnGraphicalEdgeItemClicked = QtCore.pyqtSignal('QGraphicsItem')
+    sgnGraphicalEdgeItemActivated = QtCore.pyqtSignal('QGraphicsItem')
+    sgnGraphicalEdgeItemDoubleClicked = QtCore.pyqtSignal('QGraphicsItem')
+    sgnGraphicalEdgeItemRightClicked = QtCore.pyqtSignal('QGraphicsItem')
     sgnForeignKeyItemClicked = QtCore.pyqtSignal(ForeignKeyConstraint)
+    sgnForeignKeyItemActivated = QtCore.pyqtSignal(ForeignKeyConstraint)
+    sgnForeignKeyItemDoubleClicked = QtCore.pyqtSignal(ForeignKeyConstraint)
+    sgnForeignKeyItemRightClicked = QtCore.pyqtSignal(ForeignKeyConstraint)
+
+
 
     def __init__(self, plugin):
         super().__init__(plugin.session)
 
         self.plugin = plugin
-
-        self.items = [
-            EntityType.Class,
-            EntityType.ObjectProperty,
-            EntityType.DataProperty
-        ]
-
-        self.classIcon = QtGui.QIcon(':/icons/18/ic_treeview_concept')
-        self.objPropIcon = QtGui.QIcon(':/icons/18/ic_treeview_role')
-        self.dataPropIcon = QtGui.QIcon(':/icons/18/ic_treeview_attribute')
         self.fkIcon = QtGui.QIcon(':blackbird/icons/24/ic_blackbird_fk')
-
         self.searchShortcut = QtWidgets.QShortcut(QtGui.QKeySequence('Ctrl+f'), plugin.session)
         self.search = StringField(self)
         self.search.setAcceptDrops(False)
@@ -53,23 +51,18 @@ class ForeignKeyExplorerWidget(QtWidgets.QWidget):
         self.search.setPlaceholderText('Search...')
         self.search.setToolTip('Search ({})'.format(self.searchShortcut.key().toString(QtGui.QKeySequence.NativeText)))
         self.search.setFixedHeight(30)
-
         self.model = QtGui.QStandardItemModel(self)
-
         self.proxy = ForeignKeyExplorerFilterProxyModel(self)
         self.proxy.setDynamicSortFilter(False)
         self.proxy.setFilterCaseSensitivity(QtCore.Qt.CaseInsensitive)
         self.proxy.setSortCaseSensitivity(QtCore.Qt.CaseSensitive)
         self.proxy.setSourceModel(self.model)
-
         self.tableview = ForeignKeyExplorerView(self)
         self.tableview.setModel(self.proxy)
-
         self.mainLayout = QtWidgets.QVBoxLayout(self)
         self.mainLayout.setContentsMargins(0, 0, 0, 0)
         self.mainLayout.addWidget(self.search)
         self.mainLayout.addWidget(self.tableview)
-
         self.setTabOrder(self.search, self.tableview)
         self.setContentsMargins(0, 0, 0, 0)
         self.setMinimumWidth(216)
@@ -87,23 +80,34 @@ class ForeignKeyExplorerWidget(QtWidgets.QWidget):
               padding: 4px 4px 4px 4px;
             }
         """)
-
         header = self.tableview.header()
         header.setStretchLastSection(False)
         header.setSectionResizeMode(QtWidgets.QHeaderView.ResizeToContents)
 
-        connect(plugin.sgnSchemaChanged, self.onSchemaChanged)
-        connect(self.search.textChanged, self.doFilterItem)
+        #connect(plugin.sgnSchemaChanged, self.onSchemaChanged)
+
+        connect(plugin.sgnEdgeAdded, self.doAddNode)
         connect(self.tableview.pressed, self.onItemPressed)
+        connect(self.tableview.doubleClicked, self.onItemDoubleClicked)
+        connect(self.search.textChanged, self.doFilterItem)
+        connect(self.search.returnPressed, self.onReturnPressed)
+        connect(self.searchShortcut.activated, self.doFocusSearch)
+        connect(self.sgnGraphicalEdgeItemActivated, self.plugin.doFocusItem)
+        connect(self.sgnGraphicalEdgeItemClicked, self.plugin.doFocusItem)
+        connect(self.sgnGraphicalEdgeItemDoubleClicked, self.plugin.doFocusItem)
+        connect(self.sgnGraphicalEdgeItemRightClicked, self.plugin.doFocusItem)
+        connect(self.sgnForeignKeyItemActivated, self.plugin.doFocusForeignKey)
+        connect(self.sgnForeignKeyItemClicked, self.plugin.doFocusForeignKey)
+        connect(self.sgnForeignKeyItemDoubleClicked, self.plugin.doFocusForeignKey)
+        connect(self.sgnForeignKeyItemRightClicked, self.plugin.doFocusForeignKey)
+
+
 
     #############################################
     #   SLOTS
     #################################
 
-    #A REGIME CI SARANNO METODI PER MODIFICA ENTRY DELL'ALBERO (i.e., funzione che modifica entry dopo cambio nome FK)
-
-    #QUESTO METODO DOVRA LAVORARE CON GLI ARCHI DEL DIAGRAMMA (Metodo doAddNode)
-    # (COME CORRISPONDENTE FUNZIONE IN ontology_explorer.py), NON CON GLI ELEMENTI DELLO SCHEMA
+    # TODO per ora non viene chiamato ma si utilizza doAddNode (in caso cancella)
     @QtCore.pyqtSlot(RelationalSchema)
     def onSchemaChanged(self, schema):
         """
@@ -117,73 +121,30 @@ class ForeignKeyExplorerWidget(QtWidgets.QWidget):
             parent.setIcon(self.fkIcon)
             parent.setData(fk)
             self.model.appendRow(parent)
-            # if len(self.model.findItems(fk.name, QtCore.Qt.MatchExactly))==0:
-            #     parent = QtGui.QStandardItem(fk.name)
-            #     parent.setIcon(self.fkIcon)
-            #     parent.setData(fk)
-            #     self.model.appendRow(parent)
-            # else:
-            #     LOGGER.debug('Found duplicate fk with name {}'.format(fk.name))
-
-        # for fk in fks:
-        #     parent =  self.parentFor(fk)
-        #     if not parent:
-        #         parent = QtGui.QStandardItem(self.parentKey(fk))
-        #         parent.setIcon(self.fkIcon)
-        #         parent.setData(fk)
-        #         self.model.appendRow(parent)
-            #child = QtGui.QStandardItem(self.childKey(diagram, node))
-            #child.setData(node)
-            # CHECK FOR DUPLICATE NODES
-            #children = [parent.child(i) for i in range(parent.rowCount())]
-            #if not any([child.text() == c.text() for c in children]):
-            #    parent.appendRow(child)
-            # APPLY FILTERS AND SORT
             if self.sender() != self.plugin:
                 self.proxy.invalidateFilter()
                 self.proxy.sort(0, QtCore.Qt.AscendingOrder)
 
-    # # A REGIME diagram:BBDiagram, edge:BBEdge (SERVE SOLO DOPO CHE HO COMINCIATO A DISEGNARE)
-    # @QtCore.pyqtSlot('QGraphicsScene', 'QGraphicsItem')
-    # def doAddNode(self, diagram, edge):
-    #     """
-    #     Add a node in the tree view.
-    #     :type diagram: QGraphicsScene
-    #     :type node: AbstractItem
-    #     """
-    #     if edge.type() in self.items:
-    #         parent = self.parentFor(edge)
-    #         if not parent:
-    #             parent = QtGui.QStandardItem(self.parentKey(edge))
-    #             parent.setIcon(self.iconFor(edge))
-    #             self.model.appendRow(parent)
-    #         child = QtGui.QStandardItem(self.childKey(diagram, edge))
-    #         child.setData(edge)
-    #         # CHECK FOR DUPLICATE NODES
-    #         children = [parent.child(i) for i in range(parent.rowCount())]
-    #         if not any([child.text() == c.text() for c in children]):
-    #             parent.appendRow(child)
-    #         # APPLY FILTERS AND SORT
-    #         if self.sender() != self.plugin:
-    #             self.proxy.invalidateFilter()
-    #             self.proxy.sort(0, QtCore.Qt.AscendingOrder)
-
-    # # A REGIME diagram:BBDiagram, edge:BBEdge (SERVE SOLO DOPO CHE HO COMINCIATO A DISEGNARE)
-    # @QtCore.pyqtSlot('QGraphicsScene', 'QGraphicsItem')
-    # def doRemoveNode(self, diagram, edge):
-    #     """
-    #     Remove a node from the tree view.
-    #     :type diagram: QGraphicsScene
-    #     :type node: AbstractItem
-    #     """
-    #     if edge.type() in self.items:
-    #         parent = self.parentFor(edge)
-    #         if parent:
-    #             child = self.childFor(parent, diagram, edge)
-    #             if child:
-    #                 parent.removeRow(child.index().row())
-    #             if not parent.rowCount():
-    #                 self.model.removeRow(parent.index().row())
+    @QtCore.pyqtSlot(BlackBirdDiagram, ForeignKeyEdge)
+    def doAddNode(self, diagram, edge):
+        """
+        Add a node in the tree view.
+        :type diagram: QGraphicsScene
+        :type edge: ForeignKeyEdge
+        """
+        parent = self.parentFor(edge)
+        if not parent:
+            parent = QtGui.QStandardItem(self.parentKey(edge))
+            parent.setIcon(self.iconFor(edge.foreignKey))
+            parent.setData(edge.foreignKey)
+            self.model.appendRow(parent)
+        child = QtGui.QStandardItem(self.childKey(diagram, edge))
+        child.setData(edge)
+        parent.appendRow(child)
+        # APPLY FILTERS AND SORT
+        if self.sender() != self.plugin:
+            self.proxy.invalidateFilter()
+            self.proxy.sort(0, QtCore.Qt.AscendingOrder)
 
     @QtCore.pyqtSlot(str)
     def doFilterItem(self, key):
@@ -209,6 +170,56 @@ class ForeignKeyExplorerWidget(QtWidgets.QWidget):
         self.search.setFocus()
         self.search.selectAll()
 
+    @QtCore.pyqtSlot()
+    def onReturnPressed(self):
+        """
+        Executed when the Return or Enter key is pressed in the search field.
+        """
+        self.focusNextChild()
+
+    @QtCore.pyqtSlot('QModelIndex')
+    def onItemActivated(self, index):
+        """
+        Executed when an item in the treeview is activated (e.g. by pressing Return or Enter key).
+        :type index: QModelIndex
+        """
+        # noinspection PyArgumentList
+        if QtWidgets.QApplication.mouseButtons() == QtCore.Qt.NoButton:
+            item = self.model.itemFromIndex(self.proxy.mapToSource(index))
+            if item and item.data():
+                if isinstance(item.data(), ForeignKeyConstraint):
+                    self.sgnForeignKeyItemActivated.emit(item.data())
+                elif isinstance(item.data(), ForeignKeyEdge):
+                    self.sgnGraphicalEdgeItemActivated.emit(item.data())
+                    self.sgnForeignKeyItemActivated.emit(item.data().relationalTable)
+                # KEEP FOCUS ON THE TREE VIEW UNLESS SHIFT IS PRESSED
+                if QtWidgets.QApplication.queryKeyboardModifiers() & QtCore.Qt.SHIFT:
+                    return
+                self.tableview.setFocus()
+            elif item:
+                # EXPAND/COLLAPSE PARENT ITEM
+                if self.tableview.isExpanded(index):
+                    self.tableview.collapse(index)
+                else:
+                    self.tableview.expand(index)
+
+    @QtCore.pyqtSlot('QModelIndex')
+    def onItemDoubleClicked(self, index):
+        """
+        Executed when an item in the treeview is double clicked.
+        :type index: QModelIndex
+        """
+        # noinspection PyArgumentList
+        if QtWidgets.QApplication.mouseButtons() & QtCore.Qt.LeftButton:
+            item = self.model.itemFromIndex(self.proxy.mapToSource(index))
+            if item and item.data():
+                if isinstance(item.data(), ForeignKeyConstraint):
+                    self.sgnForeignKeyItemDoubleClicked.emit(item.data())
+                elif isinstance(item.data(), ForeignKeyEdge):
+                    self.sgnGraphicalEdgeItemDoubleClicked.emit(item.data())
+                    self.sgnForeignKeyItemDoubleClicked.emit(item.data().foreignKey)
+
+
     @QtCore.pyqtSlot('QModelIndex')
     def onItemPressed(self, index):
         """
@@ -221,40 +232,35 @@ class ForeignKeyExplorerWidget(QtWidgets.QWidget):
             if item and item.data():
                 if isinstance(item.data(),ForeignKeyConstraint):
                     self.sgnForeignKeyItemClicked.emit(item.data())
-                elif isinstance(item.data(),AbstractEdge):
+                elif isinstance(item.data(),ForeignKeyEdge):
                     self.sgnGraphicalEdgeItemClicked.emit(item.data())
+                    self.sgnForeignKeyItemClicked.emit(item.data().foreignKey)
+
     #############################################
     #   INTERFACE
     #################################
 
-    # def iconFor(self, table):
-    #     """
-    #     Returns the icon for the given node.
-    #     :type table:RelationalTable
-    #     """
-    #     entity = table.entity
-    #     entityType = entity.entityType
-    #     if entityType is EntityType.Class:
-    #         return self.classIcon
-    #     if entityType is EntityType.ObjectProperty:
-    #         return self.objPropIcon
-    #     if entityType is EntityType.DataProperty:
-    #         return self.dataPropIcon
+    def iconFor(self, fk):
+        """
+        Returns the icon for the given node.
+        :type fk: ForeignKeyConstraint
+        """
+        return self.fkIcon
 
 
-    # def parentFor(self, node):
-    #     """
-    #     Search the parent element of the given node.
-    #     :type node: AbstractNode
-    #     :rtype: QtGui.QStandardItem
-    #     """
-    #     for i in self.model.findItems(self.parentKey(node), QtCore.Qt.MatchExactly):
-    #         if i.child(0):
-    #             n = i.child(0).data()
-    #             if node.type() is n.type():
-    #                 return i
-    #     return None
-    #
+    def parentFor(self, node):
+        """
+        Search the parent element of the given node.
+        :type node: ForeignKeyEdge
+        :rtype: QtGui.QStandardItem
+        """
+        for i in self.model.findItems(self.parentKey(node), QtCore.Qt.MatchExactly):
+            if i.child(0):
+                n = i.child(0).data()
+                if node.type() is n.type():
+                    return i
+        return None
+
     # def childFor(self, parent, diagram, node):
     #     """
     #     Search the item representing this node among parent children.
@@ -268,33 +274,30 @@ class ForeignKeyExplorerWidget(QtWidgets.QWidget):
     #         if child.text() == key:
     #             return child
     #     return None
-    #
-    # @staticmethod
-    # def childKey(diagram, node):
-    #     """
-    #     Returns the child key (text) used to place the given node in the treeview.
-    #     :type diagram: Diagram
-    #     :type node: AbstractNode
-    #     :rtype: str
-    #     """
-    #     #DA CAMBIARE CON DIAGRAMMI BLACKBIRD ED OPPORTUNA FORMATTAZIONE
-    #     predicate = node.text().replace('\n', '')
-    #     diagram = rstrip(diagram.name, File.Graphol.extension)
-    #     return '{0} ({1} - {2})'.format(predicate, diagram, node.id)
-    #
-    #
-    # @staticmethod
-    # def parentKey(node):
-    #     """
-    #     Returns the parent key (text) used to place the given node in the treeview.
-    #     :type node: AbstractNode
-    #     :rtype: str
-    #     """
-    #     #ALLA FINE QUESTO METODO DOVRA RITORNARE IL NOME DELLA TABELLA CORRISPONDENTE AL NODO IN INPUT
-    #     if isinstance(node, AbstractNode):
-    #         return node.text().replace('\n', '')
-    #     if isinstance(node, RelationalTable):
-    #         return node.name
+
+    @staticmethod
+    def childKey(diagram, edge):
+        """
+        Returns the child key (text) used to place the given node in the treeview.
+        :type diagram: Diagram
+        :type edge: ForeignKeyEdge
+        :rtype: str
+        """
+        diagram = rstrip(diagram.name, File.Graphol.extension)
+        return '({0} - {1})'.format(diagram, edge.id)
+
+
+    @staticmethod
+    def parentKey(node):
+        """
+        Returns the parent key (text) used to place the given node in the treeview.
+        :type node: Union[ForeignKeyEdge,ForeignKeyConstraint]
+        :rtype: str
+        """
+        if isinstance(node, ForeignKeyConstraint):
+            return node.name
+        if isinstance(node, ForeignKeyEdge):
+            return node.foreignKey.name
 
     def sizeHint(self):
         """
@@ -363,54 +366,53 @@ class ForeignKeyExplorerView(QtWidgets.QTreeView):
 
         super().mousePressEvent(mouseEvent)
 
-    #METODO DOPO NON DOVREBBE SENTIRE
-    # def mouseMoveEvent(self, mouseEvent):
-    #     """
-    #     Executed when the mouse if moved while a button is being pressed.
-    #     :type mouseEvent: QMouseEvent
-    #     """
-    #     if mouseEvent.buttons() & QtCore.Qt.LeftButton:
-    #         #if Item.ConceptNode <= self.item < Item.InclusionEdge:
-    #             distance = (mouseEvent.pos() - self.startPos).manhattanLength()
-    #             if distance >= QtWidgets.QApplication.startDragDistance():
-    #
-    #                 index = first(self.selectedIndexes())
-    #                 if index:
-    #
-    #                     model = self.model().sourceModel()
-    #                     index = self.model().mapToSource(index)
-    #
-    #                     item = model.itemFromIndex(index)
-    #                     node = item.data()
-    #
-    #                     if node:
-    #                         pass
-    #                     else:
-    #                         if item.hasChildren():
-    #                             node = item.child(0).data()
-    #
-    #                     if node:
-    #                         mimeData = QtCore.QMimeData()
-    #
-    #                         mimeData.setText(str(node.Type.value))
-    #
-    #                         node_iri = self.session.project.get_iri_of_node(node)
-    #                         node_remaining_characters = node.remaining_characters
-    #
-    #                         comma_seperated_text = str(node_iri + ',' + node_remaining_characters + ',' + node.text())
-    #
-    #                         byte_array = QtCore.QByteArray()
-    #                         byte_array.append(comma_seperated_text)
-    #
-    #                         mimeData.setData(str(node.Type.value), byte_array)
-    #
-    #                         drag = QtGui.QDrag(self)
-    #                         drag.setMimeData(mimeData)
-    #                         # drag.setPixmap(self.icon().pixmap(60, 40))
-    #                         # drag.setHotSpot(self.startPos - self.rect().topLeft())
-    #                         drag.exec_(QtCore.Qt.CopyAction)
-    #
-    #     super().mouseMoveEvent(mouseEvent)
+    def mouseMoveEvent(self, mouseEvent):
+        """
+        Executed when the mouse if moved while a button is being pressed.
+        :type mouseEvent: QMouseEvent
+        """
+        if mouseEvent.buttons() & QtCore.Qt.LeftButton:
+            #if Item.ConceptNode <= self.item < Item.InclusionEdge:
+                distance = (mouseEvent.pos() - self.startPos).manhattanLength()
+                if distance >= QtWidgets.QApplication.startDragDistance():
+
+                    index = first(self.selectedIndexes())
+                    if index:
+
+                        model = self.model().sourceModel()
+                        index = self.model().mapToSource(index)
+
+                        item = model.itemFromIndex(index)
+                        node = item.data()
+
+                        if node:
+                            pass
+                        else:
+                            if item.hasChildren():
+                                node = item.child(0).data()
+
+                        if node:
+                            mimeData = QtCore.QMimeData()
+
+                            mimeData.setText(str(node.Type.value))
+
+                            node_iri = self.session.project.get_iri_of_node(node)
+                            node_remaining_characters = node.remaining_characters
+
+                            comma_seperated_text = str(node_iri + ',' + node_remaining_characters + ',' + node.text())
+
+                            byte_array = QtCore.QByteArray()
+                            byte_array.append(comma_seperated_text)
+
+                            mimeData.setData(str(node.Type.value), byte_array)
+
+                            drag = QtGui.QDrag(self)
+                            drag.setMimeData(mimeData)
+                            # drag.setPixmap(self.icon().pixmap(60, 40))
+                            # drag.setHotSpot(self.startPos - self.rect().topLeft())
+                            drag.exec_(QtCore.Qt.CopyAction)
+
+        super().mouseMoveEvent(mouseEvent)
 
     def mouseReleaseEvent(self, mouseEvent):
         """
@@ -425,7 +427,11 @@ class ForeignKeyExplorerView(QtWidgets.QTreeView):
                 item = model.itemFromIndex(index)
                 node = item.data()
                 if node:
-                    self.widget.sgnItemRightClicked.emit(node)
+                    if isinstance(node,ForeignKeyConstraint):
+                        self.widget.sgnForeignKeyConstraintItemRightClicked.emit(node)
+                    elif isinstance(node,ForeignKeyEdge):
+                        self.widget.sgnGraphicalEdgeItemRightClicked.emit(node)
+                        self.widget.sgnForeignKeyConstraintItemRightClicked.emit(node.foreignKey)
                     menu = self.session.mf.create(node.diagram, [node])
                     menu.exec_(mouseEvent.screenPos().toPoint())
 

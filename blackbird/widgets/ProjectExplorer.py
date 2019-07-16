@@ -62,8 +62,8 @@ class BlackbirdProjectExplorerWidget(QtWidgets.QWidget):
         connect(self.projectview.doubleClicked, self.onItemDoubleClicked)
         connect(self.projectview.pressed, self.onItemPressed)
         connect(self.shortcut.activated, self.doFocusProjectView)
-        connect(self.sgnItemActivated, self.session.doFocusDiagram)
-        connect(self.sgnItemDoubleClicked, self.session.doFocusDiagram)
+        connect(self.sgnItemActivated, self.plugin.doFocusDiagram)
+        connect(self.sgnItemDoubleClicked, self.plugin.doFocusDiagram)
 
     #############################################
     #   PROPERTIES
@@ -202,6 +202,12 @@ class BlackbirdProjectExplorerWidget(QtWidgets.QWidget):
         :type project: Project
         """
         self.model.clear()
+
+        self.root = QtGui.QStandardItem()
+        self.root.setFlags(self.root.flags() & ~QtCore.Qt.ItemIsEditable)
+        self.root.setFont(Font('Roboto', 12, bold=True))
+        self.root.setIcon(self.iconRoot)
+
         self.model.appendRow(self.root)
         self.root.setText(project.name)
         #TODO SCOMMENTA SOTTO DOPO OPPORTUNE MODIFICHE

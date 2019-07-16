@@ -37,11 +37,14 @@ from PyQt5 import QtCore
 from PyQt5 import QtGui
 from eddy.core.datatypes.common import Enum_
 
-from eddy.core.datatypes.graphol import Item, Special
+from eddy.core.datatypes.graphol import  Special
 from eddy.core.functions.misc import snapF
 from eddy.core.items.common import Polygon
 from eddy.core.items.nodes.common.base import AbstractResizableNode
 from eddy.core.items.nodes.common.label import NodeLabel
+
+# noinspection PyUnresolvedReferences
+from eddy.plugins.blackbird.datatypes import Item
 
 @unique
 class Identity(Enum_):
@@ -58,7 +61,8 @@ class TableNode(AbstractResizableNode):
     DefaultBrush = QtGui.QBrush(QtGui.QColor(252, 252, 252, 255))
     DefaultPen = QtGui.QPen(QtGui.QBrush(QtGui.QColor(0, 0, 0, 255)), 1.0, QtCore.Qt.SolidLine, QtCore.Qt.RoundCap, QtCore.Qt.RoundJoin)
     Identities = {Identity.Table}
-    Type = Item.ConceptNode
+    #TODO CAMBIA TYPE OPPORTUNAMENTE
+    Type = Item.TableNode
 
     def __init__(self, width=110, height=50, brush=None, remaining_characters='table', relational_table=None, **kwargs):
         """

@@ -37,9 +37,10 @@ class BBInfoWidget(QtWidgets.QScrollArea):
         #self.schemaInfo = SchemaInfo(self)
         self.schemaInfo = SchemaInfo(plugin.session,self.stacked)
         connect(plugin.sgnSchemaChanged,self.onSchemaChanged)
+        connect(plugin.sgnFocusTable,self.doSelectTable)
+        connect(plugin.sgnFocusForeignKey, self.doSelectForeignKey)
 
         self.tableInfo = TableInfo(plugin.session,self.stacked)
-
         self.fkInfo = ForeignKeyInfo(plugin.session,self.stacked)
 
         self.stacked.addWidget(self.schemaInfo)
