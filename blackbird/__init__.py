@@ -138,7 +138,7 @@ class BlackbirdPlugin(AbstractPlugin):
         self.nmanager = NetworkManager(self)
         self.translator = None
         self.bbOntologyEntityMgr = None
-
+        self.subwindowList = []
 
     #############################################
     #   HOOKS
@@ -567,15 +567,9 @@ class BlackbirdPlugin(AbstractPlugin):
         # CONFIGURE SIGNALS #
         #                   #
         #####################
-        #connect(self.session.sgnReady, self.onSessionReady)
-        #connect(self.widget('blackbird_table_explorer').sgnRelationalTableItemClicked, self.widget('blackbird_info').doSelectTable)
-        #connect(self.widget('blackbird_fk_explorer').sgnForeignKeyItemClicked, self.widget('blackbird_info').doSelectForeignKey)
-        #connect(self.widget('blackbird_table_explorer').sgnRelationalTableItemClicked, self.widget('blackbird_action_info').doSelectTable)
 
         connect(self.widget('blackbird_action_info').sgnActionButtonClicked, self.onSchemaActionApplied)
         connect(self.widget('blackbird_action_info').sgnUndoButtonClicked, self.onSchemaActionUndo)
-
-
 
         #################
         #               #
@@ -587,13 +581,14 @@ class BlackbirdPlugin(AbstractPlugin):
         self.session.addDockWidget(QtCore.Qt.RightDockWidgetArea, self.widget('fk_explorer_dock'))
 
     def initDiagrams(self):
-        self.tempDiagramDialogList = []
-        for tempDiagram in self.tempDiagramDialogList:
-            tempDiagram.close()
+        #remove old subwindows
+        for subwin in self.subwindowList:
+            if subwin:
+                subwin.close()
+        self.subwindowList = []
+
         eddyProject = self.session.project
-
         ontDiagrams = None
-
         self.widget('blackbird_project_explorer').setProject(eddyProject)
 
         if self.diagSelInOntGen and len(self.diagSelInOntGen):
@@ -602,19 +597,14 @@ class BlackbirdPlugin(AbstractPlugin):
             ontDiagrams = eddyProject.diagrams()
 
         for ontDiagram in ontDiagrams:
-            tempDialog = QtWidgets.QDialog(self.session)
-            tempDialog.setAttribute(Qt.WA_DeleteOnClose,True)
             bbDiagram = BlackBirdDiagram('{}_SCHEMA'.format(ontDiagram.name), eddyProject)
-
             ontNodeToBBNodeDict = {}
-
             # ADDING NODES
             diagramToTablesDict = self.bbOntologyEntityMgr.diagramToTables
             relTableToDiagramNodes = diagramToTablesDict[ontDiagram]
             for table, ontNodeList in relTableToDiagramNodes.items():
                 tableName = table.name
                 for ontNode in ontNodeList:
-                    # relNode = ConceptNode(ontNode.width(), ontNode.height(), remaining_characters=tableName, diagram=bbDiagram)
                     relNode = TableNode(ontNode.width(), ontNode.height(), remaining_characters=tableName,
                                         relational_table=table, diagram=bbDiagram)
                     relNode.setPos(ontNode.pos())
@@ -622,7 +612,6 @@ class BlackbirdPlugin(AbstractPlugin):
                     bbDiagram.addItem(relNode)
                     self.sgnNodeAdded.emit(bbDiagram,relNode)
                     ontNodeToBBNodeDict[ontNode] = relNode
-
             # ADDING EDGES
             diagramToForeignKeysDict = self.bbOntologyEntityMgr.diagramToForeignKeys
             fkToDiagramElements = diagramToForeignKeysDict[ontDiagram]
@@ -630,19 +619,9 @@ class BlackbirdPlugin(AbstractPlugin):
                 for innerList in fkVisualElementList:
                     for fkVisualElement in innerList:
                         self.addFkEdgeToDiagram(fk,fkVisualElement, bbDiagram, ontNodeToBBNodeDict)
-
             self.widget('blackbird_project_explorer').doAddDiagram(bbDiagram)
 
-            diagramView = DiagramView(bbDiagram, self.session)
 
-            tempDialogLayout = QtWidgets.QVBoxLayout()
-            tempDialogLayout.addWidget(diagramView)
-            tempDialog.setLayout(tempDialogLayout)
-            tempDialog.setWindowTitle('{}_SCHEMA'.format(ontDiagram.name))
-            self.tempDiagramDialogList.append(tempDialog)
-
-        #for tempDialog in self.tempDiagramDialogList:
-            #tempDialog.show()
 
     def addFkEdgeToDiagram(self,fk, fkVisualElement, bbDiagram, ontNodeToBBNodeDict):
         """
@@ -666,22 +645,17 @@ class BlackbirdPlugin(AbstractPlugin):
 
             fkEdge = ForeignKeyEdge(foreign_key=fk, source=src, target=tgt, breakpoints=fkBreakpoints,
                                     diagram=bbDiagram)
-
             bbDiagram.addItem(fkEdge)
             self.sgnEdgeAdded.emit(bbDiagram,fkEdge)
-
             fkEdge.source.setAnchor(fkEdge, QtCore.QPointF(fkVisualElement.src.anchor(edge)))
             fkEdge.target.setAnchor(fkEdge, QtCore.QPointF(fkVisualElement.tgt.anchor(edge)))
-
             fkEdge.source.addEdge(fkEdge)
             fkEdge.target.addEdge(fkEdge)
-
             fkEdge.updateEdge(visible=True)
         else:
             srcAnchor = QtCore.QPointF(fkVisualElement.src.anchor(edges[0]))
             tgtAnchor = QtCore.QPointF(fkVisualElement.tgt.anchor(edges[-1]))
             fkBreakpoints = []
-
             for item in fkVisualElement.orderedInnerItems:
                 if isinstance(item, AbstractNode):
                     fkBreakpoints.append(item.mapToScene(item.center()))
@@ -691,21 +665,17 @@ class BlackbirdPlugin(AbstractPlugin):
                     else:
                         currBreakpoints = item.breakpoints
                     fkBreakpoints.extend(currBreakpoints)
-
             # fkEdge = InclusionEdge(source=src, target=tgt, breakpoints=fkBreakpoints, diagram=bbDiagram)
             fkEdge = ForeignKeyEdge(foreign_key=fk, source=src, target=tgt, breakpoints=fkBreakpoints,
                                     diagram=bbDiagram)
-
             bbDiagram.addItem(fkEdge)
             self.sgnEdgeAdded.emit(bbDiagram,fkEdge)
-
             fkEdge.source.setAnchor(fkEdge, srcAnchor)
             fkEdge.target.setAnchor(fkEdge, tgtAnchor)
-
             fkEdge.source.addEdge(fkEdge)
             fkEdge.target.addEdge(fkEdge)
-
             fkEdge.updateEdge(visible=True)
+
     #############################################
     #   EVENTS
     #################################
@@ -887,12 +857,13 @@ class BlackbirdPlugin(AbstractPlugin):
                 # TODO popola widget con project explorer
 
                 self.initializeOntologyEntityManager()
-                self.initDiagrams()
+
                 dialog = BlackbirdOutputDialog(owltext, json.dumps(json.loads(schema),indent=2),self.schema, self.session)
                 dialog.show()
                 dialog.raise_()
                 LOGGER.debug(self.schema)
                 self.sgnSchemaChanged.emit(self.schema)
+                self.initDiagrams()
             else:
                 self.session.addNotification('Error generating schema: {}'.format(reply.errorString()))
                 LOGGER.error('Error generating schema: {}'.format(reply.errorString()))
@@ -914,13 +885,14 @@ class BlackbirdPlugin(AbstractPlugin):
                 jsonSchema = json.loads(schema)
                 self.schema = RelationalSchemaParser.getSchema(jsonSchema)
                 self.initializeOntologyEntityManager()
-                self.initDiagrams()
+
                 dialog = BlackbirdOutputDialog('', json.dumps(json.loads(schema), indent=2),self.schema , self.session)
                 dialog.show()
                 dialog.raise_()
-                # AGGANCIATI QUI CON IL PARSER
                 self.sgnActionCorrectlyApplied.emit()
                 self.sgnSchemaChanged.emit(self.schema)
+                self.initDiagrams()#TODO sostistuisci con initDiagramsFromAction (DISEGNA A PARTIRE DA DIAGRAMMI GIà DISPONIBILI E NON DA GRAPHOL)
+
             else:
                 self.session.addNotification('Error applying action: {}'.format(reply.errorString()))
                 LOGGER.error('Error applying action: {}'.format(reply.errorString()))
@@ -942,11 +914,11 @@ class BlackbirdPlugin(AbstractPlugin):
                 dialog = BlackbirdOutputDialog('', json.dumps(json.loads(schema), indent=2), self.session)
                 dialog.show()
                 dialog.raise_()
-                # AGGANCIATI QUI CON IL PARSER
                 jsonSchema = json.loads(schema)
                 self.schema = RelationalSchemaParser.getSchema(jsonSchema)
                 self.sgnActionCorrectlyApplied.emit()
                 self.sgnSchemaChanged.emit(self.schema)
+                self.initDiagrams()#TODO sostistuisci con initDiagramsFromAction (DISEGNA A PARTIRE DA DIAGRAMMI GIà DISPONIBILI E NON DA GRAPHOL)
             else:
                 self.session.addNotification('Error undoing action: {}'.format(reply.errorString()))
                 LOGGER.error('Error undoing action: {}'.format(reply.errorString()))
@@ -982,11 +954,27 @@ class BlackbirdPlugin(AbstractPlugin):
         if not subwindow:
             view = self.session.createDiagramView(diagram)
             subwindow = self.session.createMdiSubWindow(view)
+            subwindow.setAttribute(QtCore.Qt.WA_DeleteOnClose)
             subwindow.setWindowIcon(QtGui.QIcon(':/blackbird/icons/128/ic_blackbird'))
             subwindow.showMaximized()
+            connect(subwindow.destroyed, self.onSubWindowDestroyed)
+            print('connected view', view)
+            print('connected subwindow', subwindow)
+            self.subwindowList.append(subwindow)
         self.session.mdi.setActiveSubWindow(subwindow)
         self.session.mdi.update()
         #self.session.sgnDiagramFocused.emit(diagram)
+
+    @QtCore.pyqtSlot()
+    def onSubWindowDestroyed(self):
+        """
+        Focus an item in its diagram.
+        :type item: AbstractItem
+        """
+        print(len(self.subwindowList))
+        print('call to onSubWindowDestroyed',self.sender())
+        #self.subwindowList.remove(self.sender())
+        print(len(self.subwindowList))
 
     @QtCore.pyqtSlot('QGraphicsItem')
     def doFocusItem(self, item):
@@ -996,7 +984,7 @@ class BlackbirdPlugin(AbstractPlugin):
         """
         self.sgnFocusDiagram.emit(item.diagram)
         self.session.mdi.activeDiagram().clearSelection()
-        self.session.  mdi.activeView().centerOn(item)
+        self.session.mdi.activeView().centerOn(item)
         item.setSelected(True)
 
     @QtCore.pyqtSlot(RelationalTable)

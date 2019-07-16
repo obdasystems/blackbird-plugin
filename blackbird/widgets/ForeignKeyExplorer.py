@@ -84,8 +84,7 @@ class ForeignKeyExplorerWidget(QtWidgets.QWidget):
         header.setStretchLastSection(False)
         header.setSectionResizeMode(QtWidgets.QHeaderView.ResizeToContents)
 
-        #connect(plugin.sgnSchemaChanged, self.onSchemaChanged)
-
+        connect(plugin.sgnSchemaChanged, self.onSchemaChanged)
         connect(plugin.sgnEdgeAdded, self.doAddNode)
         connect(self.tableview.pressed, self.onItemPressed)
         connect(self.tableview.doubleClicked, self.onItemDoubleClicked)
@@ -107,7 +106,6 @@ class ForeignKeyExplorerWidget(QtWidgets.QWidget):
     #   SLOTS
     #################################
 
-    # TODO per ora non viene chiamato ma si utilizza doAddNode (in caso cancella)
     @QtCore.pyqtSlot(RelationalSchema)
     def onSchemaChanged(self, schema):
         """
@@ -115,15 +113,6 @@ class ForeignKeyExplorerWidget(QtWidgets.QWidget):
         :type schema: RelationalSchema
         """
         self.model.clear()
-        fks = schema.foreignKeys
-        for fk in fks:
-            parent = QtGui.QStandardItem(fk.name)
-            parent.setIcon(self.fkIcon)
-            parent.setData(fk)
-            self.model.appendRow(parent)
-            if self.sender() != self.plugin:
-                self.proxy.invalidateFilter()
-                self.proxy.sort(0, QtCore.Qt.AscendingOrder)
 
     @QtCore.pyqtSlot(BlackBirdDiagram, ForeignKeyEdge)
     def doAddNode(self, diagram, edge):
@@ -284,7 +273,7 @@ class ForeignKeyExplorerWidget(QtWidgets.QWidget):
         :rtype: str
         """
         diagram = rstrip(diagram.name, File.Graphol.extension)
-        return '({0} - {1})'.format(diagram, edge.id)
+        return '[{0} - {1}] ({2})'.format(diagram, edge.id, edge.foreignKey.name)
 
 
     @staticmethod
@@ -366,76 +355,29 @@ class ForeignKeyExplorerView(QtWidgets.QTreeView):
 
         super().mousePressEvent(mouseEvent)
 
-    def mouseMoveEvent(self, mouseEvent):
-        """
-        Executed when the mouse if moved while a button is being pressed.
-        :type mouseEvent: QMouseEvent
-        """
-        if mouseEvent.buttons() & QtCore.Qt.LeftButton:
-            #if Item.ConceptNode <= self.item < Item.InclusionEdge:
-                distance = (mouseEvent.pos() - self.startPos).manhattanLength()
-                if distance >= QtWidgets.QApplication.startDragDistance():
-
-                    index = first(self.selectedIndexes())
-                    if index:
-
-                        model = self.model().sourceModel()
-                        index = self.model().mapToSource(index)
-
-                        item = model.itemFromIndex(index)
-                        node = item.data()
-
-                        if node:
-                            pass
-                        else:
-                            if item.hasChildren():
-                                node = item.child(0).data()
-
-                        if node:
-                            mimeData = QtCore.QMimeData()
-
-                            mimeData.setText(str(node.Type.value))
-
-                            node_iri = self.session.project.get_iri_of_node(node)
-                            node_remaining_characters = node.remaining_characters
-
-                            comma_seperated_text = str(node_iri + ',' + node_remaining_characters + ',' + node.text())
-
-                            byte_array = QtCore.QByteArray()
-                            byte_array.append(comma_seperated_text)
-
-                            mimeData.setData(str(node.Type.value), byte_array)
-
-                            drag = QtGui.QDrag(self)
-                            drag.setMimeData(mimeData)
-                            # drag.setPixmap(self.icon().pixmap(60, 40))
-                            # drag.setHotSpot(self.startPos - self.rect().topLeft())
-                            drag.exec_(QtCore.Qt.CopyAction)
-
-        super().mouseMoveEvent(mouseEvent)
-
-    def mouseReleaseEvent(self, mouseEvent):
-        """
-        Executed when the mouse is released from the tree view.
-        :type mouseEvent: QMouseEvent
-        """
-        if mouseEvent.button() == QtCore.Qt.RightButton:
-            index = first(self.selectedIndexes())
-            if index:
-                model = self.model().sourceModel()
-                index = self.model().mapToSource(index)
-                item = model.itemFromIndex(index)
-                node = item.data()
-                if node:
-                    if isinstance(node,ForeignKeyConstraint):
-                        self.widget.sgnForeignKeyConstraintItemRightClicked.emit(node)
-                    elif isinstance(node,ForeignKeyEdge):
-                        self.widget.sgnGraphicalEdgeItemRightClicked.emit(node)
-                        self.widget.sgnForeignKeyConstraintItemRightClicked.emit(node.foreignKey)
-                    menu = self.session.mf.create(node.diagram, [node])
-                    menu.exec_(mouseEvent.screenPos().toPoint())
-
-        super().mouseReleaseEvent(mouseEvent)
+    #TODO CAUSA CRASH
+    # def mouseReleaseEvent(self, mouseEvent):
+    #     """
+    #     Executed when the mouse is released from the tree view.
+    #     :type mouseEvent: QMouseEvent
+    #     """
+    #     if mouseEvent.button() == QtCore.Qt.RightButton:
+    #         index = first(self.selectedIndexes())
+    #         if index:
+    #             model = self.model().sourceModel()
+    #             index = self.model().mapToSource(index)
+    #             item = model.itemFromIndex(index)
+    #             node = item.data()
+    #             if node:
+    #                 if isinstance(node,ForeignKeyConstraint):
+    #                     self.widget.sgnForeignKeyConstraintItemRightClicked.emit(node)
+    #                 elif isinstance(node,ForeignKeyEdge):
+    #                     self.widget.sgnGraphicalEdgeItemRightClicked.emit(node)
+    #                     self.widget.sgnForeignKeyConstraintItemRightClicked.emit(node.foreignKey)
+    #                 menu = self.session.mf.create(node.diagram, [node])
+    #                 menu.exec_(mouseEvent.screenPos().toPoint())
+    #
+    #     super().mouseReleaseEvent(mouseEvent)
 
     #############################################
     #   INTERFACE
@@ -474,26 +416,4 @@ class ForeignKeyExplorerFilterProxyModel(QtCore.QSortFilterProxyModel):
     def session(self):
         return self.parent().session
 
-    #############################################
-    #   INTERFACE
-    #################################
 
-    def filterAcceptsRow(self, sourceRow, sourceIndex):
-        """
-        Overrides filterAcceptsRow to include extra filtering conditions
-        :type sourceRow: int
-        :type sourceIndex: QModelIndex
-        :rtype: bool
-        """
-        index = self.sourceModel().index(sourceRow, 0, sourceIndex)
-        item = self.sourceModel().itemFromIndex(index)
-        # PARENT NODE
-        if item.hasChildren():
-            children = [item.child(c).data() for c in range(item.rowCount())]
-            return super().filterAcceptsRow(sourceRow, sourceIndex) #\
-                   #and \
-                   #any([Status.valueOf(meta.get(K_DESCRIPTION_STATUS, '')) in self.status for meta in
-                   #     [self.project.meta(node.type(), node.text()) for node in children
-                   #      if node.type() in self.items]])
-        # LEAF NODE
-        return super().filterAcceptsRow(sourceRow, sourceIndex)
