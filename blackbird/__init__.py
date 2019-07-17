@@ -559,15 +559,6 @@ class BlackbirdPlugin(AbstractPlugin):
         menu.addAction(self.widget('blackbird_project_explorer_dock').toggleViewAction())
 
 
-        #####################
-        #                   #
-        # CONFIGURE SIGNALS #
-        #                   #
-        #####################
-
-        connect(self.widget('blackbird_action_info').sgnActionButtonClicked, self.onSchemaActionApplied)
-        connect(self.widget('blackbird_action_info').sgnUndoButtonClicked, self.onSchemaActionUndo)
-
         #################
         #               #
         # DOCKING AREAS #
@@ -579,10 +570,19 @@ class BlackbirdPlugin(AbstractPlugin):
 
     def initDiagrams(self):
         #remove old subwindows
+        toBeClosed = []
         for subwin in self.subwindowList:
             if subwin:
+                print('CLOSING SUBWINDOW IF:', subwin)
+                toBeClosed.append(subwin)
+        print('(0) ', self.subwindowList)
+        for subwin in toBeClosed:
+            if subwin:
                 subwin.close()
+        print('(1) ', self.subwindowList)
         self.subwindowList = []
+        print('(2) ', self.subwindowList)
+
 
         eddyProject = self.session.project
         ontDiagrams = None
@@ -617,8 +617,6 @@ class BlackbirdPlugin(AbstractPlugin):
                     for fkVisualElement in innerList:
                         self.addFkEdgeToDiagram(fk,fkVisualElement, bbDiagram, ontNodeToBBNodeDict)
             self.widget('blackbird_project_explorer').doAddDiagram(bbDiagram)
-
-
 
     def addFkEdgeToDiagram(self,fk, fkVisualElement, bbDiagram, ontNodeToBBNodeDict):
         """
@@ -945,10 +943,12 @@ class BlackbirdPlugin(AbstractPlugin):
         """
         subwindow = self.session.mdi.subWindowForDiagram(diagram)
         if not subwindow:
+            print('FOCUS PRE:',self.subwindowList)
             view = self.session.createDiagramView(diagram)
             subwindow = self.createMdiSubWindow(view)
             connect(subwindow.sgnCloseEvent, self.onSubWindowClose)
             self.subwindowList.append(subwindow)
+            print('FOCUS POST:', self.subwindowList)
         self.session.mdi.setActiveSubWindow(subwindow)
         self.session.mdi.update()
 
@@ -957,9 +957,8 @@ class BlackbirdPlugin(AbstractPlugin):
         """
         Manage the close event of a BlackBirdSubWindow.
         """
-        print(len(self.subwindowList))
-        self.subwindowList.remove(self.sender())
-        print(len(self.subwindowList))
+        if self.subwindowList.__contains__(self.sender()):
+            self.subwindowList.remove(self.sender())
 
     @QtCore.pyqtSlot('QGraphicsItem')
     def doFocusItem(self, item):

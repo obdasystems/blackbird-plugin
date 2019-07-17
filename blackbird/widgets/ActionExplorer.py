@@ -1,15 +1,13 @@
 from abc import ABCMeta, abstractmethod
 
 from PyQt5 import QtWidgets, QtCore
-from PyQt5.QtCore import Qt, pyqtSlot
-from PyQt5.QtWidgets import QTableWidget, QTableWidgetItem, QPushButton
+from PyQt5.QtCore import  pyqtSlot
 from eddy.core.datatypes.qt import Font
-from eddy.core.functions.misc import clamp, first
+from eddy.core.functions.misc import clamp
 from eddy.core.functions.signals import connect
 
 # noinspection PyUnresolvedReferences
 from eddy.plugins.blackbird.schema import RelationalSchema
-from eddy.ui.fields import IntegerField, StringField, ComboBox
 # noinspection PyUnresolvedReferences
 from eddy.plugins.blackbird.schema import RelationalTable
 # noinspection PyUnresolvedReferences
@@ -125,6 +123,8 @@ class BBActionWidget(QtWidgets.QScrollArea):
         scrollbar = self.verticalScrollBar()
         scrollbar.installEventFilter(self)
 
+        connect(self.sgnActionButtonClicked, plugin.onSchemaActionApplied)
+        connect(self.sgnUndoButtonClicked, plugin.onSchemaActionUndo)
     #############################################
     #   PROPERTIES
     #################################
