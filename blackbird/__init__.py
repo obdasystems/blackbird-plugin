@@ -36,7 +36,6 @@ from PyQt5 import (
     QtNetwork,
     QtWidgets
     )
-from PyQt5.QtCore import Qt
 
 from eddy import ORGANIZATION, APPNAME, WORKSPACE
 from eddy.core.datatypes.owl import OWLAxiom, OWLSyntax
@@ -48,9 +47,7 @@ from eddy.core.functions.misc import first
 from eddy.core.functions.path import expandPath
 from eddy.core.functions.signals import connect, disconnect
 from eddy.core.items.edges.common.base import AbstractEdge
-from eddy.core.items.edges.inclusion import InclusionEdge
 from eddy.core.items.nodes.common.base import AbstractNode
-from eddy.core.items.nodes.concept import ConceptNode
 from eddy.core.output import getLogger
 from eddy.core.plugin import AbstractPlugin
 from eddy.ui.dialogs import DiagramSelectionDialog
@@ -82,7 +79,6 @@ from eddy.plugins.blackbird.schema import (
 )
 # noinspection PyUnresolvedReferences
 from eddy.plugins.blackbird.translator import BlackbirdProcess
-
 # noinspection PyUnresolvedReferences
 from eddy.plugins.blackbird.schema import RelationalSchema
 # noinspection PyUnresolvedReferences
@@ -96,7 +92,6 @@ from eddy.plugins.blackbird.schema import RelationalTableAction
 # noinspection PyUnresolvedReferences
 from eddy.plugins.blackbird.widgets.ActionExplorer import BBActionWidget
 from eddy.ui.view import DiagramView
-
 # noinspection PyUnresolvedReferences
 from eddy.plugins.blackbird.diagram import BlackBirdDiagram
 # noinspection PyUnresolvedReferences
@@ -107,6 +102,8 @@ from eddy.plugins.blackbird.items.nodes import TableNode
 from eddy.plugins.blackbird.widgets.ProjectExplorer import BlackbirdProjectExplorerWidget
 # noinspection PyUnresolvedReferences
 from eddy.plugins.blackbird.schema import RelationalTable, ForeignKeyConstraint
+
+from blackbird.ui.mdi import BlackBirdMdiSubWindow
 
 LOGGER = getLogger()
 
@@ -762,10 +759,6 @@ class BlackbirdPlugin(AbstractPlugin):
         if not self.translator.state() == QtCore.QProcess.Running:
             self.sgnStartTranslator.emit()
 
-        #TODO CANCELLA
-        # INITIALIZE THE TEMPORARY DIALOG TO SHOW THE VIEW
-        #self.initDiagramDialog()
-
     @QtCore.pyqtSlot()
     def onDiagramExportCompleted(self):
         """
@@ -953,27 +946,19 @@ class BlackbirdPlugin(AbstractPlugin):
         subwindow = self.session.mdi.subWindowForDiagram(diagram)
         if not subwindow:
             view = self.session.createDiagramView(diagram)
-            subwindow = self.session.createMdiSubWindow(view)
-            subwindow.setAttribute(QtCore.Qt.WA_DeleteOnClose)
-            subwindow.setWindowIcon(QtGui.QIcon(':/blackbird/icons/128/ic_blackbird'))
-            subwindow.showMaximized()
-            connect(subwindow.destroyed, self.onSubWindowDestroyed)
-            print('connected view', view)
-            print('connected subwindow', subwindow)
+            subwindow = self.createMdiSubWindow(view)
+            connect(subwindow.sgnCloseEvent, self.onSubWindowClose)
             self.subwindowList.append(subwindow)
         self.session.mdi.setActiveSubWindow(subwindow)
         self.session.mdi.update()
-        #self.session.sgnDiagramFocused.emit(diagram)
 
     @QtCore.pyqtSlot()
-    def onSubWindowDestroyed(self):
+    def onSubWindowClose(self):
         """
-        Focus an item in its diagram.
-        :type item: AbstractItem
+        Manage the close event of a BlackBirdSubWindow.
         """
         print(len(self.subwindowList))
-        print('call to onSubWindowDestroyed',self.sender())
-        #self.subwindowList.remove(self.sender())
+        self.subwindowList.remove(self.sender())
         print(len(self.subwindowList))
 
     @QtCore.pyqtSlot('QGraphicsItem')
@@ -1270,6 +1255,18 @@ class BlackbirdPlugin(AbstractPlugin):
     #############################################
     #   INTERFACE
     #################################
+
+    def createMdiSubWindow(self, widget):
+        """
+        Create a subwindow in the MDI area that displays the given widget.
+        :type widget: QWidget
+        :rtype: BlackBirdMdiSubWindow
+        """
+        subwindow = BlackBirdMdiSubWindow(widget)
+        subwindow = self.session.mdi.addSubWindow(subwindow)
+        subwindow.showMaximized()
+        return subwindow
+
     def initializeOntologyEntityManager(self):
         """
         Initialize the ontology visual elements manager.

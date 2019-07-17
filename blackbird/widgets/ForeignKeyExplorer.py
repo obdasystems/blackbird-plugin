@@ -37,8 +37,6 @@ class ForeignKeyExplorerWidget(QtWidgets.QWidget):
     sgnForeignKeyItemDoubleClicked = QtCore.pyqtSignal(ForeignKeyConstraint)
     sgnForeignKeyItemRightClicked = QtCore.pyqtSignal(ForeignKeyConstraint)
 
-
-
     def __init__(self, plugin):
         super().__init__(plugin.session)
 
