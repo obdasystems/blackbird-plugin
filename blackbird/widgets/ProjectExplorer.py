@@ -38,7 +38,7 @@ class BlackbirdProjectExplorerWidget(QtWidgets.QWidget):
         self.root.setFont(Font('Roboto', 12, bold=True))
         self.root.setIcon(self.iconRoot)
 
-        self.shortcut = QtWidgets.QShortcut(QtGui.QKeySequence('Ctrl+Shift+d'), self.session)
+        self.shortcut = QtWidgets.QShortcut(QtGui.QKeySequence('Ctrl+Shift+b'), self.session)
         self.model = QtGui.QStandardItemModel(self)
         self.proxy = ProjectExplorerSortedProxyModel(self)
         self.proxy.setDynamicSortFilter(False)

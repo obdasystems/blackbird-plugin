@@ -42,7 +42,7 @@ class ForeignKeyExplorerWidget(QtWidgets.QWidget):
 
         self.plugin = plugin
         self.fkIcon = QtGui.QIcon(':blackbird/icons/24/ic_blackbird_fk')
-        self.searchShortcut = QtWidgets.QShortcut(QtGui.QKeySequence('Ctrl+f'), plugin.session)
+        self.searchShortcut = QtWidgets.QShortcut(QtGui.QKeySequence('Ctrl+f+k'), plugin.session)
         self.search = StringField(self)
         self.search.setAcceptDrops(False)
         self.search.setClearButtonEnabled(True)

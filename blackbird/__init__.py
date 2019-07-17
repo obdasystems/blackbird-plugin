@@ -410,7 +410,7 @@ class BlackbirdPlugin(AbstractPlugin):
         # CREATE SHORTCUTS
         action = fkExplorerDockWidget.toggleViewAction()
         action.setParent(self.session)
-        action.setShortcut(QtGui.QKeySequence('Alt+4'))
+        action.setShortcut(QtGui.QKeySequence('Alt+7'))
 
         # CREATE ENTRY IN VIEW MENU
         menu = self.session.menu('view')
@@ -480,7 +480,7 @@ class BlackbirdPlugin(AbstractPlugin):
         # CREATE SHORTCUTS
         action = tableExplorerDockWidget.toggleViewAction()
         action.setParent(self.session)
-        action.setShortcut(QtGui.QKeySequence('Alt+4'))
+        action.setShortcut(QtGui.QKeySequence('Alt+8'))
 
         # CREATE ENTRY IN VIEW MENU
         self.debug('Creating docking area widget toggle in "view" menu')
@@ -552,7 +552,7 @@ class BlackbirdPlugin(AbstractPlugin):
         # CREATE SHORTCUTS
         action = projExplorerDockWidget.toggleViewAction()
         action.setParent(self.session)
-        action.setShortcut(QtGui.QKeySequence('Alt+4'))
+        action.setShortcut(QtGui.QKeySequence('Alt+9'))
 
         # CREATE ENTRY IN VIEW MENU
         menu = self.session.menu('view')

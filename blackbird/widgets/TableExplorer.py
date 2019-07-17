@@ -46,7 +46,7 @@ class TableExplorerWidget(QtWidgets.QWidget):
         self.classIcon = QtGui.QIcon(':/icons/18/ic_treeview_concept')
         self.objPropIcon = QtGui.QIcon(':/icons/18/ic_treeview_role')
         self.dataPropIcon = QtGui.QIcon(':/icons/18/ic_treeview_attribute')
-        self.searchShortcut = QtWidgets.QShortcut(QtGui.QKeySequence('Ctrl+f'), plugin.session)
+        self.searchShortcut = QtWidgets.QShortcut(QtGui.QKeySequence('Ctrl+f+t'), plugin.session)
         self.search = StringField(self)
         self.search.setAcceptDrops(False)
         self.search.setClearButtonEnabled(True)
