@@ -8,7 +8,7 @@ class BlackBirdMdiSubWindow(MdiSubWindow):
     """
     sgnCloseEvent = QtCore.pyqtSignal()
 
-    def __init__(self, view, parent=None):
+    def __init__(self, view, label, parent=None):
         """
         Initialize the subwindow
         :type view: DiagramView
@@ -16,6 +16,8 @@ class BlackBirdMdiSubWindow(MdiSubWindow):
         """
         super().__init__(view,parent)
         self.setWindowIcon(QtGui.QIcon(':/blackbird/icons/128/ic_blackbird'))
+        self.setWindowTitle(label)
+
 
     def closeEvent(self, closeEvent: QtGui.QCloseEvent) -> None:
         self.sgnCloseEvent.emit()

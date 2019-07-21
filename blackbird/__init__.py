@@ -28,6 +28,8 @@
 import json
 import os
 import tempfile
+import copy
+
 from textwrap import dedent
 
 from PyQt5 import (
@@ -102,8 +104,10 @@ from eddy.plugins.blackbird.items.nodes import TableNode
 from eddy.plugins.blackbird.widgets.ProjectExplorer import BlackbirdProjectExplorerWidget
 # noinspection PyUnresolvedReferences
 from eddy.plugins.blackbird.schema import RelationalTable, ForeignKeyConstraint
+# noinspection PyUnresolvedReferences
+from eddy.plugins.blackbird.ui.mdi import BlackBirdMdiSubWindow
 
-from blackbird.ui.mdi import BlackBirdMdiSubWindow
+from blackbird.widgets.actions import ActionTableExplorerWidget
 
 LOGGER = getLogger()
 
@@ -117,8 +121,11 @@ class BlackbirdPlugin(AbstractPlugin):
     sgnSchemaChanged = QtCore.pyqtSignal(RelationalSchema)
     sgnActionCorrectlyApplied = QtCore.pyqtSignal()
 
+    sgnDiagramAdded = QtCore.pyqtSignal('QGraphicsScene', str)
+
     sgnFocusDiagram = QtCore.pyqtSignal('QGraphicsScene')
     sgnFocusItem = QtCore.pyqtSignal('QGraphicsItem')
+    sgnActionNodeAdded = QtCore.pyqtSignal(BlackBirdDiagram,TableNode)
     sgnNodeAdded = QtCore.pyqtSignal(BlackBirdDiagram,TableNode)
     sgnEdgeAdded = QtCore.pyqtSignal(BlackBirdDiagram,ForeignKeyEdge)
     sgnFocusTable = QtCore.pyqtSignal(RelationalTable)
@@ -136,6 +143,11 @@ class BlackbirdPlugin(AbstractPlugin):
         self.translator = None
         self.bbOntologyEntityMgr = None
         self.subwindowList = []
+        self.diagramList = []
+        self.diagramToSubWindow = {}
+        self.subWindowToDiagram = {}
+        self.diagramToWindowLabel = {}
+        self.actionCounter = 0
 
     #############################################
     #   HOOKS
@@ -416,6 +428,77 @@ class BlackbirdPlugin(AbstractPlugin):
         menu = self.session.menu('view')
         menu.addAction(self.widget('fk_explorer_dock').toggleViewAction())
 
+        ###############################################
+        #                                             #
+        # INITIALIZE THE ACTION TABLE EXPLORER WIDGET #
+        #                                             #
+        ###############################################
+        actionTableExplorerWidget = ActionTableExplorerWidget(self)
+
+        actionTableExplorerWidget.setObjectName('blackbird_action_table_explorer')
+        self.addWidget(actionTableExplorerWidget)
+        # CREATE TOGGLE ACTIONS
+        group = QtWidgets.QActionGroup(self, objectName='action_table_explorer_item_toggle')
+        group.setExclusive(False)
+        # for item in tableExplorerWidget.items:
+        #     action = QtWidgets.QAction(item.realName.title(), group, objectName=item.name, checkable=True)
+        #     action.setChecked(True)
+        #     action.setData(item)
+        #     action.setFont(Font('Roboto', 11))
+        #     connect(action.triggered, tableExplorerWidget.onMenuButtonClicked)
+        #     group.addAction(action)
+        self.addAction(group)
+
+        group = QtWidgets.QActionGroup(self, objectName='action_table_explorer_status_toggle')
+        group.setExclusive(False)
+        # for status in tableExplorerWidget.status:
+        #     action = QtWidgets.QAction(status.value if status.value else 'Default', group, objectName=status.name, checkable=True)
+        #     action.setChecked(True)
+        #     action.setData(status)
+        #     action.setFont(Font('Roboto', 11))
+        #     connect(action.triggered, tableExplorerWidget.onMenuButtonClicked)
+        #     group.addAction(action)
+        self.addAction(group)
+
+        # CREATE TOGGLE MENU
+        menu = QtWidgets.QMenu(objectName='action_table_explorer_toggle')
+        menu.addSection('Items')
+        menu.addActions(self.action('action_table_explorer_item_toggle').actions())
+        menu.addSection('Description')
+        menu.addActions(self.action('action_table_explorer_status_toggle').actions())
+        self.addMenu(menu)
+
+        # CREATE CONTROL WIDGET
+        button = QtWidgets.QToolButton(objectName='action_table_explorer_toggle')
+        button.setIcon(QtGui.QIcon(':/icons/18/ic_settings_black'))
+        button.setContentsMargins(0, 0, 0, 0)
+        button.setFixedSize(18, 18)
+        button.setFocusPolicy(QtCore.Qt.NoFocus)
+        button.setMenu(self.menu('action_table_explorer_toggle'))
+        button.setPopupMode(QtWidgets.QToolButton.InstantPopup)
+        self.addWidget(button)
+
+        # CREATE DOCKING AREA WIDGET
+        actionTableExplorerDockWidget = DockWidget('Action Schema Tables Explorer', QtGui.QIcon(':icons/18/ic_explore_black'),
+                                             self.session)
+        actionTableExplorerDockWidget.addTitleBarButton(self.widget('action_table_explorer_toggle'))
+        actionTableExplorerDockWidget.installEventFilter(self)
+        actionTableExplorerDockWidget.setAllowedAreas(
+            QtCore.Qt.LeftDockWidgetArea | QtCore.Qt.RightDockWidgetArea | QtCore.Qt.BottomDockWidgetArea)
+        actionTableExplorerDockWidget.setObjectName('action_table_explorer_dock')
+        actionTableExplorerDockWidget.setWidget(self.widget('blackbird_action_table_explorer'))
+        self.addWidget(actionTableExplorerDockWidget)
+
+        # CREATE SHORTCUTS
+        action = actionTableExplorerDockWidget.toggleViewAction()
+        action.setParent(self.session)
+        action.setShortcut(QtGui.QKeySequence('Alt+0'))
+
+        # CREATE ENTRY IN VIEW MENU
+        self.debug('Creating docking area widget toggle in "view" menu')
+        menu = self.session.menu('view')
+        menu.addAction(self.widget('action_table_explorer_dock').toggleViewAction())
+
         ########################################
         #                                      #
         # INITIALIZE THE TABLE EXPLORER WIDGET #
@@ -558,13 +641,13 @@ class BlackbirdPlugin(AbstractPlugin):
         menu = self.session.menu('view')
         menu.addAction(self.widget('blackbird_project_explorer_dock').toggleViewAction())
 
-
         #################
         #               #
         # DOCKING AREAS #
         #               #
         #################
         self.session.addDockWidget(QtCore.Qt.RightDockWidgetArea, self.widget('table_explorer_dock'))
+        self.session.addDockWidget(QtCore.Qt.RightDockWidgetArea, self.widget('action_table_explorer_dock'))
         self.session.addDockWidget(QtCore.Qt.RightDockWidgetArea, self.widget('blackbird_project_explorer_dock'))
         self.session.addDockWidget(QtCore.Qt.RightDockWidgetArea, self.widget('fk_explorer_dock'))
 
@@ -573,28 +656,26 @@ class BlackbirdPlugin(AbstractPlugin):
         toBeClosed = []
         for subwin in self.subwindowList:
             if subwin:
-                print('CLOSING SUBWINDOW IF:', subwin)
                 toBeClosed.append(subwin)
-        print('(0) ', self.subwindowList)
         for subwin in toBeClosed:
             if subwin:
                 subwin.close()
-        print('(1) ', self.subwindowList)
         self.subwindowList = []
-        print('(2) ', self.subwindowList)
 
-
-        eddyProject = self.session.project
         ontDiagrams = None
-        self.widget('blackbird_project_explorer').setProject(eddyProject)
+        self.widget('blackbird_project_explorer').setProject(self.project)
+
 
         if self.diagSelInOntGen and len(self.diagSelInOntGen):
             ontDiagrams = self.diagSelInOntGen
         else:
-            ontDiagrams = eddyProject.diagrams()
-
+            ontDiagrams = self.project.diagrams()
         for ontDiagram in ontDiagrams:
-            bbDiagram = BlackBirdDiagram('{}_SCHEMA'.format(ontDiagram.name), eddyProject)
+            bbDiagramName = self.getNewDiagramName(ontDiagram)# '{}_SCHEMA_0'.format(ontDiagram.name)
+            bbDiagram = BlackBirdDiagram(bbDiagramName, self.project, self.schema)
+            self.diagramToWindowLabel[bbDiagram] = ontDiagram.name
+            self.project.addDiagram(bbDiagram)
+            connect(bbDiagram.sgnItemAdded, self.project.doAddItem)
             ontNodeToBBNodeDict = {}
             # ADDING NODES
             diagramToTablesDict = self.bbOntologyEntityMgr.diagramToTables
@@ -608,6 +689,8 @@ class BlackbirdPlugin(AbstractPlugin):
                     relNode.setText(tableName)
                     bbDiagram.addItem(relNode)
                     self.sgnNodeAdded.emit(bbDiagram,relNode)
+                    if len(table.actions)>0:
+                        self.sgnActionNodeAdded.emit(bbDiagram,relNode)
                     ontNodeToBBNodeDict[ontNode] = relNode
             # ADDING EDGES
             diagramToForeignKeysDict = self.bbOntologyEntityMgr.diagramToForeignKeys
@@ -616,7 +699,9 @@ class BlackbirdPlugin(AbstractPlugin):
                 for innerList in fkVisualElementList:
                     for fkVisualElement in innerList:
                         self.addFkEdgeToDiagram(fk,fkVisualElement, bbDiagram, ontNodeToBBNodeDict)
-            self.widget('blackbird_project_explorer').doAddDiagram(bbDiagram)
+            self.diagramList.append(bbDiagram)
+            self.sgnDiagramAdded.emit(bbDiagram, self.diagramToWindowLabel[bbDiagram])
+            #self.widget('blackbird_project_explorer').doAddDiagram(bbDiagram)
 
     def addFkEdgeToDiagram(self,fk, fkVisualElement, bbDiagram, ontNodeToBBNodeDict):
         """
@@ -670,6 +755,30 @@ class BlackbirdPlugin(AbstractPlugin):
             fkEdge.source.addEdge(fkEdge)
             fkEdge.target.addEdge(fkEdge)
             fkEdge.updateEdge(visible=True)
+
+
+    def updateDiagrams(self):
+        copyList = []
+        for diagram in self.diagramList:
+            copyList.append(diagram)
+        self.diagramList =[]
+
+        for diagram in copyList:
+            newDiagram = self.getNewUpdatedDiagram(diagram)
+            self.diagramList.append(newDiagram)
+            self.diagramToWindowLabel[newDiagram] = self.diagramToWindowLabel[diagram]
+            self.diagramToWindowLabel.pop(diagram)
+            self.sgnDiagramAdded.emit(newDiagram, self.diagramToWindowLabel[newDiagram])
+            if diagram in self.diagramToSubWindow:
+                subwindow = self.diagramToSubWindow[diagram]
+                LOGGER.debug('Changing content of open mdiSubwindow FROM diagram {} TO diagram {}' .format(diagram.name,newDiagram.name))
+                newView = self.session.createDiagramView(newDiagram)
+                subwindow.setWidget(newView)
+                subwindow.update()
+                self.diagramToSubWindow.pop(diagram)
+                self.diagramToSubWindow[newDiagram] = subwindow
+                self.subWindowToDiagram[subwindow] = newDiagram
+
 
     #############################################
     #   EVENTS
@@ -840,15 +949,7 @@ class BlackbirdPlugin(AbstractPlugin):
                 #AGGANCIATI QUI CON IL PARSER
                 jsonSchema = json.loads(schema)
                 self.schema = RelationalSchemaParser.getSchema(jsonSchema)
-
-                #TODO
-                #self.schemaCatalog[self.schema.name] = self.schema
-
-                #self.project.schemaCatlog = self.schemaCatalog
-                # TODO popola widget con project explorer
-
                 self.initializeOntologyEntityManager()
-
                 dialog = BlackbirdOutputDialog(owltext, json.dumps(json.loads(schema),indent=2),self.schema, self.session)
                 dialog.show()
                 dialog.raise_()
@@ -875,15 +976,15 @@ class BlackbirdPlugin(AbstractPlugin):
                 schema = str(reply.readAll(), encoding='utf-8')
                 jsonSchema = json.loads(schema)
                 self.schema = RelationalSchemaParser.getSchema(jsonSchema)
-                self.initializeOntologyEntityManager()
-
+                #self.initializeOntologyEntityManager()
+                self.actionCounter += 1
                 dialog = BlackbirdOutputDialog('', json.dumps(json.loads(schema), indent=2),self.schema , self.session)
                 dialog.show()
                 dialog.raise_()
                 self.sgnActionCorrectlyApplied.emit()
                 self.sgnSchemaChanged.emit(self.schema)
-                self.initDiagrams()#TODO sostistuisci con initDiagramsFromAction (DISEGNA A PARTIRE DA DIAGRAMMI GIà DISPONIBILI E NON DA GRAPHOL)
-
+                #self.initDiagrams()#TODO sostistuisci con initDiagramsFromAction (DISEGNA A PARTIRE DA DIAGRAMMI GIà DISPONIBILI E NON DA GRAPHOL)
+                self.updateDiagrams()
             else:
                 self.session.addNotification('Error applying action: {}'.format(reply.errorString()))
                 LOGGER.error('Error applying action: {}'.format(reply.errorString()))
@@ -906,9 +1007,11 @@ class BlackbirdPlugin(AbstractPlugin):
                 dialog.show()
                 dialog.raise_()
                 jsonSchema = json.loads(schema)
+                self.actionCounter+=1
                 self.schema = RelationalSchemaParser.getSchema(jsonSchema)
                 self.sgnActionCorrectlyApplied.emit()
                 self.sgnSchemaChanged.emit(self.schema)
+
                 self.initDiagrams()#TODO sostistuisci con initDiagramsFromAction (DISEGNA A PARTIRE DA DIAGRAMMI GIà DISPONIBILI E NON DA GRAPHOL)
             else:
                 self.session.addNotification('Error undoing action: {}'.format(reply.errorString()))
@@ -943,12 +1046,12 @@ class BlackbirdPlugin(AbstractPlugin):
         """
         subwindow = self.session.mdi.subWindowForDiagram(diagram)
         if not subwindow:
-            print('FOCUS PRE:',self.subwindowList)
             view = self.session.createDiagramView(diagram)
-            subwindow = self.createMdiSubWindow(view)
+            subwindow = self.createMdiSubWindow(view, self.diagramToWindowLabel[diagram])
             connect(subwindow.sgnCloseEvent, self.onSubWindowClose)
             self.subwindowList.append(subwindow)
-            print('FOCUS POST:', self.subwindowList)
+            self.diagramToSubWindow[diagram] = subwindow
+            self.subWindowToDiagram[subwindow] = diagram
         self.session.mdi.setActiveSubWindow(subwindow)
         self.session.mdi.update()
 
@@ -959,6 +1062,9 @@ class BlackbirdPlugin(AbstractPlugin):
         """
         if self.subwindowList.__contains__(self.sender()):
             self.subwindowList.remove(self.sender())
+            diagram = self.subWindowToDiagram[self.sender()]
+            self.diagramToSubWindow.pop(diagram)
+            self.subWindowToDiagram.pop(self.sender())
 
     @QtCore.pyqtSlot('QGraphicsItem')
     def doFocusItem(self, item):
@@ -1255,13 +1361,13 @@ class BlackbirdPlugin(AbstractPlugin):
     #   INTERFACE
     #################################
 
-    def createMdiSubWindow(self, widget):
+    def createMdiSubWindow(self, widget,label):
         """
         Create a subwindow in the MDI area that displays the given widget.
         :type widget: QWidget
         :rtype: BlackBirdMdiSubWindow
         """
-        subwindow = BlackBirdMdiSubWindow(widget)
+        subwindow = BlackBirdMdiSubWindow(widget,label)
         subwindow = self.session.mdi.addSubWindow(subwindow)
         subwindow.showMaximized()
         return subwindow
@@ -1274,3 +1380,117 @@ class BlackbirdPlugin(AbstractPlugin):
         LOGGER.debug('############# Initializing BlackbirdOntologyEntityManager')
         LOGGER.debug(self.bbOntologyEntityMgr.diagramToTablesString())
         LOGGER.debug(self.bbOntologyEntityMgr.diagramToForeignKeysString())
+
+    def getNewUpdatedDiagram(self, oldDiagram):
+        """
+        Get a new version of diagram representing (subset of) schema based on current state of items
+        :type oldDiagram: BlackBirdDiagram
+        :rtype: BlackBirdDiagram
+        """
+        LOGGER.debug('Updating diagram {}'.format(oldDiagram.name))
+        #newDiagram = BlackBirdDiagram('NEW_{}'.format(oldDiagram.name), self.session.project, self.schema)
+
+        newDiagramName = self.getNewDiagramName(oldDiagram)
+        newDiagram = BlackBirdDiagram(newDiagramName, self.session.project, self.schema)
+        oldTableNodes = oldDiagram.nodes()
+        oldFkEdges = oldDiagram.edges()
+
+        oldNodeToNew = {}
+        remSchemaTables = []
+        for table in self.schema.tables:
+            remSchemaTables.append(table)
+        remSchemaFKs = []
+
+        for fk in self.schema.foreignKeys:
+            remSchemaFKs.append(fk)
+
+        remOldNodes = []
+        for node in oldTableNodes:
+            remOldNodes.append(node)
+
+        for fk in self.schema.foreignKeys:
+            for oldFkEdge in oldFkEdges:
+                if fk.equals(oldFkEdge.foreignKey):
+                    oldSrc = oldFkEdge.source
+                    if oldSrc in oldNodeToNew:
+                        newSrc = oldNodeToNew[oldSrc]
+                    else:
+                        newNodeRelTable = self.schema.getTableByEntityIRI(oldSrc.relationalTable.entity.fullIRI)
+                        if newNodeRelTable in remSchemaTables:
+                            remSchemaTables.remove(newNodeRelTable)
+                        newSrc = TableNode(oldSrc.width(), oldSrc.height(), remaining_characters=newNodeRelTable.name,relational_table=newNodeRelTable, diagram=newDiagram)
+                        newSrc.setPos(oldSrc.pos())
+                        newSrc.setText(newNodeRelTable.name)
+                        newDiagram.addItem(newSrc)
+                        self.sgnNodeAdded.emit(newDiagram, newSrc)
+                        if len(newNodeRelTable.actions) > 0:
+                            self.sgnActionNodeAdded.emit(newDiagram, newSrc)
+                        oldNodeToNew[oldSrc] = newSrc
+                        remOldNodes.remove(oldSrc)
+
+                    oldTgt = oldFkEdge.target
+                    if oldTgt in oldNodeToNew:
+                        newTgt = oldNodeToNew[oldTgt]
+                    else:
+                        newNodeRelTable = self.schema.getTableByEntityIRI(oldTgt.relationalTable.entity.fullIRI)
+                        if newNodeRelTable in remSchemaTables:
+                            remSchemaTables.remove(newNodeRelTable)
+                        newTgt = TableNode(oldTgt.width(), oldTgt.height(), remaining_characters=newNodeRelTable.name,relational_table=newNodeRelTable, diagram=newDiagram)
+                        newTgt.setPos(oldTgt.pos())
+                        newTgt.setText(newNodeRelTable.name)
+                        newDiagram.addItem(newTgt)
+                        self.sgnNodeAdded.emit(newDiagram, newTgt)
+                        if len(newNodeRelTable.actions) > 0:
+                            self.sgnActionNodeAdded.emit(newDiagram, newTgt)
+                        oldNodeToNew[oldTgt] = newTgt
+                        remOldNodes.remove(oldTgt)
+
+                    if newSrc and newTgt:
+                        newSrcAnchor = QtCore.QPointF(oldSrc.anchor(oldFkEdge))
+                        newTgtAnchor = QtCore.QPointF(oldTgt.anchor(oldFkEdge))
+
+                        newFkEdge = ForeignKeyEdge(foreign_key=fk, source=newSrc, target=newTgt, breakpoints=oldFkEdge.breakpoints,
+                                                diagram=newDiagram)
+                        newDiagram.addItem(newFkEdge)
+                        self.sgnEdgeAdded.emit(newDiagram, newFkEdge)
+                        newFkEdge.source.setAnchor(newFkEdge, newSrcAnchor)
+                        newFkEdge.target.setAnchor(newFkEdge, newTgtAnchor)
+                        newFkEdge.source.addEdge(newFkEdge)
+                        newFkEdge.target.addEdge(newFkEdge)
+                        newFkEdge.updateEdge(visible=True)
+                        LOGGER.debug('Foreign key {} added to diagram {}'.format(fk.name,newDiagram.name))
+                    else:
+                        LOGGER.debug('Problems while drawing edge for foreign key {} in diagram {}'.format(fk.name,newDiagram.name))
+                    if fk in remSchemaFKs:
+                        remSchemaFKs.remove(fk)
+
+        LOGGER.debug('After processing of FKs {} nodes of old diagram {} have not been copied to new diagram {} '.format(len(remOldNodes), oldDiagram.name, newDiagram.name))
+        LOGGER.debug('After processing of FKs {} fks of new schema have not been drawn into new diagram {} '.format(len(remSchemaFKs), oldDiagram.name, newDiagram.name))
+        LOGGER.debug('After processing of FKs {} tables of new schema have not been drawn into new diagram {} '.format(len(remSchemaTables), oldDiagram.name, newDiagram.name))
+
+        for remOldNode in remOldNodes:
+            newNodeRelTable = self.schema.getTableByEntityIRI(remOldNode.relationalTable)
+            if newNodeRelTable:
+                relNode = TableNode(remOldNode.width(), remOldNode.height(), remaining_characters=newNodeRelTable.name, relational_table=newNodeRelTable, diagram=newDiagram)
+                relNode.setPos(remOldNode.pos())
+                relNode.setText(newNodeRelTable.name)
+                newDiagram.addItem(relNode)
+                self.sgnNodeAdded.emit(newDiagram, relNode)
+                if len(newNodeRelTable.actions) > 0:
+                    self.sgnActionNodeAdded.emit(newDiagram, relNode)
+                remSchemaTables.remove(newNodeRelTable)
+                LOGGER.debug('Node {} (corresponding to table {}) added to diagram {} by direct old node inspection '.format(remOldNode, newNodeRelTable.name, newDiagram.name))
+            else:
+                LOGGER.debug('Copy of node {} (corresponding to table {}) to diagram {} by direct old node inspection was not possible'.format(remOldNode, remOldNode.relationalTable.name, newDiagram.name))
+
+        return newDiagram
+
+    def getNewDiagramName(self, oldDiagram):
+        if oldDiagram in self.diagramToWindowLabel:
+            name = '{}_{}'.format(self.diagramToWindowLabel[oldDiagram],self.actionCounter)
+            if name==oldDiagram.name:
+                self.actionCounter+=1
+                name = '{}_{}'.format(self.diagramToWindowLabel[oldDiagram],self.actionCounter)
+        else:
+            name = '{}_{}'.format(oldDiagram.name, self.actionCounter)
+        return name

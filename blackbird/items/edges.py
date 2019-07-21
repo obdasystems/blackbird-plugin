@@ -50,7 +50,6 @@ class ForeignKeyEdge(AbstractEdge):
     """
     This class implements the 'Simple(no given cardinality) Foreign Key' edge.
     """
-    #Type = Item.ForeignKeyEdge
     Type = Item.ForeignkeyEdge
 
     def __init__(self, foreign_key=None, **kwargs):
@@ -271,3 +270,12 @@ class ForeignKeyEdge(AbstractEdge):
         self.path.setPen(pathPen)
 
         super().updateEdge(selected, visible, breakpoint, anchor, **kwargs)
+
+    def isEdge(self):
+        return True
+
+    def isLabel(self):
+        return False
+
+    def isNode(self):
+        return False

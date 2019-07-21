@@ -132,6 +132,8 @@ class ForeignKeyExplorerWidget(QtWidgets.QWidget):
         if self.sender() != self.plugin:
             self.proxy.invalidateFilter()
             self.proxy.sort(0, QtCore.Qt.AscendingOrder)
+        else:
+            self.doFilterItem('')
 
     @QtCore.pyqtSlot(str)
     def doFilterItem(self, key):

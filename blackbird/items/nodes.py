@@ -451,3 +451,12 @@ class TableNode(AbstractResizableNode):
         Returns repr(self).
         """
         return '{0}:{1}:{2}'.format(self.__class__.__name__, self.text(), self.id)
+
+    def isEdge(self):
+        return False
+
+    def isLabel(self):
+        return False
+
+    def isNode(self):
+        return True

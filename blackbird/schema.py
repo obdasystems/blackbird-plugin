@@ -213,6 +213,12 @@ class RelationalSchema:
                 return table
         return None
 
+    def getTableByEntityIRI(self, fullIRI):
+        for table in self.tables:
+            if table.entity.fullIRI == fullIRI:
+                return table
+        return None
+
     def __str__(self):
         tablesStr = "\n\n".join(map(str, self.tables))
         actionsStr = "\n".join(map(str, self.actions))
@@ -275,8 +281,6 @@ class RelationalTable:
                 if colName == col.columnName:
                     return col
         return None
-
-
 
     def __str__(self):
         columnsStr = "\n".join(map(str, self.columns))
@@ -394,6 +398,25 @@ class ForeignKeyConstraint:
     @property
     def axiomType(self):
         return self._axiomType
+
+    def equals(self, other):
+        if not self.__class__ == other.__class__:
+            return False
+        if self.name!=other.name:
+            return  False
+        #TODO SCOMMENTA DOPO MODIFICA SU NOMI DI TABELLE DOPO AZIONI
+        # if self.srcTable!=other.srcTable:
+        #     return False
+        # if len(self.srcColumns)!=len(other.srcColumns) or len(self.tgtColumns)!=len(other.tgtColumns):
+        #     return False
+        # for col in self.srcColumns:
+        #     if not col in other.srcColumns:
+        #         return False
+        # for col in self.tgtColumns:
+        #     if not col in other.tgtColumns:
+        #         return False
+        return True
+
 
     def __str__(self):
         srcColumnsStr = ",".join(map(str, self.srcColumns))

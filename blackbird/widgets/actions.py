@@ -20,7 +20,7 @@ from eddy.plugins.blackbird.items.nodes import TableNode
 from eddy.plugins.blackbird.diagram import BlackBirdDiagram
 
 
-class TableExplorerWidget(QtWidgets.QWidget):
+class ActionTableExplorerWidget(QtWidgets.QWidget):
     """
     This class implements the schema explorer used to list schema tables.
     """
@@ -46,7 +46,7 @@ class TableExplorerWidget(QtWidgets.QWidget):
         self.classIcon = QtGui.QIcon(':/icons/18/ic_treeview_concept')
         self.objPropIcon = QtGui.QIcon(':/icons/18/ic_treeview_role')
         self.dataPropIcon = QtGui.QIcon(':/icons/18/ic_treeview_attribute')
-        self.searchShortcut = QtWidgets.QShortcut(QtGui.QKeySequence('Ctrl+f+t'), plugin.session)
+        self.searchShortcut = QtWidgets.QShortcut(QtGui.QKeySequence('Ctrl+f+a'), plugin.session)
         self.search = StringField(self)
         self.search.setAcceptDrops(False)
         self.search.setClearButtonEnabled(True)
@@ -54,12 +54,12 @@ class TableExplorerWidget(QtWidgets.QWidget):
         self.search.setToolTip('Search ({})'.format(self.searchShortcut.key().toString(QtGui.QKeySequence.NativeText)))
         self.search.setFixedHeight(30)
         self.model = QtGui.QStandardItemModel(self)
-        self.proxy = TableExplorerFilterProxyModel(self)
+        self.proxy = ActionTableExplorerFilterProxyModel(self)
         self.proxy.setDynamicSortFilter(False)
         self.proxy.setFilterCaseSensitivity(QtCore.Qt.CaseInsensitive)
         self.proxy.setSortCaseSensitivity(QtCore.Qt.CaseSensitive)
         self.proxy.setSourceModel(self.model)
-        self.tableview = TableExplorerView(self)
+        self.tableview = ActionTableExplorerView(self)
         self.tableview.setModel(self.proxy)
         self.mainLayout = QtWidgets.QVBoxLayout(self)
         self.mainLayout.setContentsMargins(0, 0, 0, 0)
@@ -88,7 +88,7 @@ class TableExplorerWidget(QtWidgets.QWidget):
         header.setSectionResizeMode(QtWidgets.QHeaderView.ResizeToContents)
 
         connect(plugin.sgnSchemaChanged, self.onSchemaChanged)
-        connect(plugin.sgnNodeAdded, self.doAddNode)
+        connect(plugin.sgnActionNodeAdded, self.doAddNode)
         connect(self.tableview.pressed, self.onItemPressed)
         connect(self.tableview.doubleClicked, self.onItemDoubleClicked)
         connect(self.search.textChanged, self.doFilterItem)
@@ -325,7 +325,7 @@ class TableExplorerWidget(QtWidgets.QWidget):
 
 
 
-class TableExplorerView(QtWidgets.QTreeView):
+class ActionTableExplorerView(QtWidgets.QTreeView):
     """
     This class implements the schema's tables explorer tree view.
     """
@@ -420,7 +420,7 @@ class TableExplorerView(QtWidgets.QTreeView):
         """
         return max(super().sizeHintForColumn(column), self.viewport().width())
 
-class TableExplorerFilterProxyModel(QtCore.QSortFilterProxyModel):
+class ActionTableExplorerFilterProxyModel(QtCore.QSortFilterProxyModel):
     """
     Extends QSortFilterProxyModel adding filtering functionalities for the explorer widget
     """

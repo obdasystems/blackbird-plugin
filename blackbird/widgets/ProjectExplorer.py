@@ -58,6 +58,8 @@ class BlackbirdProjectExplorerWidget(QtWidgets.QWidget):
         header.setStretchLastSection(False)
         header.setSectionResizeMode(QtWidgets.QHeaderView.ResizeToContents)
 
+        connect(plugin.sgnDiagramAdded, self.doAddDiagram)
+
         connect(self.projectview.activated, self.onItemActivated)
         connect(self.projectview.doubleClicked, self.onItemDoubleClicked)
         connect(self.projectview.pressed, self.onItemPressed)
@@ -81,28 +83,31 @@ class BlackbirdProjectExplorerWidget(QtWidgets.QWidget):
     #   WIDGET INTERNAL SLOTS
     #################################
 
-    @QtCore.pyqtSlot('QGraphicsScene')
-    def doAddDiagram(self, diagram):
+    @QtCore.pyqtSlot('QGraphicsScene', str)
+    def doAddDiagram(self, diagram, label):
         """
         Add a diagram in the treeview.
         :type diagram: BlackBirdDiagram
         """
-        if not self.findItem(diagram.name):
-            item = QtGui.QStandardItem(diagram.name)
+        item = self.findItem(label)
+        if not item:
+            item = QtGui.QStandardItem(label)
             item.setData(diagram)
             item.setFlags(item.flags() & ~QtCore.Qt.ItemIsEditable)
             item.setFont(Font('Roboto', 12))
             item.setIcon(self.iconGraphol)
             self.root.appendRow(item)
             self.proxy.sort(0, QtCore.Qt.AscendingOrder)
+        else:
+            item.setData(diagram)
 
     @QtCore.pyqtSlot('QGraphicsScene')
-    def doRemoveDiagram(self, diagram):
+    def doRemoveDiagram(self, diagram, label):
         """
         Remove a diagram from the treeview.
         :type diagram: BlackBirdDiagram
         """
-        item = self.findItem(diagram.name)
+        item = self.findItem(label)
         if item:
             self.root.removeRow(item.index().row())
 

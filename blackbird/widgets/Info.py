@@ -5,16 +5,26 @@ from PyQt5.QtCore import Qt
 from PyQt5.QtWidgets import QTableWidget, QTableWidgetItem
 from eddy.core.datatypes.qt import Font
 from eddy.core.functions.misc import clamp, first
-from eddy.core.functions.signals import connect
+from eddy.core.functions.signals import connect, disconnect
+from eddy.core.output import getLogger
 
-# noinspection PyUnresolvedReferences
-from eddy.plugins.blackbird.schema import RelationalSchema
 from eddy.ui.fields import IntegerField, StringField, ComboBox
 # noinspection PyUnresolvedReferences
 from eddy.plugins.blackbird.schema import RelationalTable
 # noinspection PyUnresolvedReferences
 from eddy.plugins.blackbird.schema import ForeignKeyConstraint
+# noinspection PyUnresolvedReferences
+from eddy.plugins.blackbird.schema import RelationalSchema
+# noinspection PyUnresolvedReferences
+from eddy.plugins.blackbird.diagram import BlackBirdDiagram
+# noinspection PyUnresolvedReferences
+from eddy.plugins.blackbird.ui.mdi import BlackBirdMdiSubWindow
+# noinspection PyUnresolvedReferences
+from eddy.plugins.blackbird.items.edges import ForeignKeyEdge
+# noinspection PyUnresolvedReferences
+from eddy.plugins.blackbird.items.nodes import TableNode
 
+LOGGER = getLogger()
 
 class BBInfoWidget(QtWidgets.QScrollArea):
     """
@@ -114,6 +124,8 @@ class BBInfoWidget(QtWidgets.QScrollArea):
         scrollbar = self.verticalScrollBar()
         scrollbar.installEventFilter(self)
 
+        connect(self.plugin.session.mdi.subWindowActivated, self.onSubWindowActivated)
+
     #############################################
     #   PROPERTIES
     #################################
@@ -191,14 +203,69 @@ class BBInfoWidget(QtWidgets.QScrollArea):
                 show = self.tableInfo
             elif isinstance(infoItem, ForeignKeyConstraint):
                 show = self.fkInfo
+            elif isinstance(infoItem,BlackBirdDiagram):
+                show = None #TODO RIPARTI DA QUI
+                selected = infoItem.selectedItems()
+                if not selected or len(selected)>1:
+                    show = self.schemaInfo
+                    show.updateData(len(infoItem.schema.tables),len(infoItem.schema.foreignKeys))
+                else:
+                    diagramItem = first(selected)
+                    #if diagramItem.type() is Item.TableNode:
+                    if isinstance(diagramItem,TableNode):
+                        show = self.tableInfo
+                        show.updateData(diagramItem.relationalTable)
+                    #elif diagramItem.type() is Item.ForeignkeyEdge:
+                    elif isinstance(diagramItem,ForeignKeyEdge):
+                        show = self.fkInfo
+                        show.updateData(diagramItem.foreignKey)
+        else:
+            show = self.infoEmpty
+        prev = self.stacked.currentWidget()
+        self.stacked.setCurrentWidget(show)
+        self.redraw()
+        if prev is not show:
+            scrollbar = self.verticalScrollBar()
+            scrollbar.setValue(0)
 
-            prev = self.stacked.currentWidget()
-            self.stacked.setCurrentWidget(show)
-            self.redraw()
-            if prev is not show:
-                scrollbar = self.verticalScrollBar()
-                scrollbar.setValue(0)
+    @QtCore.pyqtSlot(QtWidgets.QMdiSubWindow)
+    def onSubWindowActivated(self, subwindow):
+        """
+        Executed when the active subwindow changes.
+        :type subwindow: MdiSubWindow
+        """
+        if subwindow and isinstance(subwindow, BlackBirdMdiSubWindow):
+            if self.diagram:
+                # If the info widget is currently inspecting a
+                # diagram, detach signals from the subwindow which
+                # is going out of focus, before connecting new ones.
+                LOGGER.debug('Disconnecting from diagram: %s', self.diagram.name)
+                disconnect(self.diagram.selectionChanged, self.onDiagramSelectionChanged)
+                #disconnect(self.diagram.sgnUpdated, self.onDiagramUpdated)
+            # Attach the new view/diagram to the info widget.
+            LOGGER.debug('Connecting to diagram: %s', subwindow.diagram.name)
+            connect(subwindow.diagram.selectionChanged, self.onDiagramSelectionChanged)
+            #connect(subwindow.diagram.sgnUpdated, self.onDiagramUpdated)
+            self.setDiagram(subwindow.diagram)
+            self.stack(self.diagram)
+        else:
+            if not self.session.mdi.subWindowList():
+                # If we don't have any active subwindow (which means that
+                # they have been all closed and not just out of focus) we
+                # detach the widget from the last inspected diagram.
+                if self.diagram:
+                    LOGGER.debug('Disconnecting from diagram: %s', self.diagram.name)
+                    disconnect(self.diagram.selectionChanged, self.onDiagramSelectionChanged)
+                    #disconnect(self.diagram.sgnUpdated, self.onDiagramUpdated)
+                self.setDiagram(None)
+                #self.stack(None)
 
+    @QtCore.pyqtSlot()
+    def onDiagramSelectionChanged(self):
+        """
+        Executed whenever the selection of the active diagram changes.
+        """
+        self.stack(self.sender())
 
     @QtCore.pyqtSlot(RelationalSchema)
     def onSchemaChanged(self, schema):

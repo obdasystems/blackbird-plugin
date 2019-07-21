@@ -18,7 +18,10 @@ from eddy.core.generators import GUID
 from eddy.core.items.factory import ItemFactory
 from eddy.core.output import getLogger
 from eddy.core.items.common import AbstractItem
-
+# noinspection PyUnresolvedReferences
+from eddy.plugins.blackbird.items.edges import ForeignKeyEdge
+# noinspection PyUnresolvedReferences
+from eddy.plugins.blackbird.items.nodes import TableNode
 
 LOGGER = getLogger()
 
@@ -47,13 +50,15 @@ class BlackBirdDiagram(Diagram):
     #sgnNodeIdentification = QtCore.pyqtSignal('QGraphicsItem')
     sgnUpdated = QtCore.pyqtSignal()
 
-    def __init__(self, name, parent):
+    def __init__(self, name, parent, schema=None):
         """
         Initialize the diagram.
         :type name: str
         :type parent: Project
+        :type schema: RelationalSchema
         """
         super().__init__(name, parent)
+        self.schema = schema
 
         #connect(self.sgnItemAdded, self.onItemAdded)
         #connect(self.sgnItemRemoved, self.onItemRemoved)
@@ -193,7 +198,6 @@ class BlackBirdDiagram(Diagram):
         Executed when a mouse button is clicked on the scene.
         :type mouseEvent: QGraphicsSceneMouseEvent
         """
-        self.project.colour_items_in_case_of_unsatisfiability_or_inconsistent_ontology()
 
         mouseModifiers = mouseEvent.modifiers()
         mouseButtons = mouseEvent.buttons()
@@ -718,12 +722,13 @@ class BlackBirdDiagram(Diagram):
         :type _: Diagram
         :type item: AbstractItem
         """
-        if item.isEdge():
-            # Execute the node identification procedure only if one of the
-            # endpoints we are connecting is currently identified as NEUTRAL.
-            if (item.source.identity() is Identity.Neutral) ^ (item.target.identity() is Identity.Neutral):
-                for node in (item.source, item.target):
-                    self.sgnNodeIdentification.emit(node)
+        # if item.isEdge():
+        #     # Execute the node identification procedure only if one of the
+        #     # endpoints we are connecting is currently identified as NEUTRAL.
+        #     if (item.source.identity() is Identity.Neutral) ^ (item.target.identity() is Identity.Neutral):
+        #         for node in (item.source, item.target):
+        #             self.sgnNodeIdentification.emit(node)
+        pass
 
     @QtCore.pyqtSlot('QGraphicsScene', 'QGraphicsItem')
     def onItemRemoved(self, _, item):
@@ -738,6 +743,7 @@ class BlackBirdDiagram(Diagram):
         #     # to run the identification procedure on the 2 subgraphs.
         #     for node in (item.source, item.target):
         #         self.sgnNodeIdentification.emit(node)
+        pass
 
     #############################################
     #   INTERFACE
@@ -751,6 +757,7 @@ class BlackBirdDiagram(Diagram):
         super().addItem(item)
         if item.isNode():
             item.updateNode()
+        self.sgnItemAdded.emit(self,item)
 
     @staticmethod
     def completeMove(moveData, offset=QtCore.QPointF(0, 0)):
@@ -828,22 +835,23 @@ class BlackBirdDiagram(Diagram):
         :rtype: list
         """
         if mixed is None:
-            items = super().items()
+            items = super().items(**kwargs)
         elif isinstance(mixed, QtCore.QPointF):
             x = mixed.x() - (BlackBirdDiagram.SelectionRadius / 2)
             y = mixed.y() - (BlackBirdDiagram.SelectionRadius / 2)
             w = BlackBirdDiagram.SelectionRadius
             h = BlackBirdDiagram.SelectionRadius
-            items = super().items(QtCore.QRectF(x, y, w, h), mode)
+            items = super().items(QtCore.QRectF(x, y, w, h), mode, **kwargs)
         else:
-            items = super().items(mixed, mode)
-        return sorted([
-            x for x in items
-                if (kwargs.get('nodes', True) and x.isNode() or
-                    kwargs.get('edges', True) and x.isEdge() or
-                    kwargs.get('labels', False) and x.isLabel()) and
-                    x not in kwargs.get('skip', set())
-        ], key=lambda i: i.zValue(), reverse=True)
+            items = super().items(mixed, mode, **kwargs)
+        return items
+        # return sorted([
+        #     x for x in items
+        #         if (kwargs.get('nodes', True) and x.isNode() and isinstance(x,TableNode) or
+        #             kwargs.get('edges', True) and isinstance(x,ForeignKeyEdge) or
+        #             kwargs.get('labels', False) and x.isLabel()) and
+        #             x not in kwargs.get('skip', set())
+        # ], key=lambda i: i.zValue(), reverse=True)
 
     def nodes(self):
         """
@@ -866,7 +874,7 @@ class BlackBirdDiagram(Diagram):
         :type filter_on_edges: callable
         :rtype: list
         """
-        return [x for x in super().selectedItems() if x.isEdge() and filter_on_edges(x)]
+        return [x for x in super().selectedItems() if isinstance(x,ForeignKeyEdge) and filter_on_edges(x)]
 
     def selectedItems(self, filter_on_items=lambda x: True):
         """
@@ -874,7 +882,7 @@ class BlackBirdDiagram(Diagram):
         :type filter_on_items: callable
         :rtype: list
         """
-        return [x for x in super().selectedItems() if (x.isNode() or x.isEdge()) and filter_on_items(x)]
+        return [x for x in super().selectedItems() if (isinstance(x,TableNode) or isinstance(x,ForeignKeyEdge)) and filter_on_items(x)]
 
     def selectedNodes(self, filter_on_nodes=lambda x: True):
         """
@@ -882,7 +890,7 @@ class BlackBirdDiagram(Diagram):
         :type filter_on_nodes: callable
         :rtype: list
         """
-        return [x for x in super().selectedItems() if x.isNode() and filter_on_nodes(x)]
+        return [x for x in super().selectedItems() if isinstance(x,TableNode) and filter_on_nodes(x)]
 
     def setMode(self, mode, param=None):
         """
