@@ -40,6 +40,7 @@ from PyQt5 import (
     )
 
 from eddy import ORGANIZATION, APPNAME, WORKSPACE
+from eddy.core.datatypes.graphol import Item
 from eddy.core.datatypes.owl import OWLAxiom, OWLSyntax
 from eddy.core.datatypes.qt import Font
 from eddy.core.diagram import Diagram
@@ -123,6 +124,7 @@ class BlackbirdPlugin(AbstractPlugin):
 
     sgnDiagramCreated = QtCore.pyqtSignal('QGraphicsScene', str)
     sgnProjectChanged = QtCore.pyqtSignal(str)
+    sgnUpdateState = QtCore.pyqtSignal()
 
     sgnFocusDiagram = QtCore.pyqtSignal('QGraphicsScene')
     sgnFocusItem = QtCore.pyqtSignal('QGraphicsItem')
@@ -164,7 +166,7 @@ class BlackbirdPlugin(AbstractPlugin):
         # DISCONNECT FROM CURRENT PROJECT
         self.debug('Disconnecting from project: %s', self.project.name)
         disconnect(self.project.sgnUpdated, self.onProjectUpdated)
-        #disconnect(self.project.sgnDiagramAdded, self.onDiagramAdded)
+        disconnect(self.project.sgnDiagramAdded, self.onDiagramAdded)
         disconnect(self.project.sgnDiagramRemoved, self.onDiagramRemoved)
         disconnect(self.project.sgnItemAdded, self.onProjectItemAdded)
         disconnect(self.project.sgnItemRemoved, self.onProjectItemRemoved)
@@ -208,6 +210,7 @@ class BlackbirdPlugin(AbstractPlugin):
 
         connect(self.session.sgnReady, self.onSessionReady)
         connect(self.session.sgnUpdateState, self.doUpdateState)
+        connect(self.sgnUpdateState, self.doUpdateState)
         connect(self.sgnFocusDiagram, self.doFocusDiagram)
         connect(self.sgnFocusItem, self.doFocusItem)
 
@@ -814,14 +817,14 @@ class BlackbirdPlugin(AbstractPlugin):
         """
         Executed whenever a diagram is added to the active project.
         """
-        pass
+        self.sgnUpdateState.emit()
 
     @QtCore.pyqtSlot('QGraphicsScene')
     def onDiagramRemoved(self, diagram):
         """
         Executed whenever a diagram is removed from the active project.
         """
-        pass
+        self.sgnUpdateState.emit()
 
     @QtCore.pyqtSlot()
     def onDiagramSelectionChanged(self):
@@ -865,7 +868,7 @@ class BlackbirdPlugin(AbstractPlugin):
         """
         self.debug('Connecting to project: %s', self.project.name)
         connect(self.project.sgnUpdated, self.onProjectUpdated)
-        #connect(self.project.sgnDiagramAdded, self.onDiagramAdded)
+        connect(self.project.sgnDiagramAdded, self.onDiagramAdded)
         connect(self.project.sgnDiagramRemoved, self.onDiagramRemoved)
         connect(self.project.sgnItemAdded, self.onProjectItemAdded)
         connect(self.project.sgnItemRemoved, self.onProjectItemRemoved)
@@ -892,6 +895,26 @@ class BlackbirdPlugin(AbstractPlugin):
             self.session.addNotification(dedent("""\
                 <b><font color="#7E0B17">ERROR</font></b>: Could not connect to Blackbird Engine.<br/>
                 <p>{}</p>""".format(e)))
+            LOGGER.exception(e)
+
+    @QtCore.pyqtSlot()
+    def onPreviewDiagramExportCompleted(self):
+        """
+        Executed when the diagram -> OWL export completes.
+        """
+        try:
+            worker = self.session.worker('Blackbird OWL Export')
+            owltext = fread(worker.tmpfile.name)
+            os.unlink(worker.tmpfile.name)
+            reply = self.nmanager.postSchema(owltext.encode('utf-8'))
+            # We deal with network errors in the slot connected to the finished()
+            # signal since it always follows the error() signal
+            connect(reply.finished, self.onPreviewSchemaGenerationCompleted)
+        except Exception as e:
+            self.widget('progress').hide()
+            self.session.addNotification(dedent("""\
+                    <b><font color="#7E0B17">ERROR</font></b>: Could not connect to Blackbird Engine.<br/>
+                    <p>{}</p>""".format(e)))
             LOGGER.exception(e)
 
     @QtCore.pyqtSlot(RelationalSchema,RelationalTableAction)
@@ -971,6 +994,34 @@ class BlackbirdPlugin(AbstractPlugin):
             self.widget('progress').hide()
 
     @QtCore.pyqtSlot()
+    def onPreviewSchemaGenerationCompleted(self):
+        """
+        Executed when the schema preview generation completes.
+        """
+        try:
+            reply = self.sender()
+            reply.deleteLater()
+            assert reply.isFinished()
+            # noinspection PyArgumentList
+            if reply.error() == QtNetwork.QNetworkReply.NoError:
+                owltext = str(reply.request().attribute(NetworkManager.OWL), encoding='utf-8')
+                schema = str(reply.readAll(), encoding='utf-8')
+                # AGGANCIATI QUI CON IL PARSER
+                jsonSchema = json.loads(schema)
+                self.schema = RelationalSchemaParser.getSchema(jsonSchema)
+                self.initializeOntologyEntityManager()
+                dialog = BlackbirdOutputDialog(owltext, json.dumps(json.loads(schema), indent=2), self.schema,
+                                               self.session)
+                dialog.show()
+                dialog.raise_()
+                LOGGER.debug(self.schema)
+            else:
+                self.session.addNotification('Error generating schema: {}'.format(reply.errorString()))
+                LOGGER.error('Error generating schema: {}'.format(reply.errorString()))
+        finally:
+            self.widget('progress').hide()
+
+    @QtCore.pyqtSlot()
     def onSchemaActionCompleted(self):
         """
         Executed when an action over the current schema completes.
@@ -991,7 +1042,6 @@ class BlackbirdPlugin(AbstractPlugin):
                 dialog.raise_()
                 self.sgnActionCorrectlyApplied.emit()
                 self.sgnSchemaChanged.emit(self.schema)
-                #self.initDiagrams()#TODO sostistuisci con initDiagramsFromAction (DISEGNA A PARTIRE DA DIAGRAMMI GIà DISPONIBILI E NON DA GRAPHOL)
                 self.updateDiagrams()
             else:
                 self.session.addNotification('Error applying action: {}'.format(reply.errorString()))
@@ -1161,13 +1211,6 @@ class BlackbirdPlugin(AbstractPlugin):
         pass
 
     @QtCore.pyqtSlot()
-    def doGeneratePreviewSchema(self):
-        """
-        Generate a preview schema for the current project.
-        """
-        self.showDialog()
-
-    @QtCore.pyqtSlot()
     def doExportMappings(self):
         """
         Export mappings for the current project.
@@ -1197,8 +1240,6 @@ class BlackbirdPlugin(AbstractPlugin):
         if not dialog.exec_():
             return
         diagrams = dialog.selectedDiagrams()
-        #TODO valuta se aggiungere un segnale worker.sgnCompleted(diagramsConsidered) in classe OWLOntologyExporterWorker e connettersi
-        # a quello piuttosto che
         if len(diagrams) and self.translator.state() == QtCore.QProcess.Running:
             self.diagSelInOntGen = diagrams
             self.widget('progress').show()
@@ -1211,6 +1252,30 @@ class BlackbirdPlugin(AbstractPlugin):
                                                diagrams=diagrams)
             worker.tmpfile = tmpfile
             connect(worker.sgnCompleted, self.onDiagramExportCompleted)
+            connect(worker.sgnErrored, self.onDiagramExportFailure)
+            self.session.startThread('Blackbird OWL Export', worker)
+
+    @QtCore.pyqtSlot()
+    def doGeneratePreviewSchema(self):
+        """
+        Generate the schema for the selected diagrams.
+        """
+        dialog = DiagramSelectionDialog(self.session)
+        if not dialog.exec_():
+            return
+        diagrams = dialog.selectedDiagrams()
+        if len(diagrams) and self.translator.state() == QtCore.QProcess.Running:
+            self.diagSelInOntGen = diagrams
+            self.widget('progress').show()
+            # EXPORT DIAGRAM TO OWL
+            tmpfile = tempfile.NamedTemporaryFile('wb', delete=False)
+            worker = OWLOntologyExporterWorker(self.project, tmpfile.name,
+                                               axioms={x for x in OWLAxiom},
+                                               normalize=False,
+                                               syntax=OWLSyntax.Functional,
+                                               diagrams=diagrams)
+            worker.tmpfile = tmpfile
+            connect(worker.sgnCompleted, self.onPreviewDiagramExportCompleted)
             connect(worker.sgnErrored, self.onDiagramExportFailure)
             self.session.startThread('Blackbird OWL Export', worker)
 
@@ -1269,8 +1334,18 @@ class BlackbirdPlugin(AbstractPlugin):
         """
         Executed when the plugin session updates its state.
         """
-        isDiagramActive = self.session.mdi.activeDiagram() is not None
-        self.action('generate_schema').setEnabled(isDiagramActive)
+        if (len(self.project.diagrams())>0 and
+            (self.project.itemNum(Item.ConceptNode)>0  or self.project.itemNum(Item.RoleNode)>0 or self.project.itemNum(Item.AttributeNode)>0)):
+            self.action('generate_schema').setEnabled(True)
+            self.action('generate_preview_schema').setEnabled(True)
+        else:
+            self.action('generate_schema').setEnabled(False)
+            self.action('generate_preview_schema').setEnabled(False)
+
+
+
+        #isDiagramActive = self.session.mdi.activeDiagram() is not None
+        #self.action('generate_schema').setEnabled(isDiagramActive)
 
 
 
@@ -1326,19 +1401,12 @@ class BlackbirdPlugin(AbstractPlugin):
         connect(confirmation.clicked, dialog.accept)
 
         with BusyProgressDialog('Generating Schema...', mtime=1, parent=self.session):
-            # GET SCHEMA DEFINITION
-            #getAllSchemasText = RestUtils.getAllSchemas()
-            #json_schema_data = json.loads(getAllSchemasText)
 
             filePath = os.path.join(os.path.dirname(__file__), os.pardir, 'tests', 'test_export_schema_1', 'Diagram5.json')
             json_schema_data = FileUtils.parseSchemaFile(filePath)
 
-            # GET TABLE ACTIONS
-            getActionsText = '{}'  # Needs to be rewritten since we removed requests
-            json_action_data = json.loads(getActionsText)
-
             # PARSE THE SCHEMA
-            schema = RelationalSchemaParser.getSchema(json_schema_data, json_action_data)
+            schema = RelationalSchemaParser.getSchema(json_schema_data)
             LOGGER.debug('Relational Schema Parsed: ')
             LOGGER.debug(str(schema))
             textSchema.setPlainText(str(schema))
