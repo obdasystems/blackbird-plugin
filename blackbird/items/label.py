@@ -36,7 +36,7 @@ class TableNodeLabel(NodeLabel):
         """
         # painter = QPainter(self)
 
-        super().paint(painter, option, widget)
+        #super().paint(painter, option, widget)
 
         metrics = QFontMetrics(self.font())
         #TODO CONTROLLA PERCHE' non viene settato parent correttamente (parent()=None sempre)

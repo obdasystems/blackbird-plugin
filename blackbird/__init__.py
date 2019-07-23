@@ -121,7 +121,8 @@ class BlackbirdPlugin(AbstractPlugin):
     sgnSchemaChanged = QtCore.pyqtSignal(RelationalSchema)
     sgnActionCorrectlyApplied = QtCore.pyqtSignal()
 
-    sgnDiagramAdded = QtCore.pyqtSignal('QGraphicsScene', str)
+    sgnDiagramCreated = QtCore.pyqtSignal('QGraphicsScene', str)
+    sgnProjectChanged = QtCore.pyqtSignal(str)
 
     sgnFocusDiagram = QtCore.pyqtSignal('QGraphicsScene')
     sgnFocusItem = QtCore.pyqtSignal('QGraphicsItem')
@@ -163,7 +164,7 @@ class BlackbirdPlugin(AbstractPlugin):
         # DISCONNECT FROM CURRENT PROJECT
         self.debug('Disconnecting from project: %s', self.project.name)
         disconnect(self.project.sgnUpdated, self.onProjectUpdated)
-        disconnect(self.project.sgnDiagramAdded, self.onDiagramAdded)
+        #disconnect(self.project.sgnDiagramAdded, self.onDiagramAdded)
         disconnect(self.project.sgnDiagramRemoved, self.onDiagramRemoved)
         disconnect(self.project.sgnItemAdded, self.onProjectItemAdded)
         disconnect(self.project.sgnItemRemoved, self.onProjectItemRemoved)
@@ -203,6 +204,8 @@ class BlackbirdPlugin(AbstractPlugin):
         Connect session specific signals to their slots.
         """
         self.debug('Connecting to active session')
+        connect(self.sgnDiagramCreated, self.onDiagramCreated)
+
         connect(self.session.sgnReady, self.onSessionReady)
         connect(self.session.sgnUpdateState, self.doUpdateState)
         connect(self.sgnFocusDiagram, self.doFocusDiagram)
@@ -247,6 +250,11 @@ class BlackbirdPlugin(AbstractPlugin):
             QtGui.QIcon(':/blackbird/icons/128/ic_blackbird'), 'Generate Schema', self,
             objectName='generate_schema', toolTip='Generate database schema',
             triggered=self.doGenerateSchema))
+
+        # self.addAction(QtWidgets.QAction(
+        #     QtGui.QIcon(':/blackbird/icons/128/ic_blackbird'), 'Undo Action', self,
+        #     objectName='undo_action', toolTip='Undo last performed action',
+        #     triggered=self.doUndoAction))
 
     # noinspection PyArgumentList
     def initMenus(self):
@@ -662,9 +670,7 @@ class BlackbirdPlugin(AbstractPlugin):
                 subwin.close()
         self.subwindowList = []
 
-        ontDiagrams = None
-        self.widget('blackbird_project_explorer').setProject(self.project)
-
+        self.sgnProjectChanged.emit(self.project.name)
 
         if self.diagSelInOntGen and len(self.diagSelInOntGen):
             ontDiagrams = self.diagSelInOntGen
@@ -673,11 +679,8 @@ class BlackbirdPlugin(AbstractPlugin):
         for ontDiagram in ontDiagrams:
             bbDiagramName = self.getNewDiagramName(ontDiagram)# '{}_SCHEMA_0'.format(ontDiagram.name)
             bbDiagram = BlackBirdDiagram(bbDiagramName, self.project, self.schema)
-            self.diagramToWindowLabel[bbDiagram] = ontDiagram.name
-            self.project.addDiagram(bbDiagram)
-            connect(bbDiagram.sgnItemAdded, self.project.doAddItem)
+            self.sgnDiagramCreated.emit(bbDiagram, ontDiagram.name)
             ontNodeToBBNodeDict = {}
-            # ADDING NODES
             diagramToTablesDict = self.bbOntologyEntityMgr.diagramToTables
             relTableToDiagramNodes = diagramToTablesDict[ontDiagram]
             for table, ontNodeList in relTableToDiagramNodes.items():
@@ -699,9 +702,7 @@ class BlackbirdPlugin(AbstractPlugin):
                 for innerList in fkVisualElementList:
                     for fkVisualElement in innerList:
                         self.addFkEdgeToDiagram(fk,fkVisualElement, bbDiagram, ontNodeToBBNodeDict)
-            self.diagramList.append(bbDiagram)
-            self.sgnDiagramAdded.emit(bbDiagram, self.diagramToWindowLabel[bbDiagram])
-            #self.widget('blackbird_project_explorer').doAddDiagram(bbDiagram)
+
 
     def addFkEdgeToDiagram(self,fk, fkVisualElement, bbDiagram, ontNodeToBBNodeDict):
         """
@@ -765,13 +766,10 @@ class BlackbirdPlugin(AbstractPlugin):
 
         for diagram in copyList:
             newDiagram = self.getNewUpdatedDiagram(diagram)
-            self.diagramList.append(newDiagram)
-            self.diagramToWindowLabel[newDiagram] = self.diagramToWindowLabel[diagram]
             self.diagramToWindowLabel.pop(diagram)
-            self.sgnDiagramAdded.emit(newDiagram, self.diagramToWindowLabel[newDiagram])
             if diagram in self.diagramToSubWindow:
                 subwindow = self.diagramToSubWindow[diagram]
-                LOGGER.debug('Changing content of open mdiSubwindow FROM diagram {} TO diagram {}' .format(diagram.name,newDiagram.name))
+                LOGGER.debug('Changing content of open mdiSubwindow FROM diagram {} TO diagram {}'.format(diagram.name,newDiagram.name))
                 newView = self.session.createDiagramView(newDiagram)
                 subwindow.setWidget(newView)
                 subwindow.update()
@@ -800,6 +798,16 @@ class BlackbirdPlugin(AbstractPlugin):
     #############################################
     #   SLOTS
     #################################
+
+    @QtCore.pyqtSlot('QGraphicsScene', str)
+    def onDiagramCreated(self, bbDiagram, label):
+        """
+        Executed whenever a BlackBird diagram is created.
+        """
+        self.diagramList.append(bbDiagram)
+        self.diagramToWindowLabel[bbDiagram] = label
+        self.project.addDiagram(bbDiagram)
+        connect(bbDiagram.sgnItemAdded, self.project.doAddItem)
 
     @QtCore.pyqtSlot('QGraphicsScene')
     def onDiagramAdded(self, diagram):
@@ -857,7 +865,7 @@ class BlackbirdPlugin(AbstractPlugin):
         """
         self.debug('Connecting to project: %s', self.project.name)
         connect(self.project.sgnUpdated, self.onProjectUpdated)
-        connect(self.project.sgnDiagramAdded, self.onDiagramAdded)
+        #connect(self.project.sgnDiagramAdded, self.onDiagramAdded)
         connect(self.project.sgnDiagramRemoved, self.onDiagramRemoved)
         connect(self.project.sgnItemAdded, self.onProjectItemAdded)
         connect(self.project.sgnItemRemoved, self.onProjectItemRemoved)
@@ -1392,6 +1400,7 @@ class BlackbirdPlugin(AbstractPlugin):
 
         newDiagramName = self.getNewDiagramName(oldDiagram)
         newDiagram = BlackBirdDiagram(newDiagramName, self.session.project, self.schema)
+        self.sgnDiagramCreated.emit(newDiagram, self.diagramToWindowLabel[oldDiagram])
         oldTableNodes = oldDiagram.nodes()
         oldFkEdges = oldDiagram.edges()
 
@@ -1416,51 +1425,64 @@ class BlackbirdPlugin(AbstractPlugin):
                         newSrc = oldNodeToNew[oldSrc]
                     else:
                         newNodeRelTable = self.schema.getTableByEntityIRI(oldSrc.relationalTable.entity.fullIRI)
-                        if newNodeRelTable in remSchemaTables:
-                            remSchemaTables.remove(newNodeRelTable)
-                        newSrc = TableNode(oldSrc.width(), oldSrc.height(), remaining_characters=newNodeRelTable.name,relational_table=newNodeRelTable, diagram=newDiagram)
-                        newSrc.setPos(oldSrc.pos())
-                        newSrc.setText(newNodeRelTable.name)
-                        newDiagram.addItem(newSrc)
-                        self.sgnNodeAdded.emit(newDiagram, newSrc)
-                        if len(newNodeRelTable.actions) > 0:
-                            self.sgnActionNodeAdded.emit(newDiagram, newSrc)
-                        oldNodeToNew[oldSrc] = newSrc
-                        remOldNodes.remove(oldSrc)
+                        if newNodeRelTable:
+                            if newNodeRelTable in remSchemaTables:
+                                remSchemaTables.remove(newNodeRelTable)
+                            newSrc = TableNode(oldSrc.width(), oldSrc.height(), remaining_characters=newNodeRelTable.name,relational_table=newNodeRelTable, diagram=newDiagram)
+                            newSrc.setPos(oldSrc.pos())
+                            newSrc.setText(newNodeRelTable.name)
+                            newDiagram.addItem(newSrc)
+                            self.sgnNodeAdded.emit(newDiagram, newSrc)
+                            if len(newNodeRelTable.actions) > 0:
+                                self.sgnActionNodeAdded.emit(newDiagram, newSrc)
+                            oldNodeToNew[oldSrc] = newSrc
+                            remOldNodes.remove(oldSrc)
+                        else:
+                            LOGGER.debug('Problems while drawing edge {} for foreign key {} in diagram {}.\n '
+                                         'Cannot find in new schema a table corresponding to src node '
+                                         'associated to IRI {}'.format(oldFkEdge, fk.name, newDiagram.name, oldSrc.relationalTable.entity.fullIRI))
 
-                    oldTgt = oldFkEdge.target
-                    if oldTgt in oldNodeToNew:
-                        newTgt = oldNodeToNew[oldTgt]
-                    else:
-                        newNodeRelTable = self.schema.getTableByEntityIRI(oldTgt.relationalTable.entity.fullIRI)
-                        if newNodeRelTable in remSchemaTables:
-                            remSchemaTables.remove(newNodeRelTable)
-                        newTgt = TableNode(oldTgt.width(), oldTgt.height(), remaining_characters=newNodeRelTable.name,relational_table=newNodeRelTable, diagram=newDiagram)
-                        newTgt.setPos(oldTgt.pos())
-                        newTgt.setText(newNodeRelTable.name)
-                        newDiagram.addItem(newTgt)
-                        self.sgnNodeAdded.emit(newDiagram, newTgt)
-                        if len(newNodeRelTable.actions) > 0:
-                            self.sgnActionNodeAdded.emit(newDiagram, newTgt)
-                        oldNodeToNew[oldTgt] = newTgt
-                        remOldNodes.remove(oldTgt)
+                    if newSrc:
+                        oldTgt = oldFkEdge.target
+                        if oldTgt in oldNodeToNew:
+                            newTgt = oldNodeToNew[oldTgt]
+                        else:
+                            newNodeRelTable = self.schema.getTableByEntityIRI(oldTgt.relationalTable.entity.fullIRI)
+                            if newNodeRelTable:
+                                if newNodeRelTable in remSchemaTables:
+                                    remSchemaTables.remove(newNodeRelTable)
+                                newTgt = TableNode(oldTgt.width(), oldTgt.height(), remaining_characters=newNodeRelTable.name,relational_table=newNodeRelTable, diagram=newDiagram)
+                                newTgt.setPos(oldTgt.pos())
+                                newTgt.setText(newNodeRelTable.name)
+                                newDiagram.addItem(newTgt)
+                                self.sgnNodeAdded.emit(newDiagram, newTgt)
+                                if len(newNodeRelTable.actions) > 0:
+                                    self.sgnActionNodeAdded.emit(newDiagram, newTgt)
+                                oldNodeToNew[oldTgt] = newTgt
+                                remOldNodes.remove(oldTgt)
+                            else:
+                                LOGGER.debug('Problems while drawing edge {} for foreign key {} in diagram {}.\n '
+                                             'Cannot find in new schema a table corresponding to src node '
+                                             'associated to IRI {}'.format(oldFkEdge, fk.name, newDiagram.name,
+                                                                           oldTgt.relationalTable.entity.fullIRI))
+                        if newTgt:
+                            newSrcAnchor = QtCore.QPointF(oldSrc.anchor(oldFkEdge))
+                            newTgtAnchor = QtCore.QPointF(oldTgt.anchor(oldFkEdge))
 
-                    if newSrc and newTgt:
-                        newSrcAnchor = QtCore.QPointF(oldSrc.anchor(oldFkEdge))
-                        newTgtAnchor = QtCore.QPointF(oldTgt.anchor(oldFkEdge))
+                            newFkEdge = ForeignKeyEdge(foreign_key=fk, source=newSrc, target=newTgt, breakpoints=oldFkEdge.breakpoints,
+                                                        diagram=newDiagram)
+                            newDiagram.addItem(newFkEdge)
+                            self.sgnEdgeAdded.emit(newDiagram, newFkEdge)
+                            newFkEdge.source.setAnchor(newFkEdge, newSrcAnchor)
+                            newFkEdge.target.setAnchor(newFkEdge, newTgtAnchor)
+                            newFkEdge.source.addEdge(newFkEdge)
+                            newFkEdge.target.addEdge(newFkEdge)
+                            newFkEdge.updateEdge(visible=True)
+                            LOGGER.debug('Edge {} representing foreign key {} added to diagram {}'.format(newFkEdge ,fk.name,newDiagram.name))
 
-                        newFkEdge = ForeignKeyEdge(foreign_key=fk, source=newSrc, target=newTgt, breakpoints=oldFkEdge.breakpoints,
-                                                diagram=newDiagram)
-                        newDiagram.addItem(newFkEdge)
-                        self.sgnEdgeAdded.emit(newDiagram, newFkEdge)
-                        newFkEdge.source.setAnchor(newFkEdge, newSrcAnchor)
-                        newFkEdge.target.setAnchor(newFkEdge, newTgtAnchor)
-                        newFkEdge.source.addEdge(newFkEdge)
-                        newFkEdge.target.addEdge(newFkEdge)
-                        newFkEdge.updateEdge(visible=True)
-                        LOGGER.debug('Foreign key {} added to diagram {}'.format(fk.name,newDiagram.name))
-                    else:
-                        LOGGER.debug('Problems while drawing edge for foreign key {} in diagram {}'.format(fk.name,newDiagram.name))
+                        else:
+                            LOGGER.debug('Problems while drawing edge {} for foreign key {} in diagram {}. '.format(oldFkEdge, fk.name, newDiagram.name))
+
                     if fk in remSchemaFKs:
                         remSchemaFKs.remove(fk)
 

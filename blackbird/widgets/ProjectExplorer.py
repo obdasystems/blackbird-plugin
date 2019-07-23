@@ -58,7 +58,8 @@ class BlackbirdProjectExplorerWidget(QtWidgets.QWidget):
         header.setStretchLastSection(False)
         header.setSectionResizeMode(QtWidgets.QHeaderView.ResizeToContents)
 
-        connect(plugin.sgnDiagramAdded, self.doAddDiagram)
+        connect(plugin.sgnDiagramCreated, self.doAddDiagram)
+        connect(plugin.sgnProjectChanged, self.onProjectChanged)
 
         connect(self.projectview.activated, self.onItemActivated)
         connect(self.projectview.doubleClicked, self.onItemDoubleClicked)
@@ -82,6 +83,21 @@ class BlackbirdProjectExplorerWidget(QtWidgets.QWidget):
     #############################################
     #   WIDGET INTERNAL SLOTS
     #################################
+
+    @QtCore.pyqtSlot(str)
+    def onProjectChanged(self, projectName):
+        self.model.clear()
+
+        self.root = QtGui.QStandardItem()
+        self.root.setFlags(self.root.flags() & ~QtCore.Qt.ItemIsEditable)
+        self.root.setFont(Font('Roboto', 12, bold=True))
+        self.root.setIcon(self.iconRoot)
+
+        self.model.appendRow(self.root)
+        self.root.setText(projectName)
+        sindex = self.root.index()
+        pindex = self.proxy.mapFromSource(sindex)
+        self.projectview.expand(pindex)
 
     @QtCore.pyqtSlot('QGraphicsScene', str)
     def doAddDiagram(self, diagram, label):
@@ -201,28 +217,28 @@ class BlackbirdProjectExplorerWidget(QtWidgets.QWidget):
                 return item
         return None
 
-    def setProject(self, project):
-        """
-        Set the project explorer to browse the given project.
-        :type project: Project
-        """
-        self.model.clear()
-
-        self.root = QtGui.QStandardItem()
-        self.root.setFlags(self.root.flags() & ~QtCore.Qt.ItemIsEditable)
-        self.root.setFont(Font('Roboto', 12, bold=True))
-        self.root.setIcon(self.iconRoot)
-
-        self.model.appendRow(self.root)
-        self.root.setText(project.name)
-        #TODO SCOMMENTA SOTTO DOPO OPPORTUNE MODIFICHE
-        # connect(self.sgnFakeDiagramAdded, self.doAddDiagram)
-        # for diagram in project.diagrams():
-        #     self.sgnFakeDiagramAdded.emit(diagram)
-        # disconnect(self.sgnFakeDiagramAdded)
-        sindex = self.root.index()
-        pindex = self.proxy.mapFromSource(sindex)
-        self.projectview.expand(pindex)
+    # def setProject(self, project):
+    #     """
+    #     Set the project explorer to browse the given project.
+    #     :type project: Project
+    #     """
+    #     self.model.clear()
+    #
+    #     self.root = QtGui.QStandardItem()
+    #     self.root.setFlags(self.root.flags() & ~QtCore.Qt.ItemIsEditable)
+    #     self.root.setFont(Font('Roboto', 12, bold=True))
+    #     self.root.setIcon(self.iconRoot)
+    #
+    #     self.model.appendRow(self.root)
+    #     self.root.setText(project.name)
+    #     #TODO SCOMMENTA SOTTO DOPO OPPORTUNE MODIFICHE
+    #     # connect(self.sgnFakeDiagramAdded, self.doAddDiagram)
+    #     # for diagram in project.diagrams():
+    #     #     self.sgnFakeDiagramAdded.emit(diagram)
+    #     # disconnect(self.sgnFakeDiagramAdded)
+    #     sindex = self.root.index()
+    #     pindex = self.proxy.mapFromSource(sindex)
+    #     self.projectview.expand(pindex)
 
     def sizeHint(self):
         """
