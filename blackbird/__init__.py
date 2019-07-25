@@ -107,8 +107,10 @@ from eddy.plugins.blackbird.widgets.ProjectExplorer import BlackbirdProjectExplo
 from eddy.plugins.blackbird.schema import RelationalTable, ForeignKeyConstraint
 # noinspection PyUnresolvedReferences
 from eddy.plugins.blackbird.ui.mdi import BlackBirdMdiSubWindow
-
-from blackbird.widgets.actions import ActionTableExplorerWidget
+# noinspection PyUnresolvedReferences
+from eddy.plugins.blackbird.ui.preferences import PreferencesDialog
+# noinspection PyUnresolvedReferences
+from eddy.plugins.blackbird.widgets.actions import ActionTableExplorerWidget
 
 LOGGER = getLogger()
 
@@ -246,6 +248,17 @@ class BlackbirdPlugin(AbstractPlugin):
             QtGui.QIcon(':/blackbird/icons/128/ic_blackbird'), 'About Blackbird', self,
             objectName='about', triggered=self.doShowAboutDialog))
 
+        action = QtWidgets.QAction( 'Preferences', self, objectName='open_blackbird_preferences',triggered=self.doOpenDialog)
+        action.setData(PreferencesDialog(self.session))
+        self.addAction(action)
+
+        action = QtWidgets.QAction(
+            QtGui.QIcon(':/icons/24/ic_settings_black'), 'Preferences', self,
+            objectName='open_bb_preferences_window', toolTip='Open BlackBird Preferences',
+            triggered=self.doOpenDialog)
+        action.setData(PreferencesDialog(self.session))
+        self.addAction(action)
+
         #############################################
         #   ToolBar Actions
         #################################
@@ -272,6 +285,8 @@ class BlackbirdPlugin(AbstractPlugin):
         menu.addAction(self.action('save'))
         menu.addAction(self.action('save_as'))
         menu.addSeparator()
+        #TODO perchè non vengono aggiunte voci al menu????
+        menu.addAction(self.action('open_blackbird_preferences'))
         menu.addAction(self.action('settings'))
         menu.addSeparator()
         menu.addAction(self.action('open_ontology_analysis'))
@@ -281,7 +296,7 @@ class BlackbirdPlugin(AbstractPlugin):
         menu.addAction(self.action('generate_preview_schema'))
         menu.addAction(self.action('export_mappings'))
         menu.addAction(self.action('export_sql'))
-        menu.addAction(self.action('export_diagrams'))
+        #menu.addAction(self.action('export_diagrams'))
         menu.addSeparator()
         menu.addAction(self.action('blackbird_log'))
         menu.addSeparator()
@@ -290,6 +305,19 @@ class BlackbirdPlugin(AbstractPlugin):
         # Add blackbird menu to session's menu bar
         self.session.menuBar().insertMenu(self.session.menu('window').menuAction(), self.menu('menubar_menu'))
 
+        #############################################
+        #   MenuBar QMenu
+        #################################
+        menu = QtWidgets.QMenu('&Blackbird_Fake', objectName='menubar_menu_0')
+        menu.addSeparator()
+        menu.addAction(self.action('generate_preview_schema'))
+        menu.addAction(self.action('open_blackbird_preferences'))
+        menu.addAction(self.action('generate_preview_schema'))
+        self.addMenu(menu)
+        # Add blackbird menu to session's menu bar
+        self.session.menuBar().insertMenu(self.session.menu('window').menuAction(), self.menu('menubar_menu_0'))
+
+
     # noinspection PyArgumentList
     def initToolBars(self):
         """
@@ -297,6 +325,7 @@ class BlackbirdPlugin(AbstractPlugin):
         """
         toolbar = QtWidgets.QToolBar(self.session, objectName='blackbird_toolbar')
         toolbar.addAction(self.action('generate_schema'))
+        toolbar.addAction(self.action('open_bb_preferences_window'))
         self.addWidget(toolbar)
 
         self.session.addToolBar(QtCore.Qt.TopToolBarArea, self.widget('blackbird_toolbar'))
@@ -1151,6 +1180,19 @@ class BlackbirdPlugin(AbstractPlugin):
         """
         self.sgnFocusForeignKey.emit(fk)
 
+
+    @QtCore.pyqtSlot()
+    def doOpenDialog(self):
+        """
+        Open a dialog window by initializing it using the class stored in action data.
+        """
+        action = self.sender()
+        window = action.data()
+        #window = dialog(self)
+        window.setWindowModality(QtCore.Qt.ApplicationModal)
+        window.show()
+        window.raise_()
+        window.activateWindow()
 
     @QtCore.pyqtSlot()
     def doOpen(self):
