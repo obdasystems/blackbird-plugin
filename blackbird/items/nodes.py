@@ -31,6 +31,7 @@
 #     - Marco Console <console@dis.uniroma1.it>                          #
 #                                                                        #
 ##########################################################################
+from asyncio import get_event_loop_policy
 from enum import unique
 
 from PyQt5 import QtCore
@@ -47,6 +48,8 @@ from eddy.core.items.nodes.common.label import NodeLabel
 from eddy.plugins.blackbird.datatypes import Item
 # noinspection PyUnresolvedReferences
 from eddy.plugins.blackbird.items.label import TableNodeLabel
+# noinspection PyUnresolvedReferences
+from eddy.plugins.blackbird.schema import EntityType
 
 
 @unique
@@ -66,6 +69,10 @@ class TableNode(AbstractResizableNode):
     Identities = {Identity.Table}
     Type = Item.TableNode
 
+    classBrushColor = '#F9F5A2'
+    objectPropertyBrushColor = '#A8CBE0'
+    dataPropertyBrushColor = '#C7DBAB'
+
     def __init__(self, width=110, height=50, brush=None, remaining_characters='table', relational_table=None, **kwargs):
         """
         Initialize the node.
@@ -76,16 +83,13 @@ class TableNode(AbstractResizableNode):
         super().__init__(**kwargs)
         w = max(width, 110)
         h = max(height, 50)
-        brush = brush or TableNode.DefaultBrush
+        self.relationalTable = relational_table
+        brush = brush or self.getPolygonBrush()
         pen = TableNode.DefaultPen
         self.background = Polygon(QtCore.QRectF(-(w + 8) / 2, -(h + 8) / 2, w + 8, h + 8))
         self.selection = Polygon(QtCore.QRectF(-(w + 8) / 2, -(h + 8) / 2, w + 8, h + 8))
         self.polygon = Polygon(QtCore.QRectF(-w / 2, -h / 2, w, h), brush, pen)
-
         self.remaining_characters = remaining_characters
-
-        self.relationalTable = relational_table
-
         self.label = TableNodeLabel(template='table', pos=self.center, parent=self, editable=True)
         self.label.setAlignment(QtCore.Qt.AlignCenter)
         self.updateNode()
@@ -95,6 +99,23 @@ class TableNode(AbstractResizableNode):
     #############################################
     #   INTERFACE
     #################################
+
+    def getPolygonBrush(self):
+        """
+        Return the brush for the polygon based on the type of the ontology entity associated to the relational table
+        :rtype widget: QBrush
+        """
+        brush = TableNode.DefaultBrush
+
+        entity = self.relationalTable.entity
+        entityType = entity.entityType
+        if entityType is EntityType.Class:
+            brush = QtGui.QBrush(QtGui.QColor(TableNode.classBrushColor))
+        if entityType is EntityType.ObjectProperty:
+            brush = QtGui.QBrush(QtGui.QColor(TableNode.objectPropertyBrushColor))
+        if entityType is EntityType.DataProperty:
+            brush = QtGui.QBrush(QtGui.QColor(TableNode.dataPropertyBrushColor))
+        return brush
 
     def boundingRect(self):
         """
