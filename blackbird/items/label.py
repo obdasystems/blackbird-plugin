@@ -47,3 +47,13 @@ class TableNodeLabel(NodeLabel):
         else:
             elided = metrics.elidedText(self.text(), Qt.ElideRight, self.width())
         painter.drawText(self.boundingRect(), self.alignment(), elided)
+
+
+    def isEdge(self):
+        return False
+
+    def isLabel(self):
+        return True
+
+    def isNode(self):
+        return False
