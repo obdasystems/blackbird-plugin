@@ -50,7 +50,7 @@ class BlackBirdDiagram(Diagram):
     #sgnNodeIdentification = QtCore.pyqtSignal('QGraphicsItem')
     sgnUpdated = QtCore.pyqtSignal()
 
-    def __init__(self, name, parent, schema=None):
+    def __init__(self, name, parent, schema=None, plugin=None):
         """
         Initialize the diagram.
         :type name: str
@@ -59,6 +59,7 @@ class BlackBirdDiagram(Diagram):
         """
         super().__init__(name, parent)
         self.schema = schema
+        self.plugin = plugin
 
         #connect(self.sgnItemAdded, self.onItemAdded)
         #connect(self.sgnItemRemoved, self.onItemRemoved)
@@ -444,87 +445,6 @@ class BlackBirdDiagram(Diagram):
 
         super().mouseMoveEvent(mouseEvent)
 
-        # if mouseButtons & QtCore.Qt.LeftButton:
-        #
-        #     if self.mode is DiagramMode.EdgeAdd:
-        #
-        #         #############################################
-        #         # EDGE INSERTION
-        #         #################################
-        #
-        #         if self.isEdgeAdd():
-        #
-        #             statusBar = self.session.statusBar()
-        #             edge = self.mp_Edge
-        #             edge.updateEdge(target=mousePos)
-        #
-        #             previousNode = self.mo_Node
-        #             if previousNode:
-        #                 previousNode.updateNode(selected=False)
-        #
-        #             currentNode = first(self.items(mousePos, edges=False, skip={edge.source}))
-        #             if currentNode:
-        #                 self.mo_Node = currentNode
-        #                 pvr = self.project.profile.checkEdge(edge.source, edge, currentNode)
-        #                 currentNode.updateNode(selected=False, valid=pvr.isValid())
-        #                 if not pvr.isValid():
-        #                     statusBar.showMessage(pvr.message())
-        #                 else:
-        #                     statusBar.clearMessage()
-        #             else:
-        #                 statusBar.clearMessage()
-        #                 self.mo_Node = None
-        #                 self.project.profile.reset()
-        #
-        #     elif self.mode is DiagramMode.LabelMove:
-        #
-        #         #############################################
-        #         # LABEL MOVE
-        #         #################################
-        #
-        #         if self.isLabelMove():
-        #
-        #             snapToGrid = self.session.action('toggle_grid').isChecked()
-        #             point = self.mp_LabelPos + mousePos - self.mp_Pos
-        #             point = snap(point, BlackBirdDiagram.GridSize / 2, snapToGrid)
-        #             delta = point - self.mp_LabelPos
-        #             self.mp_Label.setPos(self.mp_LabelPos + delta)
-        #
-        #     else:
-        #
-        #         if self.mode is DiagramMode.Idle:
-        #             if self.mp_Node:
-        #                 self.setMode(DiagramMode.NodeMove)
-        #
-        #         if self.mode is DiagramMode.NodeMove:
-        #
-        #             #############################################
-        #             # ITEM MOVEMENT
-        #             #################################
-        #
-        #             if self.isNodeMove():
-        #
-        #                 snapToGrid = self.session.action('toggle_grid').isChecked()
-        #                 point = self.mp_NodePos + mousePos - self.mp_Pos
-        #                 point = snap(point, BlackBirdDiagram.GridSize, snapToGrid)
-        #                 delta = point - self.mp_NodePos
-        #                 edges = set()
-        #
-        #                 for edge, breakpoints in self.mp_Data['edges'].items():
-        #                     for i in range(len(breakpoints)):
-        #                         edge.breakpoints[i] = breakpoints[i] + delta
-        #
-        #                 for node, data in self.mp_Data['nodes'].items():
-        #                     edges |= set(node.edges)
-        #                     node.setPos(data['pos'] + delta)
-        #                     for edge, pos in data['anchors'].items():
-        #                         node.setAnchor(edge, pos + delta)
-        #
-        #                 for edge in edges:
-        #                     edge.updateEdge()
-        #
-        # super().mouseMoveEvent(mouseEvent)
-
     def mouseReleaseEvent(self, mouseEvent):
         """
         Executed when the mouse is released from the scene.
@@ -563,6 +483,29 @@ class BlackBirdDiagram(Diagram):
                         moveData = self.completeMove(self.mp_Data)
                         self.session.undostack.push(CommandNodeMove(self, self.mp_Data, moveData))
                     self.setMode(DiagramMode.Idle)
+
+        elif mouseButton == QtCore.Qt.RightButton:
+
+            if self.mode is not DiagramMode.SceneDrag:
+
+                #############################################
+                # CONTEXTUAL MENU
+                #################################
+
+                item = first(self.items(mousePos))
+                if not item:
+                    self.clearSelection()
+                    items = []
+                else:
+                    items = self.selectedItems()
+                    if item not in items:
+                        self.clearSelection()
+                        item.setSelected(True)
+                        items = [item]
+
+                self.mp_Pos = mousePos
+                menu = self.plugin.mf.create(self, items, mousePos)
+                menu.exec_(mouseEvent.screenPos())
 
         super().mouseReleaseEvent(mouseEvent)
 

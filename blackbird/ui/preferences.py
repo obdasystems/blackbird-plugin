@@ -100,7 +100,7 @@ class DataPropertyMergeWithClassPolicyLabels(Enum_):
     MERGE_TYPED = 'Merge Typed'
 
 
-class PreferencesDialog(QtWidgets.QDialog, HasWidgetSystem):
+class BlackbirdPreferencesDialog(QtWidgets.QDialog, HasWidgetSystem):
     """
     This class implements the 'Preferences' dialog.
     """

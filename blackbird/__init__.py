@@ -108,9 +108,11 @@ from eddy.plugins.blackbird.schema import RelationalTable, ForeignKeyConstraint
 # noinspection PyUnresolvedReferences
 from eddy.plugins.blackbird.ui.mdi import BlackBirdMdiSubWindow
 # noinspection PyUnresolvedReferences
-from eddy.plugins.blackbird.ui.preferences import PreferencesDialog
+from eddy.plugins.blackbird.ui.preferences import BlackbirdPreferencesDialog
 # noinspection PyUnresolvedReferences
 from eddy.plugins.blackbird.widgets.actions import ActionTableExplorerWidget
+# noinspection PyUnresolvedReferences
+from eddy.plugins.blackbird.factory import BBMenuFactory
 
 LOGGER = getLogger()
 
@@ -153,6 +155,7 @@ class BlackbirdPlugin(AbstractPlugin):
         self.subWindowToDiagram = {}
         self.diagramToWindowLabel = {}
         self.actionCounter = 0
+        self.relationalTableNameToQtActions = {}
 
     #############################################
     #   HOOKS
@@ -197,10 +200,9 @@ class BlackbirdPlugin(AbstractPlugin):
 
         self.initSignals()
 
-        # CONFIGURE SIGNAL/SLOTS
-        # self.debug('Connecting to active session')
-        # connect(self.session.sgnReady, self.onSessionReady)
-        # connect(self.session.sgnUpdateState, self.doUpdateState)
+        #INITIALIZE MENU FACTORY
+        self.mf = BBMenuFactory(self)
+
 
 
     def initSignals(self):
@@ -248,15 +250,15 @@ class BlackbirdPlugin(AbstractPlugin):
             QtGui.QIcon(':/blackbird/icons/128/ic_blackbird'), 'About Blackbird', self,
             objectName='about', triggered=self.doShowAboutDialog))
 
-        action = QtWidgets.QAction( 'Preferences', self, objectName='open_blackbird_preferences',triggered=self.doOpenDialog)
-        action.setData(PreferencesDialog(self.session))
+        action = QtWidgets.QAction( 'BB Preferences', self, objectName='open_blackbird_preferences',triggered=self.doOpenDialog)
+        action.setData(BlackbirdPreferencesDialog(self.session))
         self.addAction(action)
 
         action = QtWidgets.QAction(
-            QtGui.QIcon(':/icons/24/ic_settings_black'), 'Preferences', self,
+            QtGui.QIcon(':/icons/24/ic_settings_black'), 'BB Preferences', self,
             objectName='open_bb_preferences_window', toolTip='Open BlackBird Preferences',
             triggered=self.doOpenDialog)
-        action.setData(PreferencesDialog(self.session))
+        action.setData(BlackbirdPreferencesDialog(self.session))
         self.addAction(action)
 
         #############################################
@@ -267,10 +269,21 @@ class BlackbirdPlugin(AbstractPlugin):
             objectName='generate_schema', toolTip='Generate database schema',
             triggered=self.doGenerateSchema))
 
+        #TODO
         # self.addAction(QtWidgets.QAction(
         #     QtGui.QIcon(':/blackbird/icons/128/ic_blackbird'), 'Undo Action', self,
         #     objectName='undo_action', toolTip='Undo last performed action',
         #     triggered=self.doUndoAction))
+
+        #############################################
+        # EDGE RELATED
+        #################################
+        # self.addAction(QtWidgets.QAction(
+        #     QtGui.QIcon(':/icons/24/ic_delete_black'), 'Remove breakpoint', self,
+        #     objectName='remove_breakpoint', statusTip='Remove the selected edge breakpoint',
+        #     triggered=self.session.doRemoveBreakpoint))
+
+
 
     # noinspection PyArgumentList
     def initMenus(self):
@@ -305,17 +318,6 @@ class BlackbirdPlugin(AbstractPlugin):
         # Add blackbird menu to session's menu bar
         self.session.menuBar().insertMenu(self.session.menu('window').menuAction(), self.menu('menubar_menu'))
 
-        #############################################
-        #   MenuBar QMenu
-        #################################
-        menu = QtWidgets.QMenu('&Blackbird_Fake', objectName='menubar_menu_0')
-        menu.addSeparator()
-        menu.addAction(self.action('generate_preview_schema'))
-        menu.addAction(self.action('open_blackbird_preferences'))
-        menu.addAction(self.action('generate_preview_schema'))
-        self.addMenu(menu)
-        # Add blackbird menu to session's menu bar
-        self.session.menuBar().insertMenu(self.session.menu('window').menuAction(), self.menu('menubar_menu_0'))
 
 
     # noinspection PyArgumentList
@@ -710,7 +712,7 @@ class BlackbirdPlugin(AbstractPlugin):
             ontDiagrams = self.project.diagrams()
         for ontDiagram in ontDiagrams:
             bbDiagramName = self.getNewDiagramName(ontDiagram)# '{}_SCHEMA_0'.format(ontDiagram.name)
-            bbDiagram = BlackBirdDiagram(bbDiagramName, self.project, self.schema)
+            bbDiagram = BlackBirdDiagram(bbDiagramName, self.project, self.schema, self)
             self.sgnDiagramCreated.emit(bbDiagram, ontDiagram.name)
             ontNodeToBBNodeDict = {}
             diagramToTablesDict = self.bbOntologyEntityMgr.diagramToTables
@@ -946,6 +948,8 @@ class BlackbirdPlugin(AbstractPlugin):
                     <p>{}</p>""".format(e)))
             LOGGER.exception(e)
 
+
+
     @QtCore.pyqtSlot(RelationalSchema,RelationalTableAction)
     def onSchemaActionApplied(self,schema, action):
         """
@@ -1016,11 +1020,68 @@ class BlackbirdPlugin(AbstractPlugin):
                 LOGGER.debug(self.schema)
                 self.sgnSchemaChanged.emit(self.schema)
                 self.initDiagrams()
+                self.initSchemaTableActions()
+
             else:
                 self.session.addNotification('Error generating schema: {}'.format(reply.errorString()))
                 LOGGER.error('Error generating schema: {}'.format(reply.errorString()))
         finally:
             self.widget('progress').hide()
+
+
+    def initSchemaTableActions(self):
+        """
+        Initialize the QT actions associated to the BB actions associated to the relational tables (needed for the right click menu)
+        """
+        for tableName in self.relationalTableNameToQtActions:
+            qtActionList = self.relationalTableNameToQtActions[tableName]
+            for qtAction in qtActionList:
+                self.removeAction(qtAction)
+
+        self.relationalTableNameToQtActions = {}
+
+        bbActions = self.schema.actions
+
+        for bbAction in bbActions:
+            subj = bbAction.actionSubjectTableName
+            type = bbAction.actionType
+            objs = bbAction.actionObjectsNames
+
+            if len(objs)>1:
+                objectsString = ','.join(map(str,objs))
+            else:
+                objectsString = objs[0]
+            qtActionLabel = 'Merge {}'.format(objectsString)
+            qtActionName = 'apply_action_{}_{}'.format(subj,objectsString)
+            qtAction = QtWidgets.QAction( qtActionLabel, self, objectName=qtActionName,triggered=self.doApplySchemaAction)
+            qtAction.setData(bbAction)
+            self.addAction(qtAction)
+
+            if subj in self.relationalTableNameToQtActions:
+                self.relationalTableNameToQtActions[subj].append(qtAction)
+            else:
+                qtActionList = [qtAction]
+                self.relationalTableNameToQtActions[subj]=qtActionList
+
+    @QtCore.pyqtSlot()
+    def doApplySchemaAction(self):
+        """
+        Executed when an action has been applied over the current schema.
+        """
+        try:
+            self.widget('action_progress').show()
+            qtAction = self.sender()
+            bbAction = qtAction.data()
+            reply = self.nmanager.putActionToSchema(self.schema.name, bbAction)
+            # We deal with network errors in the slot connected to the finished()
+            # signal since it always follows the error() signal
+            connect(reply.finished, self.onSchemaActionCompleted)
+        except Exception as e:
+            self.widget('action_progress').hide()
+            self.session.addNotification(dedent("""\
+                    <b><font color="#7E0B17">ERROR</font></b>: Could not connect to Blackbird Engine.<br/>
+                    <p>{}</p>""".format(e)))
+            LOGGER.exception(e)
 
     @QtCore.pyqtSlot()
     def onPreviewSchemaGenerationCompleted(self):
@@ -1072,6 +1133,7 @@ class BlackbirdPlugin(AbstractPlugin):
                 self.sgnActionCorrectlyApplied.emit()
                 self.sgnSchemaChanged.emit(self.schema)
                 self.updateDiagrams()
+                self.initSchemaTableActions()
             else:
                 self.session.addNotification('Error applying action: {}'.format(reply.errorString()))
                 LOGGER.error('Error applying action: {}'.format(reply.errorString()))
@@ -1099,7 +1161,8 @@ class BlackbirdPlugin(AbstractPlugin):
                 self.sgnActionCorrectlyApplied.emit()
                 self.sgnSchemaChanged.emit(self.schema)
 
-                self.initDiagrams()#TODO sostistuisci con initDiagramsFromAction (DISEGNA A PARTIRE DA DIAGRAMMI GIà DISPONIBILI E NON DA GRAPHOL)
+                self.initDiagrams()#TODO sostistuisci con updateDiagramsFromUndo (DISEGNA A PARTIRE DA DIAGRAMMA CORRENTE + DIAGRAMMA PRECEDENTE AD AZIONE CHE VIENE ANNULLATA DA UNDO)
+                self.initSchemaTableActions()
             else:
                 self.session.addNotification('Error undoing action: {}'.format(reply.errorString()))
                 LOGGER.error('Error undoing action: {}'.format(reply.errorString()))
@@ -1509,7 +1572,7 @@ class BlackbirdPlugin(AbstractPlugin):
         #newDiagram = BlackBirdDiagram('NEW_{}'.format(oldDiagram.name), self.session.project, self.schema)
 
         newDiagramName = self.getNewDiagramName(oldDiagram)
-        newDiagram = BlackBirdDiagram(newDiagramName, self.session.project, self.schema)
+        newDiagram = BlackBirdDiagram(newDiagramName, self.session.project, self.schema, self)
         self.sgnDiagramCreated.emit(newDiagram, self.diagramToWindowLabel[oldDiagram])
         oldTableNodes = oldDiagram.nodes()
         oldFkEdges = oldDiagram.edges()
