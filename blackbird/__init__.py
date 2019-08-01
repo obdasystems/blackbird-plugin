@@ -276,12 +276,9 @@ class BlackbirdPlugin(AbstractPlugin):
         #     triggered=self.doUndoAction))
 
         #############################################
-        # EDGE RELATED
+        # NODE RELATED
         #################################
-        # self.addAction(QtWidgets.QAction(
-        #     QtGui.QIcon(':/icons/24/ic_delete_black'), 'Remove breakpoint', self,
-        #     objectName='remove_breakpoint', statusTip='Remove the selected edge breakpoint',
-        #     triggered=self.session.doRemoveBreakpoint))
+        self.addAction(QtWidgets.QAction( 'No action available\non this table', self, objectName='empty_action',triggered=self.doNothing))
 
 
 
@@ -1062,6 +1059,10 @@ class BlackbirdPlugin(AbstractPlugin):
             else:
                 qtActionList = [qtAction]
                 self.relationalTableNameToQtActions[subj]=qtActionList
+
+    @QtCore.pyqtSlot()
+    def doNothing(self):
+        pass
 
     @QtCore.pyqtSlot()
     def doApplySchemaAction(self):
