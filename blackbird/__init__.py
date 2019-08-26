@@ -124,7 +124,8 @@ class BlackbirdPlugin(AbstractPlugin):
     sgnStartTranslator = QtCore.pyqtSignal()
     sgnStopTranslator = QtCore.pyqtSignal()
     sgnSchemaChanged = QtCore.pyqtSignal(RelationalSchema)
-    sgnActionCorrectlyApplied = QtCore.pyqtSignal()
+    sgnActionCorrectlyFinalized = QtCore.pyqtSignal()
+    sgnUndoActionCorrectlyFinalized = QtCore.pyqtSignal()
 
     sgnDiagramCreated = QtCore.pyqtSignal('QGraphicsScene', str)
     sgnProjectChanged = QtCore.pyqtSignal(str)
@@ -203,20 +204,19 @@ class BlackbirdPlugin(AbstractPlugin):
         #INITIALIZE MENU FACTORY
         self.mf = BBMenuFactory(self)
 
-
-
     def initSignals(self):
         """
         Connect session specific signals to their slots.
         """
         self.debug('Connecting to active session')
         connect(self.sgnDiagramCreated, self.onDiagramCreated)
-
         connect(self.session.sgnReady, self.onSessionReady)
         connect(self.session.sgnUpdateState, self.doUpdateState)
         connect(self.sgnUpdateState, self.doUpdateState)
         connect(self.sgnFocusDiagram, self.doFocusDiagram)
         connect(self.sgnFocusItem, self.doFocusItem)
+        connect(self.sgnActionCorrectlyFinalized, self.onSchemaActionCorrectlyFinalized)
+        connect(self.sgnUndoActionCorrectlyFinalized, self.onSchemaUndoActionCorrectlyFinalized)
 
     # noinspection PyArgumentList
     def initActions(self):
@@ -254,33 +254,26 @@ class BlackbirdPlugin(AbstractPlugin):
         action.setData(BlackbirdPreferencesDialog(self.session))
         self.addAction(action)
 
-        action = QtWidgets.QAction(
-            QtGui.QIcon(':/icons/24/ic_settings_black'), 'BB Preferences', self,
-            objectName='open_bb_preferences_window', toolTip='Open BlackBird Preferences',
-            triggered=self.doOpenDialog)
-        action.setData(BlackbirdPreferencesDialog(self.session))
-        self.addAction(action)
-
         #############################################
         #   ToolBar Actions
         #################################
+        #GENERATE SCHEMA
         self.addAction(QtWidgets.QAction(
             QtGui.QIcon(':/blackbird/icons/128/ic_blackbird'), 'Generate Schema', self,
             objectName='generate_schema', toolTip='Generate database schema',
             triggered=self.doGenerateSchema))
 
-        #TODO
-        # self.addAction(QtWidgets.QAction(
-        #     QtGui.QIcon(':/blackbird/icons/128/ic_blackbird'), 'Undo Action', self,
-        #     objectName='undo_action', toolTip='Undo last performed action',
-        #     triggered=self.doUndoAction))
+        #UNDO LAST ACTION
+        self.addAction(QtWidgets.QAction(
+            QtGui.QIcon(':/icons/24/ic_undo_black'), 'Undo last schema action', self,
+            objectName='undo_last_schema_action', toolTip='Undo last schema action',
+            triggered=self.onSchemaActionUndo))
+
 
         #############################################
         # NODE RELATED
         #################################
         self.addAction(QtWidgets.QAction( 'No action available\non this table', self, objectName='empty_action',triggered=self.doNothing))
-
-
 
     # noinspection PyArgumentList
     def initMenus(self):
@@ -315,8 +308,6 @@ class BlackbirdPlugin(AbstractPlugin):
         # Add blackbird menu to session's menu bar
         self.session.menuBar().insertMenu(self.session.menu('window').menuAction(), self.menu('menubar_menu'))
 
-
-
     # noinspection PyArgumentList
     def initToolBars(self):
         """
@@ -324,7 +315,8 @@ class BlackbirdPlugin(AbstractPlugin):
         """
         toolbar = QtWidgets.QToolBar(self.session, objectName='blackbird_toolbar')
         toolbar.addAction(self.action('generate_schema'))
-        toolbar.addAction(self.action('open_bb_preferences_window'))
+        toolbar.addAction(self.action('undo_last_schema_action'))
+        self.action('undo_last_schema_action').setEnabled(False)
         self.addWidget(toolbar)
 
         self.session.addToolBar(QtCore.Qt.TopToolBarArea, self.widget('blackbird_toolbar'))
@@ -691,15 +683,8 @@ class BlackbirdPlugin(AbstractPlugin):
         self.session.addDockWidget(QtCore.Qt.RightDockWidgetArea, self.widget('fk_explorer_dock'))
 
     def initDiagrams(self):
-        #remove old subwindows
-        toBeClosed = []
-        for subwin in self.subwindowList:
-            if subwin:
-                toBeClosed.append(subwin)
-        for subwin in toBeClosed:
-            if subwin:
-                subwin.close()
-        self.subwindowList = []
+        self.closeOldWindowsAfterSchemaGeneration()
+        self.removeOldDiagramsAfterSchemaGeneration()
 
         self.sgnProjectChanged.emit(self.project.name)
 
@@ -733,7 +718,6 @@ class BlackbirdPlugin(AbstractPlugin):
                 for innerList in fkVisualElementList:
                     for fkVisualElement in innerList:
                         self.addFkEdgeToDiagram(fk,fkVisualElement, bbDiagram, ontNodeToBBNodeDict)
-
 
     def addFkEdgeToDiagram(self,fk, fkVisualElement, bbDiagram, ontNodeToBBNodeDict):
         """
@@ -788,6 +772,35 @@ class BlackbirdPlugin(AbstractPlugin):
             fkEdge.target.addEdge(fkEdge)
             fkEdge.updateEdge(visible=True)
 
+    def removeOldDiagramsAfterSchemaGeneration(self):
+        # remove old diagrams
+        toBeRemoved = []
+        for bbDiagram in self.diagramList:
+            if bbDiagram:
+                toBeRemoved.append(bbDiagram)
+        for bbDiagram in toBeRemoved:
+            if bbDiagram:
+                if bbDiagram in self.diagramList:
+                    self.diagramList.remove(bbDiagram)
+                if bbDiagram in self.diagramToWindowLabel:
+                    self.diagramToWindowLabel.pop(bbDiagram, None)
+                self.project.removeDiagram(bbDiagram)
+        self.diagramList=[]
+        self.diagramToWindowLabel = {}
+        self.diagramToSubWindow = {}
+        self.subWindowToDiagram = {}
+
+
+    def closeOldWindowsAfterSchemaGeneration(self):
+        # remove old subwindows
+        toBeClosed = []
+        for subwin in self.subwindowList:
+            if subwin:
+                toBeClosed.append(subwin)
+        for subwin in toBeClosed:
+            if subwin:
+                subwin.close()
+        self.subwindowList = []
 
     def updateDiagrams(self):
         copyList = []
@@ -807,7 +820,7 @@ class BlackbirdPlugin(AbstractPlugin):
                 self.diagramToSubWindow.pop(diagram)
                 self.diagramToSubWindow[newDiagram] = subwindow
                 self.subWindowToDiagram[subwindow] = newDiagram
-
+                self.project.removeDiagram(diagram)
 
     #############################################
     #   EVENTS
@@ -965,14 +978,14 @@ class BlackbirdPlugin(AbstractPlugin):
                 <p>{}</p>""".format(e)))
             LOGGER.exception(e)
 
-    @QtCore.pyqtSlot(RelationalSchema)
-    def onSchemaActionUndo(self, schema):
+    @QtCore.pyqtSlot()
+    def onSchemaActionUndo(self):
         """
         Executed when an action has been undone over the current schema.
         """
         try:
             self.widget('undo_progress').show()
-            reply = self.nmanager.putUndoToSchema(schema.name)
+            reply = self.nmanager.putUndoToSchema(self.schema.name)
             # We deal with network errors in the slot connected to the finished()
             # signal since it always follows the error() signal
             connect(reply.finished, self.onSchemaUndoCompleted)
@@ -1015,6 +1028,8 @@ class BlackbirdPlugin(AbstractPlugin):
                 dialog.show()
                 dialog.raise_()
                 LOGGER.debug(self.schema)
+                self.actionCounter = 0
+                self.action('undo_last_schema_action').setEnabled(False)
                 self.sgnSchemaChanged.emit(self.schema)
                 self.initDiagrams()
                 self.initSchemaTableActions()
@@ -1024,7 +1039,6 @@ class BlackbirdPlugin(AbstractPlugin):
                 LOGGER.error('Error generating schema: {}'.format(reply.errorString()))
         finally:
             self.widget('progress').hide()
-
 
     def initSchemaTableActions(self):
         """
@@ -1131,15 +1145,23 @@ class BlackbirdPlugin(AbstractPlugin):
                 dialog = BlackbirdOutputDialog('', json.dumps(json.loads(schema), indent=2),self.schema , self.session)
                 dialog.show()
                 dialog.raise_()
-                self.sgnActionCorrectlyApplied.emit()
+
                 self.sgnSchemaChanged.emit(self.schema)
                 self.updateDiagrams()
                 self.initSchemaTableActions()
+                self.sgnActionCorrectlyFinalized.emit()
             else:
                 self.session.addNotification('Error applying action: {}'.format(reply.errorString()))
                 LOGGER.error('Error applying action: {}'.format(reply.errorString()))
         finally:
             self.widget('action_progress').hide()
+
+    @QtCore.pyqtSlot()
+    def onSchemaActionCorrectlyFinalized(self):
+        """
+        Executed when an action over the current schema has been correctly applied.
+        """
+        self.action('undo_last_schema_action').setEnabled(True)
 
     @QtCore.pyqtSlot()
     def onSchemaUndoCompleted(self):
@@ -1157,18 +1179,25 @@ class BlackbirdPlugin(AbstractPlugin):
                 dialog.show()
                 dialog.raise_()
                 jsonSchema = json.loads(schema)
-                self.actionCounter+=1
+                self.actionCounter += 1
                 self.schema = RelationalSchemaParser.getSchema(jsonSchema)
-                self.sgnActionCorrectlyApplied.emit()
+                self.sgnActionCorrectlyFinalized.emit()
                 self.sgnSchemaChanged.emit(self.schema)
-
-                self.initDiagrams()#TODO sostistuisci con updateDiagramsFromUndo (DISEGNA A PARTIRE DA DIAGRAMMA CORRENTE + DIAGRAMMA PRECEDENTE AD AZIONE CHE VIENE ANNULLATA DA UNDO)
+                self.updateDiagrams()  # TODO sostistuisci con updateDiagramsFromUndo (DISEGNA A PARTIRE DA DIAGRAMMA CORRENTE + DIAGRAMMA PRECEDENTE AD AZIONE CHE VIENE ANNULLATA DA UNDO)
                 self.initSchemaTableActions()
+                self.sgnUndoActionCorrectlyFinalized.emit()
             else:
                 self.session.addNotification('Error undoing action: {}'.format(reply.errorString()))
                 LOGGER.error('Error undoing action: {}'.format(reply.errorString()))
         finally:
             self.widget('undo_progress').hide()
+
+    @QtCore.pyqtSlot()
+    def onSchemaUndoActionCorrectlyFinalized(self):
+        """
+        Executed when the undo of an action over the current schema has been correctly applied.
+        """
+        self.action('undo_last_schema_action').setEnabled(False)
 
     @QtCore.pyqtSlot(QtCore.QProcess.ProcessError)
     def onTranslatorErrorOccurred(self, error):
@@ -1447,8 +1476,6 @@ class BlackbirdPlugin(AbstractPlugin):
         else:
             self.action('generate_schema').setEnabled(False)
             self.action('generate_preview_schema').setEnabled(False)
-
-
 
         #isDiagramActive = self.session.mdi.activeDiagram() is not None
         #self.action('generate_schema').setEnabled(isDiagramActive)

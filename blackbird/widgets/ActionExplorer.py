@@ -30,7 +30,7 @@ class BBActionWidget(QtWidgets.QScrollArea):
     # segnale emesso se schiaccio pulsante corrispondente ad action su schema
     sgnActionButtonClicked = QtCore.pyqtSignal(RelationalSchema, RelationalTableAction)
     # segnale emesso se schiaccio pulsante corrispondente ad undo
-    sgnUndoButtonClicked = QtCore.pyqtSignal(RelationalSchema)
+    sgnUndoButtonClicked = QtCore.pyqtSignal()
 
     def __init__(self, plugin):
         """
@@ -52,7 +52,7 @@ class BBActionWidget(QtWidgets.QScrollArea):
         connect(self.actionInfo.sgnActionButtonClicked, self.doApplyAction)
         connect(self.actionInfo.sgnUndoButtonClicked, self.doUndoAction)
         connect(plugin.sgnSchemaChanged,self.onSchemaChanged)
-        connect(plugin.sgnActionCorrectlyApplied, self.onActionCorrectlyApplied)
+        connect(plugin.sgnUndoActionCorrectlyFinalized, self.onActionCorrectlyApplied)
 
         self.stacked.addWidget(self.actionInfo)
 
@@ -236,7 +236,7 @@ class BBActionWidget(QtWidgets.QScrollArea):
 
     @QtCore.pyqtSlot()
     def doUndoAction(self):
-        self.sgnUndoButtonClicked.emit(self.schema)
+        self.sgnUndoButtonClicked.emit()
 
 #############################################
 #   INFO WIDGETS

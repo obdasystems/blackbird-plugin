@@ -203,7 +203,7 @@ class BlackbirdPreferencesDialog(QtWidgets.QDialog, HasWidgetSystem):
         #################################
 
         widget = QtWidgets.QTabWidget(self, objectName='main_widget')
-        widget.addTab(self.widget('general_widget'), QtGui.QIcon(':/icons/24/ic_settings_black'), 'General')
+        widget.addTab(self.widget('general_widget'), QtGui.QIcon(':/icons/24/ic_settings_black'), 'Schema Configuration')
         self.addWidget(widget)
         layout = QtWidgets.QVBoxLayout()
         layout.setContentsMargins(0, 0, 0, 0)

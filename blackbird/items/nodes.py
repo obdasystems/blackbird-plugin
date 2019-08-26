@@ -31,7 +31,6 @@
 #     - Marco Console <console@dis.uniroma1.it>                          #
 #                                                                        #
 ##########################################################################
-from asyncio import get_event_loop_policy
 from enum import unique
 
 from PyQt5 import QtCore
@@ -42,7 +41,6 @@ from eddy.core.datatypes.graphol import  Special
 from eddy.core.functions.misc import snapF
 from eddy.core.items.common import Polygon
 from eddy.core.items.nodes.common.base import AbstractResizableNode
-from eddy.core.items.nodes.common.label import NodeLabel
 
 # noinspection PyUnresolvedReferences
 from eddy.plugins.blackbird.datatypes import Item
