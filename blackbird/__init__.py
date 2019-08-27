@@ -64,7 +64,8 @@ from eddy.plugins.blackbird.about import AboutDialog
 # noinspection PyUnresolvedReferences
 from eddy.plugins.blackbird.dialogs import (
     BlackbirdLogDialog,
-    BlackbirdOutputDialog
+    BlackbirdOutputDialog,
+    BlackbirdOntologyDialog
 )
 # noinspection PyUnresolvedReferences
 from eddy.plugins.blackbird.files import FileUtils
@@ -113,6 +114,7 @@ from eddy.plugins.blackbird.ui.preferences import BlackbirdPreferencesDialog
 from eddy.plugins.blackbird.widgets.actions import ActionTableExplorerWidget
 # noinspection PyUnresolvedReferences
 from eddy.plugins.blackbird.factory import BBMenuFactory
+
 
 LOGGER = getLogger()
 
@@ -269,6 +271,12 @@ class BlackbirdPlugin(AbstractPlugin):
             objectName='undo_last_schema_action', toolTip='Undo last schema action',
             triggered=self.onSchemaActionUndo))
 
+        #SHOW OWL ONTOLOGY
+        self.addAction(QtWidgets.QAction(
+            QtGui.QIcon(':/blackbird/icons/128/ic_blackbird'), 'Show referenced ontology', self,
+            objectName='show_ontology', toolTip='Show referenced ontology',
+            triggered=self.showOntologyDialog))
+
 
         #############################################
         # NODE RELATED
@@ -316,7 +324,10 @@ class BlackbirdPlugin(AbstractPlugin):
         toolbar = QtWidgets.QToolBar(self.session, objectName='blackbird_toolbar')
         toolbar.addAction(self.action('generate_schema'))
         toolbar.addAction(self.action('undo_last_schema_action'))
+        toolbar.addAction(self.action('show_ontology'))
+
         self.action('undo_last_schema_action').setEnabled(False)
+        self.action('show_ontology').setEnabled(False)
         self.addWidget(toolbar)
 
         self.session.addToolBar(QtCore.Qt.TopToolBarArea, self.widget('blackbird_toolbar'))
@@ -790,7 +801,6 @@ class BlackbirdPlugin(AbstractPlugin):
         self.diagramToSubWindow = {}
         self.subWindowToDiagram = {}
 
-
     def closeOldWindowsAfterSchemaGeneration(self):
         # remove old subwindows
         toBeClosed = []
@@ -958,8 +968,6 @@ class BlackbirdPlugin(AbstractPlugin):
                     <p>{}</p>""".format(e)))
             LOGGER.exception(e)
 
-
-
     @QtCore.pyqtSlot(RelationalSchema,RelationalTableAction)
     def onSchemaActionApplied(self,schema, action):
         """
@@ -1018,18 +1026,18 @@ class BlackbirdPlugin(AbstractPlugin):
             assert reply.isFinished()
             # noinspection PyArgumentList
             if reply.error() == QtNetwork.QNetworkReply.NoError:
-                owltext = str(reply.request().attribute(NetworkManager.OWL), encoding='utf-8')
+                self.owltext = str(reply.request().attribute(NetworkManager.OWL), encoding='utf-8')
                 schema = str(reply.readAll(), encoding='utf-8')
-                #AGGANCIATI QUI CON IL PARSER
                 jsonSchema = json.loads(schema)
                 self.schema = RelationalSchemaParser.getSchema(jsonSchema)
                 self.initializeOntologyEntityManager()
-                dialog = BlackbirdOutputDialog(owltext, json.dumps(json.loads(schema),indent=2),self.schema, self.session)
+                dialog = BlackbirdOutputDialog(self.owltext, json.dumps(json.loads(schema),indent=2),self.schema, self.session)
                 dialog.show()
                 dialog.raise_()
                 LOGGER.debug(self.schema)
                 self.actionCounter = 0
                 self.action('undo_last_schema_action').setEnabled(False)
+                self.action('show_ontology').setEnabled(True)
                 self.sgnSchemaChanged.emit(self.schema)
                 self.initDiagrams()
                 self.initSchemaTableActions()
@@ -1273,7 +1281,6 @@ class BlackbirdPlugin(AbstractPlugin):
         """
         self.sgnFocusForeignKey.emit(fk)
 
-
     @QtCore.pyqtSlot()
     def doOpenDialog(self):
         """
@@ -1481,7 +1488,6 @@ class BlackbirdPlugin(AbstractPlugin):
         #self.action('generate_schema').setEnabled(isDiagramActive)
 
 
-
     #############################################
     #   UTILITIES
     #################################
@@ -1565,7 +1571,12 @@ class BlackbirdPlugin(AbstractPlugin):
         # SHOW THE DIALOG
         dialog.exec_()
 
+    def showOntologyDialog(self):
+        dialog = BlackbirdOntologyDialog(self.owltext, self.session)
+        dialog.show()
+        dialog.raise_()
 
+    
     #############################################
     #   INTERFACE
     #################################

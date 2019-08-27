@@ -1,8 +1,8 @@
 from abc import ABCMeta, abstractmethod
 
-from PyQt5 import QtWidgets, QtCore
+from PyQt5 import QtWidgets, QtCore, QtGui
 from PyQt5.QtCore import Qt
-from PyQt5.QtWidgets import QTableWidget, QTableWidgetItem
+from PyQt5.QtWidgets import QTableWidget, QTableWidgetItem, QHeaderView
 from eddy.core.datatypes.qt import Font
 from eddy.core.functions.misc import clamp, first
 from eddy.core.functions.signals import connect, disconnect
@@ -50,7 +50,9 @@ class BBInfoWidget(QtWidgets.QScrollArea):
         connect(plugin.sgnFocusTable,self.doSelectTable)
         connect(plugin.sgnFocusForeignKey, self.doSelectForeignKey)
 
-        self.tableInfo = TableInfo(plugin.session,self.stacked)
+        #self.tableInfo = TableInfo(plugin.session,self.stacked)
+        self.tableInfo = SimpleTableInfo(plugin.session, self.stacked)
+
         self.fkInfo = ForeignKeyInfo(plugin.session,self.stacked)
 
         self.stacked.addWidget(self.schemaInfo)
@@ -372,6 +374,97 @@ class SchemaInfo(BBAbstractInfo):
         """
         self.tableCountField.setValue(str(tableCount))
         self.fkCountField.setValue(str(fkCount))
+
+class SimpleTableInfo(BBAbstractInfo):
+    def __init__(self,session,parent=None):
+        super().__init__(session,parent)
+
+        self.header = BBHeader('')
+        self.header.setFont(Font('Roboto', 12))
+
+        self.tableWidget = QTableWidget(self)
+        self.tableWidget.setColumnCount(2)
+        self.tableWidget.verticalHeader().setVisible(False)
+        self.tableWidget.horizontalHeader().setVisible(False)
+        #self.tableWidget.resizeColumnsToContents()
+
+        self.mainLayout = QtWidgets.QVBoxLayout(self)
+        self.mainLayout.setAlignment(QtCore.Qt.AlignTop)
+        self.mainLayout.setContentsMargins(0, 0, 0, 0)
+        self.mainLayout.setSpacing(0)
+        self.mainLayout.addWidget(self.header)
+        self.mainLayout.addWidget(self.tableWidget)
+
+    #############################################
+    #   INTERFACE
+    #################################
+
+    def updateData(self, table):
+        """
+        Fetch new information and fill the widget with data.
+        :type tableCount: RelationalTable
+        """
+        self.table = table
+        self.tableName = table.name
+        self.columns = table.columns
+        self.primaryKey = table.primaryKey
+
+        pkColNames = self.primaryKey.columns
+
+        self.header.setText('TABLE: '+self.tableName)
+        self.tableWidget.setColumnCount(2)
+        self.tableWidget.setRowCount(len(self.columns))
+
+        rowIndex = 0
+        notPkCols = []
+
+        for column in self.columns:
+            if column.columnName in pkColNames:
+                nameStr = column.columnName
+                typeStr = column.columnType
+                self.tableWidget.setItem(rowIndex, 0, QTableWidgetItem(nameStr))
+                self.tableWidget.setItem(rowIndex, 1, QTableWidgetItem(typeStr))
+                rowIndex +=1
+            else:
+                notPkCols.append(column)
+
+        for notPkCol in notPkCols:
+            nameStr = notPkCol.columnName
+            typeStr = notPkCol.columnType
+            self.tableWidget.setItem(rowIndex, 0, QTableWidgetItem(nameStr))
+            self.tableWidget.setItem(rowIndex, 1, QTableWidgetItem(typeStr))
+            rowIndex += 1
+
+        #align text
+        for row in range(self.tableWidget.rowCount()):
+            nameItem = self.tableWidget.item(row,0)
+            nameItem.setTextAlignment(Qt.AlignLeft)
+            nameItem.setTextAlignment(Qt.AlignVCenter)
+            typeItem = self.tableWidget.item(row,1)
+            typeItem.setTextAlignment(Qt.AlignRight)
+            typeItem.setTextAlignment(Qt.AlignVCenter)
+            if row<len(pkColNames):
+                nameItem.setForeground(QtGui.QBrush(Qt.yellow))
+            else:
+                nameItem.setForeground(QtGui.QBrush(Qt.white))
+            typeItem.setForeground(QtGui.QBrush(Qt.white))
+
+            nameItem.setBackground(QtGui.QBrush(Qt.black))
+            typeItem.setBackground(QtGui.QBrush(Qt.black))
+
+            nameItem.setFlags(QtCore.Qt.ItemIsEnabled)
+            typeItem.setFlags(QtCore.Qt.ItemIsEnabled)
+
+
+        # Remove headers
+        self.tableWidget.verticalHeader().setVisible(False)
+        self.tableWidget.horizontalHeader().setVisible(False)
+        self.tableWidget.setShowGrid(False)
+
+        # Do the resize of the columns by content
+        self.tableWidget.resizeColumnsToContents()
+        self.tableWidget.horizontalHeader().setSectionResizeMode(QHeaderView.Stretch)
+
 
 class TableInfo(BBAbstractInfo):
     def __init__(self,session,parent=None):

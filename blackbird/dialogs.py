@@ -237,3 +237,85 @@ class BlackbirdOutputDialog(QtWidgets.QDialog):
             openPath(directory)
 
 
+class BlackbirdOntologyDialog(QtWidgets.QDialog):
+    """
+    Subclass of QtWidgets.QDialog that shows the owl ontology used to generate current schema.
+    """
+    def __init__(self, owl, parent=None, **kwargs):
+        """
+        Initialize the dialog.
+        """
+        super().__init__(parent, **kwargs)
+
+        #############################################
+        # TEXT AREA
+        #################################
+
+        owlLabel = QtWidgets.QLabel('OWL', self)
+
+        headerLayout = QtWidgets.QHBoxLayout(self)
+        headerLayout.addWidget(owlLabel, 1, QtCore.Qt.AlignLeading)
+
+        headerWidget = QtWidgets.QWidget(self)
+        headerWidget.setLayout(headerLayout)
+
+        owlText = QtWidgets.QTextEdit(self)
+        owlText.setFont(Font('Roboto', 14))
+        owlText.setObjectName('owl_text')
+        owlText.setReadOnly(True)
+        owlText.setText(owl)
+
+        innerLayout = QtWidgets.QHBoxLayout(self)
+        innerLayout.setContentsMargins(8, 0, 8, 8)
+        innerLayout.addWidget(owlText)
+
+        textWidget = QtWidgets.QWidget(self)
+        textWidget.setLayout(innerLayout)
+
+        #############################################
+        # CONFIRMATION AREA
+        #################################
+
+        exportBtn = QtWidgets.QPushButton('Export', self)
+        confirmation = QtWidgets.QDialogButtonBox(QtWidgets.QDialogButtonBox.Close, self)
+        buttonLayout = QtWidgets.QHBoxLayout(self)
+        buttonLayout.setContentsMargins(10, 0, 10, 10)
+        buttonLayout.addWidget(exportBtn)
+        buttonLayout.addWidget(confirmation)
+
+        buttonWidget = QtWidgets.QWidget(self)
+        buttonWidget.setLayout(buttonLayout)
+
+        #############################################
+        # SETUP DIALOG LAYOUT
+        #################################
+
+        mainLayout = QtWidgets.QVBoxLayout()
+        mainLayout.addWidget(headerWidget)
+        mainLayout.addWidget(textWidget)
+        mainLayout.addWidget(buttonWidget, 0, QtCore.Qt.AlignRight)
+
+        self.setWindowTitle("Referenced Ontology")
+        self.setModal(True)
+        self.setLayout(mainLayout)
+        self.setMinimumSize(1024, 480)
+
+        connect(confirmation.clicked, self.accept)
+        connect(exportBtn.clicked, self.doExport)
+
+    #############################################
+    #   SLOTS
+    #################################
+
+    @QtCore.pyqtSlot()
+    def doExport(self):
+        """
+        Export the generated OWL and schema.
+        """
+        dialog = QtWidgets.QFileDialog(self)
+        dialog.setFileMode(QtWidgets.QFileDialog.Directory)
+        if dialog.exec_():
+            directory = first(dialog.selectedFiles())
+            owl = self.findChild(QtWidgets.QTextEdit, 'owl_text').toPlainText()
+            fwrite(owl, os.path.join(directory, 'ontology.owl'))
+            openPath(directory)
