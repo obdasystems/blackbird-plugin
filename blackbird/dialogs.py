@@ -31,6 +31,7 @@ from PyQt5 import (
     QtGui,
     QtWidgets
 )
+from eddy.core.common import HasWidgetSystem
 
 from eddy.core.datatypes.qt import Font
 from eddy.core.functions.fsystem import fwrite
@@ -319,3 +320,224 @@ class BlackbirdOntologyDialog(QtWidgets.QDialog):
             owl = self.findChild(QtWidgets.QTextEdit, 'owl_text').toPlainText()
             fwrite(owl, os.path.join(directory, 'ontology.owl'))
             openPath(directory)
+
+
+class TableInfoDialog(QtWidgets.QDialog, HasWidgetSystem):
+    """
+    This class implements the 'TableInfo' dialog.
+    """
+
+    def __init__(self, relationalTable, parent=None):
+        """
+        Initialize the TableInfo dialog.
+        :type session: Session
+        :type table: RelationalTable
+        """
+        super().__init__(parent)
+
+        self.relationalTable = relationalTable
+
+        columns = self.relationalTable.columns
+        primaryKey = self.relationalTable.primaryKey
+        uniques = self.relationalTable.uniques
+        foreignKeys = self.relationalTable.foreignKeys
+
+        #############################################
+        # COLUMNS TAB
+        #################################
+
+        table = QtWidgets.QTableWidget(len(self.relationalTable.columns), 6, self, objectName='columns_table')
+        table.setHorizontalHeaderLabels(['Name', 'Data Type', 'Length', 'Precision', 'Not NULL?', 'Primary Key?'])
+        table.setFont(Font('Roboto', 12))
+        table.setSelectionMode(QtWidgets.QAbstractItemView.NoSelection)
+        table.setFocusPolicy(QtCore.Qt.NoFocus)
+        self.addWidget(table)
+
+        header = table.horizontalHeader()
+        header.setSectionResizeMode(0, QtWidgets.QHeaderView.Stretch)
+        header.setSectionResizeMode(1, QtWidgets.QHeaderView.Fixed)
+        header.setSectionResizeMode(2, QtWidgets.QHeaderView.Stretch)
+        header.setSectionResizeMode(3, QtWidgets.QHeaderView.Stretch)
+        header.setSectionResizeMode(4, QtWidgets.QHeaderView.Fixed)
+        header.setSectionResizeMode(5, QtWidgets.QHeaderView.Fixed)
+        header.setSectionsClickable(False)
+        header.setSectionsMovable(False)
+        header = table.verticalHeader()
+        header.setSectionResizeMode(QtWidgets.QHeaderView.Fixed)
+
+        for row, column in enumerate(columns):
+            colName = column.columnName
+            colType = column.columnType
+            colNull = not column.isNullable
+            if colName in primaryKey.columns:
+                colPK = True
+            else:
+                colPK = False
+            item = QtWidgets.QTableWidgetItem(colName)
+            item.setTextAlignment(QtCore.Qt.AlignLeft | QtCore.Qt.AlignVCenter)
+            item.setFlags(item.flags() ^ QtCore.Qt.ItemIsEditable)
+            table.setItem(row, 0, item)
+            item = QtWidgets.QTableWidgetItem(colType)
+            item.setTextAlignment(QtCore.Qt.AlignLeft | QtCore.Qt.AlignVCenter)
+            item.setFlags(item.flags() ^ QtCore.Qt.ItemIsEditable)
+            table.setItem(row, 1, item)
+            item = QtWidgets.QTableWidgetItem('-')
+            item.setTextAlignment(QtCore.Qt.AlignLeft | QtCore.Qt.AlignVCenter)
+            item.setFlags(item.flags() ^ QtCore.Qt.ItemIsEditable)
+            table.setItem(row, 2, item)
+            item = QtWidgets.QTableWidgetItem('-')
+            item.setTextAlignment(QtCore.Qt.AlignLeft | QtCore.Qt.AlignVCenter)
+            item.setFlags(item.flags() ^ QtCore.Qt.ItemIsEditable)
+            table.setItem(row, 3, item)
+            item = QtWidgets.QTableWidgetItem(str(colNull))
+            item.setTextAlignment(QtCore.Qt.AlignLeft | QtCore.Qt.AlignVCenter)
+            item.setFlags(item.flags() ^ QtCore.Qt.ItemIsEditable)
+            table.setItem(row, 4, item)
+            item = QtWidgets.QTableWidgetItem(str(colPK))
+            item.setTextAlignment(QtCore.Qt.AlignLeft | QtCore.Qt.AlignVCenter)
+            item.setFlags(item.flags() ^ QtCore.Qt.ItemIsEditable)
+            table.setItem(row, 5, item)
+
+        layout = QtWidgets.QVBoxLayout()
+        layout.addWidget(self.widget('columns_table'), 1)
+        widget = QtWidgets.QWidget(objectName='columns_widget')
+        widget.setLayout(layout)
+        self.addWidget(widget)
+
+        #############################################
+        # PRIMARY KEY TAB
+        #################################
+
+        table = QtWidgets.QTableWidget(1, 2, self, objectName='pk_table')
+        table.setHorizontalHeaderLabels(['Name', 'Columns'])
+        table.setFont(Font('Roboto', 12))
+        table.setSelectionMode(QtWidgets.QAbstractItemView.NoSelection)
+        table.setFocusPolicy(QtCore.Qt.NoFocus)
+        self.addWidget(table)
+
+        header = table.horizontalHeader()
+        header.setSectionResizeMode(0, QtWidgets.QHeaderView.Stretch)
+        header.setSectionResizeMode(1, QtWidgets.QHeaderView.Stretch)
+        header.setSectionsClickable(False)
+        header.setSectionsMovable(False)
+        header = table.verticalHeader()
+        header.setSectionResizeMode(QtWidgets.QHeaderView.Fixed)
+
+        pkName = primaryKey.name
+        item = QtWidgets.QTableWidgetItem(pkName)
+        item.setTextAlignment(QtCore.Qt.AlignLeft | QtCore.Qt.AlignVCenter)
+        item.setFlags(item.flags() ^ QtCore.Qt.ItemIsEditable)
+        table.setItem(0,0,item)
+        pkColumnNames = primaryKey.columns
+        item = QtWidgets.QTableWidgetItem(','.join(pkColumnNames))
+        item.setTextAlignment(QtCore.Qt.AlignLeft | QtCore.Qt.AlignVCenter)
+        item.setFlags(item.flags() ^ QtCore.Qt.ItemIsEditable)
+        table.setItem(0, 1, item)
+
+        layout = QtWidgets.QVBoxLayout()
+        layout.addWidget(self.widget('pk_table'), 1)
+        widget = QtWidgets.QWidget(objectName='pk_widget')
+        widget.setLayout(layout)
+        self.addWidget(widget)
+
+
+        #############################################
+        # CONFIRMATION BOX
+        #################################
+
+        confirmation = QtWidgets.QDialogButtonBox(QtCore.Qt.Horizontal, self, objectName='confirmation_widget')
+        confirmation.addButton(QtWidgets.QDialogButtonBox.Save)
+        confirmation.addButton(QtWidgets.QDialogButtonBox.Cancel)
+        confirmation.setContentsMargins(10, 0, 10, 10)
+        confirmation.setFont(Font('Roboto', 12))
+        self.addWidget(confirmation)
+
+        #############################################
+        # MAIN WIDGET
+        #################################
+
+        widget = QtWidgets.QTabWidget(self, objectName='main_widget')
+        widget.addTab(self.widget('columns_widget'), QtGui.QIcon(':/icons/24/ic_settings_black'), 'Columns')
+        widget.addTab(self.widget('pk_widget'), QtGui.QIcon(':/icons/24/ic_settings_black'), 'Primary Key')
+        self.addWidget(widget)
+        layout = QtWidgets.QVBoxLayout()
+        layout.setContentsMargins(0, 0, 0, 0)
+        layout.addWidget(self.widget('main_widget'))
+        layout.addWidget(self.widget('confirmation_widget'), 0, QtCore.Qt.AlignRight)
+        self.setLayout(layout)
+        self.setMinimumSize(740, 420)
+        self.setWindowIcon(QtGui.QIcon(':/blackbird/icons/128/ic_blackbird'))
+        self.setWindowTitle(self.relationalTable.name)
+
+        connect(confirmation.accepted, self.accept)
+        connect(confirmation.rejected, self.reject)
+
+    #############################################
+    #   PROPERTIES
+    #################################
+
+    @property
+    def session(self):
+        """
+        Returns the reference to the main session (alias for PreferencesDialog.parent()).
+        :rtype: Session
+        """
+        return self.parent()
+
+    #############################################
+    #   SLOTS
+    #################################
+
+    @QtCore.pyqtSlot()
+    def accept(self):
+        """
+        Executed when the dialog is accepted.
+        """
+        #############################################
+        # PLUGINS TAB
+        #################################
+        '''
+        plugins_to_uninstall = [plugin for plugin, checkbox in self.uninstall.items() if checkbox.isChecked()]
+        if plugins_to_uninstall:
+            plugins_to_uninstall_fmt = []
+            for p in plugins_to_uninstall:
+                plugins_to_uninstall_fmt.append('&nbsp;&nbsp;&nbsp;&nbsp;- {0} v{1}'.format(p.name(), p.version()))
+            msgbox = QtWidgets.QMessageBox(self)
+            msgbox.setIconPixmap(QtGui.QIcon(':/icons/48/ic_question_outline_black').pixmap(48))
+            msgbox.setInformativeText('<b>NOTE: This action is not reversible!</b>')
+            msgbox.setStandardButtons(QtWidgets.QMessageBox.No | QtWidgets.QMessageBox.Yes)
+            msgbox.setWindowIcon(QtGui.QIcon(':/icons/128/ic_eddy'))
+            msgbox.setWindowTitle('Are you sure?')
+            msgbox.setText(textwrap.dedent("""You marked the following plugins for uninstall:<br/><br/>
+            {0}<br/><br/>Are you sure you want to continue?""".format('<br/>'.join(plugins_to_uninstall_fmt))))
+            msgbox.exec_()
+            if msgbox.result() == QtWidgets.QMessageBox.No:
+                return
+
+        for plugin in plugins_to_uninstall:
+            self.session.pmanager.uninstall(plugin)
+
+        settings = QtCore.QSettings(ORGANIZATION, APPNAME)
+        '''
+        #############################################
+        # EXPORT TAB
+        #################################
+        '''
+        for axiom, checkbox in self.checks.items():
+            settings.setValue('export/axiom/{0}'.format(axiom.value), checkbox.isChecked())
+        '''
+        #############################################
+        # GENERAL TAB
+        #################################
+        '''
+        settings.setValue('diagram/size', self.widget('diagram_size_field').value())
+        settings.setValue('update/channel', self.widget('update_channel_switch').currentText())
+        settings.setValue('update/check_on_startup', self.widget('update_startup_checkbox').isChecked())
+        '''
+        #############################################
+        # SAVE & EXIT
+        #################################
+
+        #settings.sync()
+
+        super().accept()

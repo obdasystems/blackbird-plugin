@@ -93,9 +93,12 @@ class BBMenuFactory(QtCore.QObject):
         """
         menu = QtWidgets.QMenu()
         tableName = node.relationalTable.name
-        if tableName in self.plugin.relationalTableNameToQtActions:
-            tableQtActions = self.plugin.relationalTableNameToQtActions[tableName]
-            for qtAction in tableQtActions:
+
+        menu.addAction(self.plugin.tableNameToDescriptionQtAction[tableName])
+        menu.addSeparator()
+        if tableName in self.plugin.tableNameToSchemaQtActions:
+            tableSchemaQtActions = self.plugin.tableNameToSchemaQtActions[tableName]
+            for qtAction in tableSchemaQtActions:
                 menu.addAction(qtAction)
         else:
             menu.addAction(self.plugin.action('empty_action'))

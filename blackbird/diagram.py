@@ -1,23 +1,14 @@
 
 
 from PyQt5 import QtCore
-from PyQt5 import QtWidgets
-
-from eddy.core.clipboard import Clipboard
-from eddy.core.commands.edges import CommandEdgeAdd
-from eddy.core.commands.nodes import CommandNodeAdd
-from eddy.core.commands.nodes import CommandNodeMove
 from eddy.core.commands.labels import CommandLabelMove
-from eddy.core.datatypes.graphol import Item, Identity
+from eddy.core.commands.nodes import CommandNodeMove
+from eddy.core.datatypes.graphol import Item
 from eddy.core.datatypes.misc import DiagramMode
 from eddy.core.diagram import Diagram
-from eddy.core.functions.graph import bfs
-from eddy.core.functions.misc import snap, partition, first
-from eddy.core.functions.signals import connect
-from eddy.core.generators import GUID
-from eddy.core.items.factory import ItemFactory
-from eddy.core.output import getLogger
+from eddy.core.functions.misc import snap, first
 from eddy.core.items.common import AbstractItem
+from eddy.core.output import getLogger
 # noinspection PyUnresolvedReferences
 from eddy.plugins.blackbird.items.edges import ForeignKeyEdge
 # noinspection PyUnresolvedReferences

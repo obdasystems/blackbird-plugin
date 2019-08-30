@@ -65,7 +65,8 @@ from eddy.plugins.blackbird.about import AboutDialog
 from eddy.plugins.blackbird.dialogs import (
     BlackbirdLogDialog,
     BlackbirdOutputDialog,
-    BlackbirdOntologyDialog
+    BlackbirdOntologyDialog,
+    TableInfoDialog
 )
 # noinspection PyUnresolvedReferences
 from eddy.plugins.blackbird.files import FileUtils
@@ -158,7 +159,8 @@ class BlackbirdPlugin(AbstractPlugin):
         self.subWindowToDiagram = {}
         self.diagramToWindowLabel = {}
         self.actionCounter = 0
-        self.relationalTableNameToQtActions = {}
+        self.tableNameToSchemaQtActions = {}
+        self.tableNameToDescriptionQtAction = {}
 
     #############################################
     #   HOOKS
@@ -1050,22 +1052,28 @@ class BlackbirdPlugin(AbstractPlugin):
 
     def initSchemaTableActions(self):
         """
-        Initialize the QT actions associated to the BB actions associated to the relational tables (needed for the right click menu)
+        Initialize the QT actions associated to the the relational tables (right click menu related)
         """
-        for tableName in self.relationalTableNameToQtActions:
-            qtActionList = self.relationalTableNameToQtActions[tableName]
+        for tableName, qtAction in self.tableNameToDescriptionQtAction.items():
+            self.removeAction(qtAction)
+        self.tableNameToDescriptionQtAction = {}
+        for table in self.schema.tables:
+            qtActionLabel = 'Show detailed description'
+            qtActionName = 'show_detailed_description_{}'.format(table.name)
+            qtAction = QtWidgets.QAction(qtActionLabel,self,objectName=qtActionName,triggered=self.doShowTableDescriptionDialog)
+            qtAction.setData(table)
+            self.addAction(qtAction)
+            self.tableNameToDescriptionQtAction[table.name] = qtAction
+
+        for tableName, qtActionList in self.tableNameToSchemaQtActions.items():
             for qtAction in qtActionList:
                 self.removeAction(qtAction)
-
-        self.relationalTableNameToQtActions = {}
-
+        self.tableNameToSchemaQtActions = {}
         bbActions = self.schema.actions
-
         for bbAction in bbActions:
             subj = bbAction.actionSubjectTableName
             type = bbAction.actionType
             objs = bbAction.actionObjectsNames
-
             if len(objs)>1:
                 objectsString = ','.join(map(str,objs))
             else:
@@ -1075,16 +1083,27 @@ class BlackbirdPlugin(AbstractPlugin):
             qtAction = QtWidgets.QAction( qtActionLabel, self, objectName=qtActionName,triggered=self.doApplySchemaAction)
             qtAction.setData(bbAction)
             self.addAction(qtAction)
-
-            if subj in self.relationalTableNameToQtActions:
-                self.relationalTableNameToQtActions[subj].append(qtAction)
+            if subj in self.tableNameToSchemaQtActions:
+                self.tableNameToSchemaQtActions[subj].append(qtAction)
             else:
                 qtActionList = [qtAction]
-                self.relationalTableNameToQtActions[subj]=qtActionList
+                self.tableNameToSchemaQtActions[subj]=qtActionList
 
     @QtCore.pyqtSlot()
     def doNothing(self):
         pass
+
+    @QtCore.pyqtSlot()
+    def doShowTableDescriptionDialog(self):
+        """
+        Executed when the detailed description of a relational table is requested.
+        """
+        qtAction = self.sender()
+        table = qtAction.data()
+        dialog = TableInfoDialog(table, self.session)
+        dialog.show()
+        dialog.raise_()
+
 
     @QtCore.pyqtSlot()
     def doApplySchemaAction(self):
