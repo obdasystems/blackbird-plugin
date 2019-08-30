@@ -440,6 +440,88 @@ class TableInfoDialog(QtWidgets.QDialog, HasWidgetSystem):
         widget.setLayout(layout)
         self.addWidget(widget)
 
+        #############################################
+        # UNIQUE TAB
+        #################################
+
+        table = QtWidgets.QTableWidget(len(uniques), 2, self, objectName='uniques_table')
+        table.setHorizontalHeaderLabels(['Name', 'Columns'])
+        table.setFont(Font('Roboto', 12))
+        table.setSelectionMode(QtWidgets.QAbstractItemView.NoSelection)
+        table.setFocusPolicy(QtCore.Qt.NoFocus)
+        self.addWidget(table)
+
+        header = table.horizontalHeader()
+        header.setSectionResizeMode(0, QtWidgets.QHeaderView.Stretch)
+        header.setSectionResizeMode(1, QtWidgets.QHeaderView.Stretch)
+        header.setSectionsClickable(False)
+        header.setSectionsMovable(False)
+        header = table.verticalHeader()
+        header.setSectionResizeMode(QtWidgets.QHeaderView.Fixed)
+
+        for row,unique in enumerate(uniques):
+            uniqueName = unique.name
+            item = QtWidgets.QTableWidgetItem(uniqueName)
+            item.setTextAlignment(QtCore.Qt.AlignLeft | QtCore.Qt.AlignVCenter)
+            item.setFlags(item.flags() ^ QtCore.Qt.ItemIsEditable)
+            table.setItem(row, 0, item)
+            uniqueColumnNames = unique.columns
+            item = QtWidgets.QTableWidgetItem(','.join(uniqueColumnNames))
+            item.setTextAlignment(QtCore.Qt.AlignLeft | QtCore.Qt.AlignVCenter)
+            item.setFlags(item.flags() ^ QtCore.Qt.ItemIsEditable)
+            table.setItem(row, 1, item)
+
+        layout = QtWidgets.QVBoxLayout()
+        layout.addWidget(self.widget('uniques_table'), 1)
+        widget = QtWidgets.QWidget(objectName='uniques_widget')
+        widget.setLayout(layout)
+        self.addWidget(widget)
+
+        #############################################
+        # FOREIGN KEY TAB
+        #################################
+
+        table = QtWidgets.QTableWidget(len(foreignKeys), 3, self, objectName='fk_table')
+        table.setHorizontalHeaderLabels(['Name','Referenced Table', 'Columns'])
+        table.setFont(Font('Roboto', 12))
+        table.setSelectionMode(QtWidgets.QAbstractItemView.NoSelection)
+        table.setFocusPolicy(QtCore.Qt.NoFocus)
+        self.addWidget(table)
+
+        header = table.horizontalHeader()
+        header.setSectionResizeMode(0, QtWidgets.QHeaderView.Stretch)
+        header.setSectionResizeMode(1, QtWidgets.QHeaderView.Stretch)
+        header.setSectionResizeMode(2, QtWidgets.QHeaderView.Stretch)
+        header.setSectionsClickable(False)
+        header.setSectionsMovable(False)
+        header = table.verticalHeader()
+        header.setSectionResizeMode(QtWidgets.QHeaderView.Fixed)
+
+        for row, fk in enumerate(foreignKeys):
+            fkName = fk.name
+            item = QtWidgets.QTableWidgetItem(fkName)
+            item.setTextAlignment(QtCore.Qt.AlignLeft | QtCore.Qt.AlignVCenter)
+            item.setFlags(item.flags() ^ QtCore.Qt.ItemIsEditable)
+            table.setItem(row, 0, item)
+            tgtTableName = fk.tgtTable
+            item = QtWidgets.QTableWidgetItem(tgtTableName)
+            item.setTextAlignment(QtCore.Qt.AlignLeft | QtCore.Qt.AlignVCenter)
+            item.setFlags(item.flags() ^ QtCore.Qt.ItemIsEditable)
+            table.setItem(row, 1, item)
+            srcColumnNames = ','.join(fk.srcColumns)
+            tgtColumnNames = ','.join(fk.tgtColumns)
+            columnsString = '({})-->({})'.format(srcColumnNames,tgtColumnNames)
+            item = QtWidgets.QTableWidgetItem(columnsString)
+            item.setTextAlignment(QtCore.Qt.AlignLeft | QtCore.Qt.AlignVCenter)
+            item.setFlags(item.flags() ^ QtCore.Qt.ItemIsEditable)
+            table.setItem(row, 2, item)
+
+        layout = QtWidgets.QVBoxLayout()
+        layout.addWidget(self.widget('fk_table'), 1)
+        widget = QtWidgets.QWidget(objectName='fk_widget')
+        widget.setLayout(layout)
+        self.addWidget(widget)
+
 
         #############################################
         # CONFIRMATION BOX
@@ -459,6 +541,8 @@ class TableInfoDialog(QtWidgets.QDialog, HasWidgetSystem):
         widget = QtWidgets.QTabWidget(self, objectName='main_widget')
         widget.addTab(self.widget('columns_widget'), QtGui.QIcon(':/icons/24/ic_settings_black'), 'Columns')
         widget.addTab(self.widget('pk_widget'), QtGui.QIcon(':/icons/24/ic_settings_black'), 'Primary Key')
+        widget.addTab(self.widget('uniques_widget'), QtGui.QIcon(':/icons/24/ic_settings_black'), 'Uniques')
+        widget.addTab(self.widget('fk_widget'), QtGui.QIcon(':/icons/24/ic_settings_black'), 'Foreign Keys')
         self.addWidget(widget)
         layout = QtWidgets.QVBoxLayout()
         layout.setContentsMargins(0, 0, 0, 0)
