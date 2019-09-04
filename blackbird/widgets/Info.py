@@ -2,6 +2,7 @@ from abc import ABCMeta, abstractmethod
 
 from PyQt5 import QtWidgets, QtCore, QtGui
 from PyQt5.QtCore import Qt
+from PyQt5.QtGui import QColor
 from PyQt5.QtWidgets import QTableWidget, QTableWidgetItem, QHeaderView
 from eddy.core.datatypes.qt import Font
 from eddy.core.functions.misc import clamp, first
@@ -330,7 +331,6 @@ class BBAbstractInfo(QtWidgets.QWidget):
         """
         pass
 
-
 class SchemaInfo(BBAbstractInfo):
     def __init__(self,session,parent=None):
         super().__init__(session,parent)
@@ -444,13 +444,16 @@ class SimpleTableInfo(BBAbstractInfo):
             typeItem.setTextAlignment(Qt.AlignRight)
             typeItem.setTextAlignment(Qt.AlignVCenter)
             if row<len(pkColNames):
-                nameItem.setForeground(QtGui.QBrush(Qt.yellow))
+                nameItem.setForeground(QtGui.QBrush(Qt.red))
             else:
-                nameItem.setForeground(QtGui.QBrush(Qt.white))
-            typeItem.setForeground(QtGui.QBrush(Qt.white))
+                nameItem.setForeground(QtGui.QBrush(Qt.black))
+            typeItem.setForeground(QtGui.QBrush(Qt.black))
 
-            nameItem.setBackground(QtGui.QBrush(Qt.black))
-            typeItem.setBackground(QtGui.QBrush(Qt.black))
+            #nameItem.setBackground(QtGui.QBrush(Qt.black))
+            #typeItem.setBackground(QtGui.QBrush(Qt.black))
+
+            nameItem.setBackground(QtGui.QBrush(QColor('#BBDEFB')))
+            typeItem.setBackground(QtGui.QBrush(QColor('#E3F2FD')))
 
             nameItem.setFlags(QtCore.Qt.ItemIsEnabled)
             typeItem.setFlags(QtCore.Qt.ItemIsEnabled)

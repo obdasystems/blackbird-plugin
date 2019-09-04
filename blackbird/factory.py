@@ -100,8 +100,8 @@ class BBMenuFactory(QtCore.QObject):
             tableSchemaQtActions = self.plugin.tableNameToSchemaQtActions[tableName]
             for qtAction in tableSchemaQtActions:
                 menu.addAction(qtAction)
-        else:
-            menu.addAction(self.plugin.action('empty_action'))
+        #else:
+        #    menu.addAction(self.plugin.action('empty_action'))
 
         return menu
 
