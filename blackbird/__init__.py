@@ -825,14 +825,18 @@ class BlackbirdPlugin(AbstractPlugin):
             self.diagramToWindowLabel.pop(diagram)
             if diagram in self.diagramToSubWindow:
                 subwindow = self.diagramToSubWindow[diagram]
+                subwindow.view.setScene(diagram)
+                subwindow.view.update()
                 LOGGER.debug('Changing content of open mdiSubwindow FROM diagram {} TO diagram {}'.format(diagram.name,newDiagram.name))
                 newView = self.session.createDiagramView(newDiagram)
-                subwindow.setWidget(newView)
+                #subwindow.setWidget(newView)
                 subwindow.update()
-                self.diagramToSubWindow.pop(diagram)
-                self.diagramToSubWindow[newDiagram] = subwindow
-                self.subWindowToDiagram[subwindow] = newDiagram
+                #self.diagramToSubWindow.pop(diagram)
+                #self.diagramToSubWindow[newDiagram] = subwindow
+                #self.subWindowToDiagram[subwindow] = newDiagram
+
                 self.project.removeDiagram(diagram)
+                self.doFocusDiagram(newDiagram)
 
     #############################################
     #   EVENTS
@@ -1257,8 +1261,8 @@ class BlackbirdPlugin(AbstractPlugin):
             subwindow = self.createMdiSubWindow(view, self.diagramToWindowLabel[diagram])
             connect(subwindow.sgnCloseEvent, self.onSubWindowClose)
             self.subwindowList.append(subwindow)
-            self.diagramToSubWindow[diagram] = subwindow
-            self.subWindowToDiagram[subwindow] = diagram
+        self.diagramToSubWindow[diagram] = subwindow
+        self.subWindowToDiagram[subwindow] = diagram
         self.session.mdi.setActiveSubWindow(subwindow)
         self.session.mdi.update()
 
