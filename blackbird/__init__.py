@@ -66,8 +66,6 @@ from eddy.plugins.blackbird.dialogs import (
 # noinspection PyUnresolvedReferences
 from eddy.plugins.blackbird.factory import BBMenuFactory
 # noinspection PyUnresolvedReferences
-from eddy.plugins.blackbird.files import FileUtils
-# noinspection PyUnresolvedReferences
 from eddy.plugins.blackbird.graphol import (
     ForeignKeyVisualElements,
     BlackbirdOntologyEntityManager
@@ -1533,66 +1531,6 @@ class BlackbirdPlugin(AbstractPlugin):
         dialog.setLayout(layout)
         connect(confirmation.accepted, dialog.accept)
         dialog.show()
-        dialog.exec_()
-
-    def showDialog(self):
-        """
-        Displays the given message in a new dialog.
-        """
-        dialog = QtWidgets.QDialog(self.session)
-        textSchema = QtWidgets.QTextEdit(self.session)
-        textSchema.setFont(Font('Roboto', 14))
-
-        textTables = QtWidgets.QTextEdit(self.session)
-        textTables.setFont(Font('Roboto', 14))
-
-        textFKs = QtWidgets.QTextEdit(self.session)
-        textFKs.setFont(Font('Roboto', 14))
-
-        confirmation = QtWidgets.QDialogButtonBox(QtWidgets.QDialogButtonBox.Close, self.session)
-        confirmation.setContentsMargins(10, 0, 10, 10)
-        confirmation.setFont(Font('Roboto', 12))
-        layout = QtWidgets.QVBoxLayout()
-        layout.addWidget(textSchema)
-        layout.addWidget(textTables)
-        layout.addWidget(textFKs)
-        layout.addWidget(confirmation, 0, QtCore.Qt.AlignRight)
-        dialog.setWindowTitle("Blackbird Plugin")
-        dialog.setModal(False)
-        dialog.setLayout(layout)
-        dialog.setMinimumSize(640, 480)
-        connect(confirmation.clicked, dialog.accept)
-
-        with BusyProgressDialog('Generating Schema...', mtime=1, parent=self.session):
-            filePath = os.path.join(os.path.dirname(__file__), os.pardir, 'tests', 'test_export_schema_1',
-                                    'Diagram5.json')
-            json_schema_data = FileUtils.parseSchemaFile(filePath)
-
-            # PARSE THE SCHEMA
-            schema = RelationalSchemaParser.getSchema(json_schema_data)
-            LOGGER.debug('Relational Schema Parsed: ')
-            LOGGER.debug(str(schema))
-            textSchema.setPlainText(str(schema))
-            textSchema.setReadOnly(True)
-
-            # MAP TO ONTOLOGY VISUAL ELEMENTS
-            visualManager = BlackbirdOntologyEntityManager(schema, self.session.project)
-            tableDict = visualManager.diagramToTables
-            tableDictStr = visualManager.diagramToTablesString()
-
-            LOGGER.debug('table dictionary created')
-            LOGGER.debug(tableDictStr)
-            textTables.setPlainText(tableDictStr)
-            textTables.setReadOnly(True)
-
-            fkDict = visualManager.diagramToForeignKeys
-            fkDictStr = visualManager.diagramToForeignKeysString()
-            LOGGER.debug('FKs dictionary created')
-            LOGGER.debug(fkDictStr)
-            textFKs.setPlainText(fkDictStr)
-            textFKs.setReadOnly(True)
-
-        # SHOW THE DIALOG
         dialog.exec_()
 
     def showOntologyDialog(self):
