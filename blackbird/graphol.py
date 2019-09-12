@@ -242,12 +242,12 @@ class BlackbirdOntologyEntityManager(QtCore.QObject):
                                     tgtColumnName = first(tgtColumnNames)
                                     relColumn = tgtTable.getColumnByName(tgtColumnName)
                                     relcolPos = relColumn.position
-                                    if relcolPos == 1:
+                                    if relcolPos == 0:
                                         currVisualEls.append(
                                             self.getClassIsaExistRoleOrAttributeVEs(srcOccurrencesInDiagram,
                                                                                     tgtOccurrencesInDiagram,
                                                                                     ontDiagram))
-                                    elif relcolPos == 2:
+                                    elif relcolPos == 1:
                                         currVisualEls.append(self.getClassIsaExistRoleInvVEs(srcOccurrencesInDiagram,
                                                                                              tgtOccurrencesInDiagram,
                                                                                              ontDiagram))
@@ -265,11 +265,11 @@ class BlackbirdOntologyEntityManager(QtCore.QObject):
                                 srcRelColumn = srcTable.getColumnByName(srcColumnName)
                                 srcRelcolPos = srcRelColumn.position
                                 if tgtEntityType == EntityType.Class:
-                                    if srcRelcolPos == 1:
+                                    if srcRelcolPos == 0:
                                         currVisualEls.append(
                                             self.getExistRoleOrAttributeIsaClassVEs(srcOccurrencesInDiagram,
                                                                                     tgtOccurrencesInDiagram, ontDiagram))
-                                    elif srcRelcolPos == 2:
+                                    elif srcRelcolPos == 1:
                                         currVisualEls.append(self.getExistRoleInvIsaClassVEs(srcOccurrencesInDiagram,
                                                                                              tgtOccurrencesInDiagram,
                                                                                              ontDiagram))
@@ -277,32 +277,32 @@ class BlackbirdOntologyEntityManager(QtCore.QObject):
                                     tgtColumnName = first(tgtColumnNames)
                                     tgtRelColumn = tgtTable.getColumnByName(tgtColumnName)
                                     tgtRelcolPos = tgtRelColumn.position
-                                    if srcRelcolPos == 1 and tgtRelcolPos == 1:
+                                    if srcRelcolPos == 0 and tgtRelcolPos == 0:
                                         currVisualEls.append(
                                             self.getExistRoleOrAttributeIsaExistRoleOrAttributeVEs(srcOccurrencesInDiagram,
                                                                                                    tgtOccurrencesInDiagram,
                                                                                                    ontDiagram))
-                                    elif srcRelcolPos == 1 and tgtRelcolPos == 2:
+                                    elif srcRelcolPos == 0 and tgtRelcolPos == 1:
                                         currVisualEls.append(
                                             self.getExistRoleOrAttributeIsaExistRoleInvVEs(srcOccurrencesInDiagram,
                                                                                            tgtOccurrencesInDiagram,
                                                                                            ontDiagram))
-                                    elif srcRelcolPos == 2 and tgtRelcolPos == 1:
+                                    elif srcRelcolPos == 1 and tgtRelcolPos == 0:
                                         currVisualEls.append(
                                             self.getExistRoleInvIsaExistRoleOrAttributeVEs(srcOccurrencesInDiagram,
                                                                                            tgtOccurrencesInDiagram,
                                                                                            ontDiagram))
-                                    elif srcRelcolPos == 2 and tgtRelcolPos == 2:
+                                    elif srcRelcolPos == 1 and tgtRelcolPos == 1:
                                         currVisualEls.append(self.getExistRoleInvIsaExistRoleInvVEs(srcOccurrencesInDiagram,
                                                                                                     tgtOccurrencesInDiagram,
                                                                                                     ontDiagram))
                                 elif tgtEntityType == EntityType.DataProperty:
-                                    if srcRelcolPos == 1:
+                                    if srcRelcolPos == 0:
                                         currVisualEls.append(
                                             self.getExistRoleOrAttributeIsaExistRoleOrAttributeVEs(srcOccurrencesInDiagram,
                                                                                                    tgtOccurrencesInDiagram,
                                                                                                    ontDiagram))
-                                    elif srcRelcolPos == 2:
+                                    elif srcRelcolPos == 1:
                                         currVisualEls.append(
                                             self.getExistRoleInvIsaExistRoleOrAttributeVEs(srcOccurrencesInDiagram,
                                                                                            tgtOccurrencesInDiagram,
@@ -316,12 +316,12 @@ class BlackbirdOntologyEntityManager(QtCore.QObject):
                                     tgtColumnName = first(tgtColumnNames)
                                     tgtRelColumn = tgtTable.getColumnByName(tgtColumnName)
                                     tgtRelcolPos = tgtRelColumn.position
-                                    if tgtRelcolPos == 1:
+                                    if tgtRelcolPos == 0:
                                         currVisualEls.append(
                                             self.getExistRoleOrAttributeIsaExistRoleOrAttributeVEs(srcOccurrencesInDiagram,
                                                                                                    tgtOccurrencesInDiagram,
                                                                                                    ontDiagram))
-                                    elif tgtRelcolPos == 2:
+                                    elif tgtRelcolPos == 1:
                                         currVisualEls.append(
                                             self.getExistRoleOrAttributeIsaExistRoleInvVEs(srcOccurrencesInDiagram,
                                                                                            tgtOccurrencesInDiagram,
