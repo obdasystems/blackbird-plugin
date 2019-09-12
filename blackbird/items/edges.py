@@ -31,17 +31,17 @@
 #     - Marco Console <console@dis.uniroma1.it>                          #
 #                                                                        #
 ##########################################################################
-from enum import unique
+
+
 from math import sin, cos, radians, pi as M_PI
 
-from PyQt5 import QtCore
-from PyQt5 import QtGui
-from eddy.core.datatypes.common import IntEnum_
-
+from PyQt5 import (
+    QtCore,
+    QtGui
+)
 from eddy.core.functions.geometry import createArea
-from eddy.core.functions.misc import rstrip
 from eddy.core.items.edges.common.base import AbstractEdge
-from eddy.core.regex import RE_CAMEL_SPACE
+
 # noinspection PyUnresolvedReferences
 from eddy.plugins.blackbird.datatypes import Item
 
@@ -262,8 +262,10 @@ class ForeignKeyEdge(AbstractEdge):
 
         if visible:
             headBrush = QtGui.QBrush(QtGui.QColor(0, 0, 0, 255))
-            headPen = QtGui.QPen(QtGui.QBrush(QtGui.QColor(0, 0, 0, 255)), 1.1, QtCore.Qt.SolidLine, QtCore.Qt.RoundCap, QtCore.Qt.RoundJoin)
-            pathPen = QtGui.QPen(QtGui.QBrush(QtGui.QColor(0, 0, 0, 255)), 1.1, QtCore.Qt.SolidLine, QtCore.Qt.RoundCap, QtCore.Qt.RoundJoin)
+            headPen = QtGui.QPen(QtGui.QBrush(QtGui.QColor(0, 0, 0, 255)), 1.1,
+                                 QtCore.Qt.SolidLine, QtCore.Qt.RoundCap, QtCore.Qt.RoundJoin)
+            pathPen = QtGui.QPen(QtGui.QBrush(QtGui.QColor(0, 0, 0, 255)), 1.1,
+                                 QtCore.Qt.SolidLine, QtCore.Qt.RoundCap, QtCore.Qt.RoundJoin)
 
         self.head.setBrush(headBrush)
         self.head.setPen(headPen)

@@ -31,8 +31,8 @@ from PyQt5 import (
     QtGui,
     QtWidgets
 )
-from eddy.core.common import HasWidgetSystem
 
+from eddy.core.common import HasWidgetSystem
 from eddy.core.datatypes.qt import Font
 from eddy.core.functions.fsystem import fwrite
 from eddy.core.functions.misc import first
@@ -44,6 +44,7 @@ class BlackbirdLogDialog(QtWidgets.QDialog):
     """
     Extends QtWidgets.QDialog providing a view for the Blackbird translator log.
     """
+
     def __init__(self, stream=io.StringIO(), parent=None):
         """
         Initialize the dialog.
@@ -92,6 +93,7 @@ class LogHighlighter(QtGui.QSyntaxHighlighter):
     """
     Extends QtGui.QSyntaxHighlighter providing a syntax highlighter for log messages.
     """
+
     def __init__(self, document):
         """
         Initialize the syntax highlighter.
@@ -134,6 +136,7 @@ class BlackbirdOutputDialog(QtWidgets.QDialog):
     Subclass of QtWidgets.QDialog that shows a side-by-side view
     of the input and output of the schema generation process.
     """
+
     def __init__(self, owl, schema, parsedSchema, parent=None, **kwargs):
         """
         Initialize the dialog.
@@ -242,6 +245,7 @@ class BlackbirdOntologyDialog(QtWidgets.QDialog):
     """
     Subclass of QtWidgets.QDialog that shows the owl ontology used to generate current schema.
     """
+
     def __init__(self, owl, parent=None, **kwargs):
         """
         Initialize the dialog.
@@ -327,6 +331,7 @@ class TableInfoDialog(QtWidgets.QDialog, HasWidgetSystem):
     This class implements the 'TableInfo' dialog.
     """
 
+    # noinspection PyArgumentList
     def __init__(self, relationalTable, parent=None):
         """
         Initialize the TableInfo dialog.
@@ -427,7 +432,7 @@ class TableInfoDialog(QtWidgets.QDialog, HasWidgetSystem):
         item = QtWidgets.QTableWidgetItem(pkName)
         item.setTextAlignment(QtCore.Qt.AlignLeft | QtCore.Qt.AlignVCenter)
         item.setFlags(item.flags() ^ QtCore.Qt.ItemIsEditable)
-        table.setItem(0,0,item)
+        table.setItem(0, 0, item)
         pkColumnNames = primaryKey.columns
         item = QtWidgets.QTableWidgetItem(','.join(pkColumnNames))
         item.setTextAlignment(QtCore.Qt.AlignLeft | QtCore.Qt.AlignVCenter)
@@ -459,7 +464,7 @@ class TableInfoDialog(QtWidgets.QDialog, HasWidgetSystem):
         header = table.verticalHeader()
         header.setSectionResizeMode(QtWidgets.QHeaderView.Fixed)
 
-        for row,unique in enumerate(uniques):
+        for row, unique in enumerate(uniques):
             uniqueName = unique.name
             item = QtWidgets.QTableWidgetItem(uniqueName)
             item.setTextAlignment(QtCore.Qt.AlignLeft | QtCore.Qt.AlignVCenter)
@@ -482,7 +487,7 @@ class TableInfoDialog(QtWidgets.QDialog, HasWidgetSystem):
         #################################
 
         table = QtWidgets.QTableWidget(len(foreignKeys), 3, self, objectName='fk_table')
-        table.setHorizontalHeaderLabels(['Name','Referenced Table', 'Columns'])
+        table.setHorizontalHeaderLabels(['Name', 'Referenced Table', 'Columns'])
         table.setFont(Font('Roboto', 12))
         table.setSelectionMode(QtWidgets.QAbstractItemView.NoSelection)
         table.setFocusPolicy(QtCore.Qt.NoFocus)
@@ -510,7 +515,7 @@ class TableInfoDialog(QtWidgets.QDialog, HasWidgetSystem):
             table.setItem(row, 1, item)
             srcColumnNames = ','.join(fk.srcColumns)
             tgtColumnNames = ','.join(fk.tgtColumns)
-            columnsString = '({})-->({})'.format(srcColumnNames,tgtColumnNames)
+            columnsString = '({})-->({})'.format(srcColumnNames, tgtColumnNames)
             item = QtWidgets.QTableWidgetItem(columnsString)
             item.setTextAlignment(QtCore.Qt.AlignLeft | QtCore.Qt.AlignVCenter)
             item.setFlags(item.flags() ^ QtCore.Qt.ItemIsEditable)
@@ -521,7 +526,6 @@ class TableInfoDialog(QtWidgets.QDialog, HasWidgetSystem):
         widget = QtWidgets.QWidget(objectName='fk_widget')
         widget.setLayout(layout)
         self.addWidget(widget)
-
 
         #############################################
         # CONFIRMATION BOX
@@ -577,51 +581,4 @@ class TableInfoDialog(QtWidgets.QDialog, HasWidgetSystem):
         """
         Executed when the dialog is accepted.
         """
-        #############################################
-        # PLUGINS TAB
-        #################################
-        '''
-        plugins_to_uninstall = [plugin for plugin, checkbox in self.uninstall.items() if checkbox.isChecked()]
-        if plugins_to_uninstall:
-            plugins_to_uninstall_fmt = []
-            for p in plugins_to_uninstall:
-                plugins_to_uninstall_fmt.append('&nbsp;&nbsp;&nbsp;&nbsp;- {0} v{1}'.format(p.name(), p.version()))
-            msgbox = QtWidgets.QMessageBox(self)
-            msgbox.setIconPixmap(QtGui.QIcon(':/icons/48/ic_question_outline_black').pixmap(48))
-            msgbox.setInformativeText('<b>NOTE: This action is not reversible!</b>')
-            msgbox.setStandardButtons(QtWidgets.QMessageBox.No | QtWidgets.QMessageBox.Yes)
-            msgbox.setWindowIcon(QtGui.QIcon(':/icons/128/ic_eddy'))
-            msgbox.setWindowTitle('Are you sure?')
-            msgbox.setText(textwrap.dedent("""You marked the following plugins for uninstall:<br/><br/>
-            {0}<br/><br/>Are you sure you want to continue?""".format('<br/>'.join(plugins_to_uninstall_fmt))))
-            msgbox.exec_()
-            if msgbox.result() == QtWidgets.QMessageBox.No:
-                return
-
-        for plugin in plugins_to_uninstall:
-            self.session.pmanager.uninstall(plugin)
-
-        settings = QtCore.QSettings(ORGANIZATION, APPNAME)
-        '''
-        #############################################
-        # EXPORT TAB
-        #################################
-        '''
-        for axiom, checkbox in self.checks.items():
-            settings.setValue('export/axiom/{0}'.format(axiom.value), checkbox.isChecked())
-        '''
-        #############################################
-        # GENERAL TAB
-        #################################
-        '''
-        settings.setValue('diagram/size', self.widget('diagram_size_field').value())
-        settings.setValue('update/channel', self.widget('update_channel_switch').currentText())
-        settings.setValue('update/check_on_startup', self.widget('update_startup_checkbox').isChecked())
-        '''
-        #############################################
-        # SAVE & EXIT
-        #################################
-
-        #settings.sync()
-
         super().accept()

@@ -23,10 +23,9 @@
 ##########################################################################
 
 
+import urllib
 from enum import unique
 from json import JSONEncoder
-import urllib
-from pprint import _safe_key
 
 from PyQt5 import (
     QtCore,
@@ -46,12 +45,12 @@ LOGGER = getLogger()
 class Resources(Enum_):
     Endpoint = 'http://localhost:8080/bbe'
     Schema = '{}/schema'.format(Endpoint)
-    SchemaByName = '{}/{}'.format(Schema,'{}')
+    SchemaByName = '{}/{}'.format(Schema, '{}')
     SchemaHistoryByName = '{}/history'.format(SchemaByName)
     SchemaApplyActionByName = '{}/action'.format(SchemaByName)
     SchemaUndoByName = '{}/undo'.format(SchemaApplyActionByName)
     SchemaTables = '{}/tables'.format(SchemaByName, '{}')
-    SchemaSingleTable = '{}/table/{}'.format(SchemaByName,'{}')
+    SchemaSingleTable = '{}/table/{}'.format(SchemaByName, '{}')
     SchemaSingleTableActions = '{}/actions'.format(SchemaSingleTable)
 
 
@@ -139,12 +138,12 @@ class NetworkManager(QtNetwork.QNetworkAccessManager):
         if not action:
             raise BlackbirdRequestError('Action must not be empty')
         actionJsonStr = RelationalTableActionDecoder().encode(action)
-        encodedSchemaName = self.encodeUrl(schemaName,'')
+        encodedSchemaName = self.encodeUrl(schemaName, '')
         url = QtCore.QUrl(Resources.SchemaApplyActionByName.value.format(encodedSchemaName))
         request = QtNetwork.QNetworkRequest(url)
         request.setHeader(QtNetwork.QNetworkRequest.ContentTypeHeader, 'application/json;charset=utf-8')
-        byteContent = bytes(actionJsonStr,encoding='utf8')
-        reply = self.put(request,byteContent)
+        byteContent = bytes(actionJsonStr, encoding='utf8')
+        reply = self.put(request, byteContent)
         return reply
 
     def putUndoToSchema(self, schemaName):
@@ -160,7 +159,7 @@ class NetworkManager(QtNetwork.QNetworkAccessManager):
         url = QtCore.QUrl(Resources.SchemaUndoByName.value.format(encodedSchemaName))
         request = QtNetwork.QNetworkRequest(url)
         request.setHeader(QtNetwork.QNetworkRequest.ContentTypeHeader, 'application/json')
-        reply = self.put(request,bytes(emptyJsonStr,encoding='utf8'))
+        reply = self.put(request, bytes(emptyJsonStr, encoding='utf8'))
         return reply
 
     def getTableNames(self, schemaName):
@@ -208,7 +207,7 @@ class NetworkManager(QtNetwork.QNetworkAccessManager):
         reply = self.get(request)
         return reply
 
-    def encodeUrl(self, url,safe):
+    def encodeUrl(self, url, safe):
         return urllib.parse.quote(url, safe)
 
 
@@ -218,12 +217,11 @@ class RelationalTableActionDecoder(JSONEncoder):
         if isinstance(o, RelationalTableAction):
             return o.__dict__
         else:
-            return JSONEncoder.default(self,o)
+            return JSONEncoder.default(self, o)
+
 
 class BlackbirdRequestError(Exception):
     """
     Raised when an error occurs during a network request.
     """
     pass
-
-

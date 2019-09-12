@@ -1,32 +1,57 @@
-from abc import ABCMeta, abstractmethod
+# -*- coding: utf-8 -*-
 
-from PyQt5 import QtWidgets, QtCore
-from PyQt5.QtCore import  pyqtSlot
+##########################################################################
+#                                                                        #
+#  Blackbird: An ontology to relational schema translator                #
+#  Copyright (C) 2019 OBDA Systems                                       #
+#                                                                        #
+#  ####################################################################  #
+#                                                                        #
+#  This program is free software: you can redistribute it and/or modify  #
+#  it under the terms of the GNU General Public License as published by  #
+#  the Free Software Foundation, either version 3 of the License, or     #
+#  (at your option) any later version.                                   #
+#                                                                        #
+#  This program is distributed in the hope that it will be useful,       #
+#  but WITHOUT ANY WARRANTY; without even the implied warranty of        #
+#  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the          #
+#  GNU General Public License for more details.                          #
+#                                                                        #
+#  You should have received a copy of the GNU General Public License     #
+#  along with this program. If not, see <http://www.gnu.org/licenses/>.  #
+#                                                                        #
+##########################################################################
+
+
+from PyQt5 import (
+    QtCore,
+    QtWidgets
+)
+
 from eddy.core.datatypes.qt import Font
 from eddy.core.functions.misc import clamp
 from eddy.core.functions.signals import connect
 
 # noinspection PyUnresolvedReferences
+from eddy.plugins.blackbird.dialogs import BlackbirdOutputDialog
+# noinspection PyUnresolvedReferences
+from eddy.plugins.blackbird.schema import ForeignKeyConstraint
+# noinspection PyUnresolvedReferences
 from eddy.plugins.blackbird.schema import RelationalSchema
 # noinspection PyUnresolvedReferences
 from eddy.plugins.blackbird.schema import RelationalTable
 # noinspection PyUnresolvedReferences
-from eddy.plugins.blackbird.schema import ForeignKeyConstraint
-# noinspection PyUnresolvedReferences
 from eddy.plugins.blackbird.schema import RelationalTableAction
 # noinspection PyUnresolvedReferences
-from eddy.plugins.blackbird.widgets.Info import BBAbstractInfo, BBHeader, BBKey, BBInteger, BBString
+from eddy.plugins.blackbird.widgets.info import BBAbstractInfo, BBHeader, BBKey, BBInteger, BBString
 # noinspection PyUnresolvedReferences
-from eddy.plugins.blackbird.widgets.Info import BBButton
-# noinspection PyUnresolvedReferences
-from eddy.plugins.blackbird.dialogs import BlackbirdOutputDialog
+from eddy.plugins.blackbird.widgets.info import BBButton
 
 
 class BBActionWidget(QtWidgets.QScrollArea):
     """
     This class implements the action information box widget.
     """
-
     # segnale emesso se schiaccio pulsante corrispondente ad action su schema
     sgnActionButtonClicked = QtCore.pyqtSignal(RelationalSchema, RelationalTableAction)
     # segnale emesso se schiaccio pulsante corrispondente ad undo
@@ -47,11 +72,11 @@ class BBActionWidget(QtWidgets.QScrollArea):
         self.stacked.setContentsMargins(0, 0, 0, 0)
         self.infoEmpty = QtWidgets.QWidget(self.stacked)
 
-        #self.actionInfo = ActionInfo(plugin.session,self.stacked,self.plugin.schema)
-        self.actionInfo = ActionInfo(plugin.session,self.stacked)
+        # self.actionInfo = ActionInfo(plugin.session,self.stacked,self.plugin.schema)
+        self.actionInfo = ActionInfo(plugin.session, self.stacked)
         connect(self.actionInfo.sgnActionButtonClicked, self.doApplyAction)
         connect(self.actionInfo.sgnUndoButtonClicked, self.doUndoAction)
-        connect(plugin.sgnSchemaChanged,self.onSchemaChanged)
+        connect(plugin.sgnSchemaChanged, self.onSchemaChanged)
         connect(plugin.sgnUndoActionCorrectlyFinalized, self.onActionCorrectlyApplied)
 
         self.stacked.addWidget(self.actionInfo)
@@ -125,6 +150,7 @@ class BBActionWidget(QtWidgets.QScrollArea):
 
         connect(self.sgnActionButtonClicked, plugin.onSchemaActionApplied)
         connect(self.sgnUndoButtonClicked, plugin.onSchemaActionUndo)
+
     #############################################
     #   PROPERTIES
     #################################
@@ -197,7 +223,7 @@ class BBActionWidget(QtWidgets.QScrollArea):
         """
         if infoItem:
             if isinstance(infoItem, list):
-                if len(infoItem)>0:
+                if len(infoItem) > 0:
                     if isinstance(infoItem[0], RelationalTableAction):
                         show = self.actionInfo
             if isinstance(infoItem, RelationalTable):
@@ -209,7 +235,6 @@ class BBActionWidget(QtWidgets.QScrollArea):
             if prev is not show:
                 scrollbar = self.verticalScrollBar()
                 scrollbar.setValue(0)
-
 
     @QtCore.pyqtSlot(RelationalSchema)
     def onSchemaChanged(self, schema):
@@ -232,16 +257,16 @@ class BBActionWidget(QtWidgets.QScrollArea):
 
     @QtCore.pyqtSlot(RelationalTableAction)
     def doApplyAction(self, action):
-        self.sgnActionButtonClicked.emit(self.schema,action)
+        self.sgnActionButtonClicked.emit(self.schema, action)
 
     @QtCore.pyqtSlot()
     def doUndoAction(self):
         self.sgnUndoButtonClicked.emit()
 
+
 #############################################
 #   INFO WIDGETS
 #################################
-
 
 class ActionInfo(BBAbstractInfo):
     allSchemaDomainLabel = "whole schema"
@@ -251,8 +276,8 @@ class ActionInfo(BBAbstractInfo):
     # segnale emesso se schiaccio pulsante corrispondente ad aundo
     sgnUndoButtonClicked = QtCore.pyqtSignal()
 
-    def __init__(self,session,parent=None, schema=None):
-        super().__init__(session,parent)
+    def __init__(self, session, parent=None, schema=None):
+        super().__init__(session, parent)
         self.widgets = []
         self.layouts = []
         self.mainLayout = QtWidgets.QVBoxLayout(self)
@@ -266,20 +291,20 @@ class ActionInfo(BBAbstractInfo):
         return self._actionApplied
 
     @actionApplied.setter
-    def actionApplied(self,v):
+    def actionApplied(self, v):
         self._actionApplied = v
 
     #############################################
     #   SLOTS
     #################################
-    @pyqtSlot(RelationalTableAction)
-    def applyAction(self,action):
+    @QtCore.pyqtSlot(RelationalTableAction)
+    def applyAction(self, action):
         # dialog = BlackbirdOutputDialog('ACTION CLICKED', '{}'.format(action), self.session)
         # dialog.show()
         # dialog.raise_()
         self.sgnActionButtonClicked.emit(action)
 
-    @pyqtSlot()
+    @QtCore.pyqtSlot()
     def undoAction(self):
         # dialog = BlackbirdOutputDialog('ACTION CLICKED', '{}'.format(action), self.session)
         # dialog.show()
@@ -326,7 +351,6 @@ class ActionInfo(BBAbstractInfo):
             # self.layouts.append(emptyLayout)
             # self.mainLayout.addLayout(emptyLayout)
 
-
         domainHeader = BBHeader('Actions applicable on {}'.format(domain))
         domainHeader.setFont(Font('Roboto', 12))
         # emptyKey = BBKey('')
@@ -343,7 +367,7 @@ class ActionInfo(BBAbstractInfo):
         # self.layouts.append(emptyLayout)
         # self.mainLayout.addLayout(emptyLayout)
 
-        if len(actions)>0:
+        if len(actions) > 0:
             for index, action in enumerate(actions):
                 subj = action.actionSubjectTableName
                 type = action.actionType
@@ -383,9 +407,9 @@ class ActionInfo(BBAbstractInfo):
                 objStr = ", ".join(map(str, objs))
                 objsField.setValue(objStr)
 
-                button = ActionButton(action,'Apply {}'.format(index), self)
+                button = ActionButton(action, 'Apply {}'.format(index), self)
                 button.setFont(Font('Roboto', 12))
-                connect(button.sgnActionButtonClicked,self.applyAction)
+                connect(button.sgnActionButtonClicked, self.applyAction)
 
                 layout = QtWidgets.QFormLayout()
                 layout.setSpacing(0)
@@ -415,11 +439,13 @@ class ActionInfo(BBAbstractInfo):
 #############################################
 #   COMPONENTS
 #################################
+
 class ActionButton(QtWidgets.QPushButton):
     """
     This class implements the button to apply an action to a schema
     """
     sgnActionButtonClicked = QtCore.pyqtSignal(RelationalTableAction)
+
     def __init__(self, action, label, actionInfo):
         """
         Initialize the button.
@@ -435,6 +461,7 @@ class ActionButton(QtWidgets.QPushButton):
 
     def applyAction(self):
         self.sgnActionButtonClicked.emit(self.action)
+
 
 class UndoButton(QtWidgets.QPushButton):
     """

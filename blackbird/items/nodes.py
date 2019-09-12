@@ -31,13 +31,17 @@
 #     - Marco Console <console@dis.uniroma1.it>                          #
 #                                                                        #
 ##########################################################################
+
+
 from enum import unique
 
-from PyQt5 import QtCore
-from PyQt5 import QtGui
-from eddy.core.datatypes.common import Enum_
+from PyQt5 import (
+    QtCore,
+    QtGui
+)
 
-from eddy.core.datatypes.graphol import  Special
+from eddy.core.datatypes.common import Enum_
+from eddy.core.datatypes.graphol import Special
 from eddy.core.functions.misc import snapF
 from eddy.core.items.common import Polygon
 from eddy.core.items.nodes.common.base import AbstractResizableNode
@@ -63,7 +67,8 @@ class TableNode(AbstractResizableNode):
     This class implements the 'Concept' node.
     """
     DefaultBrush = QtGui.QBrush(QtGui.QColor(252, 252, 252, 255))
-    DefaultPen = QtGui.QPen(QtGui.QBrush(QtGui.QColor(0, 0, 0, 255)), 1.0, QtCore.Qt.SolidLine, QtCore.Qt.RoundCap, QtCore.Qt.RoundJoin)
+    DefaultPen = QtGui.QPen(QtGui.QBrush(QtGui.QColor(0, 0, 0, 255)), 1.0,
+                            QtCore.Qt.SolidLine, QtCore.Qt.RoundCap, QtCore.Qt.RoundJoin)
     Identities = {Identity.Table}
     Type = Item.TableNode
 
@@ -92,7 +97,6 @@ class TableNode(AbstractResizableNode):
         self.label.setAlignment(QtCore.Qt.AlignCenter)
         self.updateNode()
         self.updateTextPos()
-
 
     #############################################
     #   INTERFACE
@@ -127,8 +131,6 @@ class TableNode(AbstractResizableNode):
         Create a copy of the current item.
         :type diagram: Diagram
         """
-        #print('copy >> self',self)
-        #print('copy >> type(self)', type(self))
         node = diagram.factory.create(self.type(), **{
             'id': self.id,
             'brush': self.brush(),
@@ -139,7 +141,6 @@ class TableNode(AbstractResizableNode):
         node.setPos(self.pos())
         node.setText(self.text())
         node.setTextPos(node.mapFromScene(self.mapToScene(self.textPos())))
-        #print('copy END >> self', self)
         return node
 
     def height(self):

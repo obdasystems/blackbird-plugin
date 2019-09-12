@@ -1,17 +1,38 @@
-import os
+# -*- coding: utf-8 -*-
+
+##########################################################################
+#                                                                        #
+#  Blackbird: An ontology to relational schema translator                #
+#  Copyright (C) 2019 OBDA Systems                                       #
+#                                                                        #
+#  ####################################################################  #
+#                                                                        #
+#  This program is free software: you can redistribute it and/or modify  #
+#  it under the terms of the GNU General Public License as published by  #
+#  the Free Software Foundation, either version 3 of the License, or     #
+#  (at your option) any later version.                                   #
+#                                                                        #
+#  This program is distributed in the hope that it will be useful,       #
+#  but WITHOUT ANY WARRANTY; without even the implied warranty of        #
+#  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the          #
+#  GNU General Public License for more details.                          #
+#                                                                        #
+#  You should have received a copy of the GNU General Public License     #
+#  along with this program. If not, see <http://www.gnu.org/licenses/>.  #
+#                                                                        #
+##########################################################################
+
 
 from PyQt5 import QtXml
 
 from eddy.core.exporters.common import AbstractProjectExporter
-from eddy.core.functions.misc import postfix
-from eddy.core.functions.fsystem import fwrite, mkdir
 from eddy.core.output import getLogger
 from eddy.core.project import Project
 
-from blackbird.datatypes.blackbird import Item
 from blackbird.datatypes.system import File
 
 LOGGER = getLogger()
+
 
 class BlackBirdProjectExporter(AbstractProjectExporter):
     """
@@ -37,10 +58,10 @@ class BlackBirdProjectExporter(AbstractProjectExporter):
         super().__init__(project, session)
 
         if schema and diagrams:
-            self.schema=schema
+            self.schema = schema
             self.diagrams = diagrams
         else:
-            #TODO extract schema and diagrams from project
+            # TODO extract schema and diagrams from project
             LOGGER.debug("At least one between schema or diagram list is None")
             if not schema:
                 LOGGER.debug("Input schema is None")
@@ -50,7 +71,7 @@ class BlackBirdProjectExporter(AbstractProjectExporter):
         if version:
             self.version = version
         else:
-            #TODO extract version (From schema? From input utente? Embedded counter based current project structure?)
+            # TODO extract version (From schema? From input utente? Embedded counter based current project structure?)
             LOGGER.debug("Input version is None")
             self.version = 'Version String'
 
@@ -71,7 +92,7 @@ class BlackBirdProjectExporter(AbstractProjectExporter):
         self.document.appendChild(blackbird)
 
         projectName = self.document.createElement('name')
-        projectName.appendChild(self.document.createTextNode('PROJECT NAME'))#TODO Modifica
+        projectName.appendChild(self.document.createTextNode('PROJECT NAME'))  # TODO Modifica
         projectVersion = self.document.createElement('version')
         projectVersion.appendChild(self.document.createTextNode(self.version))
 
@@ -236,8 +257,6 @@ class BlackBirdProjectExporter(AbstractProjectExporter):
 
         self.document.documentElement().appendChild(section)
 
-
-
     #############################################
     #   INTERFACE
     #################################
@@ -256,6 +275,6 @@ class BlackBirdProjectExporter(AbstractProjectExporter):
         """
         self.createDomDocument()
         self.createSchema()
-        #self.createPredicatesMeta()
-        #self.createDiagrams()
-        #self.createProjectFile()
+        # self.createPredicatesMeta()
+        # self.createDiagrams()
+        # self.createProjectFile()

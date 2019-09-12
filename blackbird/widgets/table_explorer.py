@@ -1,23 +1,50 @@
-from PyQt5 import QtWidgets, QtGui, QtCore
+# -*- coding: utf-8 -*-
 
+##########################################################################
+#                                                                        #
+#  Blackbird: An ontology to relational schema translator                #
+#  Copyright (C) 2019 OBDA Systems                                       #
+#                                                                        #
+#  ####################################################################  #
+#                                                                        #
+#  This program is free software: you can redistribute it and/or modify  #
+#  it under the terms of the GNU General Public License as published by  #
+#  the Free Software Foundation, either version 3 of the License, or     #
+#  (at your option) any later version.                                   #
+#                                                                        #
+#  This program is distributed in the hope that it will be useful,       #
+#  but WITHOUT ANY WARRANTY; without even the implied warranty of        #
+#  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the          #
+#  GNU General Public License for more details.                          #
+#                                                                        #
+#  You should have received a copy of the GNU General Public License     #
+#  along with this program. If not, see <http://www.gnu.org/licenses/>.  #
+#                                                                        #
+##########################################################################
+
+
+from PyQt5 import (
+    QtCore,
+    QtGui,
+    QtWidgets
+)
 
 from eddy.core.datatypes.qt import Font
 from eddy.core.datatypes.system import File
-from eddy.core.functions.misc import first, rstrip
+from eddy.core.functions.misc import rstrip
 from eddy.core.functions.signals import connect
-from eddy.core.items.nodes.common.base import AbstractNode
 from eddy.ui.fields import StringField
 
+# noinspection PyUnresolvedReferences
+from eddy.plugins.blackbird.diagram import BlackBirdDiagram
+# noinspection PyUnresolvedReferences
+from eddy.plugins.blackbird.items.nodes import TableNode
 # noinspection PyUnresolvedReferences
 from eddy.plugins.blackbird.schema import EntityType
 # noinspection PyUnresolvedReferences
 from eddy.plugins.blackbird.schema import RelationalSchema
 # noinspection PyUnresolvedReferences
 from eddy.plugins.blackbird.schema import RelationalTable
-# noinspection PyUnresolvedReferences
-from eddy.plugins.blackbird.items.nodes import TableNode
-# noinspection PyUnresolvedReferences
-from eddy.plugins.blackbird.diagram import BlackBirdDiagram
 
 
 class TableExplorerWidget(QtWidgets.QWidget):
@@ -32,7 +59,6 @@ class TableExplorerWidget(QtWidgets.QWidget):
     sgnRelationalTableItemActivated = QtCore.pyqtSignal(RelationalTable)
     sgnRelationalTableItemDoubleClicked = QtCore.pyqtSignal(RelationalTable)
     sgnRelationalTableItemRightClicked = QtCore.pyqtSignal(RelationalTable)
-
 
     def __init__(self, plugin):
         super().__init__(plugin.session)
@@ -115,7 +141,6 @@ class TableExplorerWidget(QtWidgets.QWidget):
         """
         self.model.clear()
 
-
     @QtCore.pyqtSlot(BlackBirdDiagram, TableNode)
     def doAddNode(self, diagram, node):
         """
@@ -146,14 +171,6 @@ class TableExplorerWidget(QtWidgets.QWidget):
         :type diagram: QGraphicsScene
         :type node: AbstractItem
         """
-        # if node.type() in self.items:
-        #     parent = self.parentFor(node)
-        #     if parent:
-        #         child = self.childFor(parent, diagram, node)
-        #         if child:
-        #             parent.removeRow(child.index().row())
-        #         if not parent.rowCount():
-        #             self.model.removeRow(parent.index().row())
         pass
 
     @QtCore.pyqtSlot(str)
@@ -200,7 +217,7 @@ class TableExplorerWidget(QtWidgets.QWidget):
                 if isinstance(item.data(), RelationalTable):
                     self.sgnRelationalTableItemActivated.emit(item.data())
                 elif isinstance(item.data(), TableNode):
-                    #self.sgnGraphicalNodeItemActivated.emit(item.data())
+                    # self.sgnGraphicalNodeItemActivated.emit(item.data())
                     self.sgnRelationalTableItemActivated.emit(item.data().relationalTable)
                 # KEEP FOCUS ON THE TREE VIEW UNLESS SHIFT IS PRESSED
                 if QtWidgets.QApplication.queryKeyboardModifiers() & QtCore.Qt.SHIFT:
@@ -229,7 +246,6 @@ class TableExplorerWidget(QtWidgets.QWidget):
                     self.sgnGraphicalNodeItemDoubleClicked.emit(item.data())
                     self.sgnRelationalTableItemDoubleClicked.emit(item.data().relationalTable)
 
-
     @QtCore.pyqtSlot('QModelIndex')
     def onItemPressed(self, index):
         """
@@ -240,10 +256,10 @@ class TableExplorerWidget(QtWidgets.QWidget):
         if QtWidgets.QApplication.mouseButtons() & QtCore.Qt.LeftButton:
             item = self.model.itemFromIndex(self.proxy.mapToSource(index))
             if item and item.data():
-                if isinstance(item.data(),RelationalTable):
+                if isinstance(item.data(), RelationalTable):
                     self.sgnRelationalTableItemClicked.emit(item.data())
-                elif isinstance(item.data(),TableNode):
-                    #self.sgnGraphicalNodeItemClicked.emit(item.data())
+                elif isinstance(item.data(), TableNode):
+                    # self.sgnGraphicalNodeItemClicked.emit(item.data())
                     self.sgnRelationalTableItemClicked.emit(item.data().relationalTable)
 
     #############################################
@@ -264,7 +280,6 @@ class TableExplorerWidget(QtWidgets.QWidget):
         if entityType is EntityType.DataProperty:
             return self.dataPropIcon
 
-
     def parentFor(self, node):
         """
         Search the parent element of the given node.
@@ -278,20 +293,6 @@ class TableExplorerWidget(QtWidgets.QWidget):
                     return i
         return None
 
-    # def childFor(self, parent, diagram, node):
-    #     """
-    #     Search the item representing this node among parent children.
-    #     :type parent: QtGui.QStandardItem
-    #     :type diagram: Diagram
-    #     :type node: AbstractNode
-    #     """
-    #     key = self.childKey(diagram, node)
-    #     for i in range(parent.rowCount()):
-    #         child = parent.child(i)
-    #         if child.text() == key:
-    #             return child
-    #     return None
-
     @staticmethod
     def childKey(diagram, node):
         """
@@ -302,7 +303,6 @@ class TableExplorerWidget(QtWidgets.QWidget):
         """
         diagram = rstrip(diagram.name, File.Graphol.extension)
         return '[{0} - {1}] ({2})'.format(diagram, node.id, node.relationalTable.name)
-
 
     @staticmethod
     def parentKey(node):
@@ -324,12 +324,12 @@ class TableExplorerWidget(QtWidgets.QWidget):
         return QtCore.QSize(216, 266)
 
 
-
 class TableExplorerView(QtWidgets.QTreeView):
     """
     This class implements the schema's tables explorer tree view.
     """
-    def __init__(self,widget):
+
+    def __init__(self, widget):
         """
         Initialize the ontology explorer view.
         :type widget: TableExplorerWidget
@@ -420,11 +420,13 @@ class TableExplorerView(QtWidgets.QTreeView):
         """
         return max(super().sizeHintForColumn(column), self.viewport().width())
 
+
 class TableExplorerFilterProxyModel(QtCore.QSortFilterProxyModel):
     """
     Extends QSortFilterProxyModel adding filtering functionalities for the explorer widget
     """
-    def __init__(self,parent=None):
+
+    def __init__(self, parent=None):
         super().__init__(parent)
         self.items = {
             EntityType.Class,
@@ -443,5 +445,3 @@ class TableExplorerFilterProxyModel(QtCore.QSortFilterProxyModel):
     @property
     def session(self):
         return self.parent().session
-
-

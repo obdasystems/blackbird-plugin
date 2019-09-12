@@ -1,36 +1,65 @@
+# -*- coding: utf-8 -*-
+
+##########################################################################
+#                                                                        #
+#  Blackbird: An ontology to relational schema translator                #
+#  Copyright (C) 2019 OBDA Systems                                       #
+#                                                                        #
+#  ####################################################################  #
+#                                                                        #
+#  This program is free software: you can redistribute it and/or modify  #
+#  it under the terms of the GNU General Public License as published by  #
+#  the Free Software Foundation, either version 3 of the License, or     #
+#  (at your option) any later version.                                   #
+#                                                                        #
+#  This program is distributed in the hope that it will be useful,       #
+#  but WITHOUT ANY WARRANTY; without even the implied warranty of        #
+#  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the          #
+#  GNU General Public License for more details.                          #
+#                                                                        #
+#  You should have received a copy of the GNU General Public License     #
+#  along with this program. If not, see <http://www.gnu.org/licenses/>.  #
+#                                                                        #
+##########################################################################
+
+
 from abc import ABCMeta, abstractmethod
 
-from PyQt5 import QtWidgets, QtCore, QtGui
-from PyQt5.QtCore import Qt
-from PyQt5.QtGui import QColor
-from PyQt5.QtWidgets import QTableWidget, QTableWidgetItem, QHeaderView
+from PyQt5 import (
+    QtCore,
+    QtGui,
+    QtWidgets
+)
+
 from eddy.core.datatypes.qt import Font
 from eddy.core.functions.misc import clamp, first
 from eddy.core.functions.signals import connect, disconnect
 from eddy.core.output import getLogger
-
 from eddy.ui.fields import IntegerField, StringField, ComboBox
+
 # noinspection PyUnresolvedReferences
-from eddy.plugins.blackbird.schema import RelationalTable
+from eddy.plugins.blackbird.diagram import BlackBirdDiagram
+# noinspection PyUnresolvedReferences
+from eddy.plugins.blackbird.items.edges import ForeignKeyEdge
+# noinspection PyUnresolvedReferences
+from eddy.plugins.blackbird.items.nodes import TableNode
 # noinspection PyUnresolvedReferences
 from eddy.plugins.blackbird.schema import ForeignKeyConstraint
 # noinspection PyUnresolvedReferences
 from eddy.plugins.blackbird.schema import RelationalSchema
 # noinspection PyUnresolvedReferences
-from eddy.plugins.blackbird.diagram import BlackBirdDiagram
+from eddy.plugins.blackbird.schema import RelationalTable
 # noinspection PyUnresolvedReferences
 from eddy.plugins.blackbird.ui.mdi import BlackBirdMdiSubWindow
-# noinspection PyUnresolvedReferences
-from eddy.plugins.blackbird.items.edges import ForeignKeyEdge
-# noinspection PyUnresolvedReferences
-from eddy.plugins.blackbird.items.nodes import TableNode
 
 LOGGER = getLogger()
+
 
 class BBInfoWidget(QtWidgets.QScrollArea):
     """
     This class implements the information box widget.
     """
+
     def __init__(self, plugin):
         """
         Initialize the info box.
@@ -45,16 +74,16 @@ class BBInfoWidget(QtWidgets.QScrollArea):
         self.stacked.setContentsMargins(0, 0, 0, 0)
         self.infoEmpty = QtWidgets.QWidget(self.stacked)
 
-        #self.schemaInfo = SchemaInfo(self)
-        self.schemaInfo = SchemaInfo(plugin.session,self.stacked)
-        connect(plugin.sgnSchemaChanged,self.onSchemaChanged)
-        connect(plugin.sgnFocusTable,self.doSelectTable)
+        # self.schemaInfo = SchemaInfo(self)
+        self.schemaInfo = SchemaInfo(plugin.session, self.stacked)
+        connect(plugin.sgnSchemaChanged, self.onSchemaChanged)
+        connect(plugin.sgnFocusTable, self.doSelectTable)
         connect(plugin.sgnFocusForeignKey, self.doSelectForeignKey)
 
-        #self.tableInfo = TableInfo(plugin.session,self.stacked)
+        # self.tableInfo = TableInfo(plugin.session,self.stacked)
         self.tableInfo = SimpleTableInfo(plugin.session, self.stacked)
 
-        self.fkInfo = ForeignKeyInfo(plugin.session,self.stacked)
+        self.fkInfo = ForeignKeyInfo(plugin.session, self.stacked)
 
         self.stacked.addWidget(self.schemaInfo)
         self.stacked.addWidget(self.tableInfo)
@@ -206,20 +235,20 @@ class BBInfoWidget(QtWidgets.QScrollArea):
                 show = self.tableInfo
             elif isinstance(infoItem, ForeignKeyConstraint):
                 show = self.fkInfo
-            elif isinstance(infoItem,BlackBirdDiagram):
-                show = None #TODO RIPARTI DA QUI
+            elif isinstance(infoItem, BlackBirdDiagram):
+                show = None  # TODO RIPARTI DA QUI
                 selected = infoItem.selectedItems()
-                if not selected or len(selected)>1:
+                if not selected or len(selected) > 1:
                     show = self.schemaInfo
-                    show.updateData(len(infoItem.schema.tables),len(infoItem.schema.foreignKeys))
+                    show.updateData(len(infoItem.schema.tables), len(infoItem.schema.foreignKeys))
                 else:
                     diagramItem = first(selected)
-                    #if diagramItem.type() is Item.TableNode:
-                    if isinstance(diagramItem,TableNode):
+                    # if diagramItem.type() is Item.TableNode:
+                    if isinstance(diagramItem, TableNode):
                         show = self.tableInfo
                         show.updateData(diagramItem.relationalTable)
-                    #elif diagramItem.type() is Item.ForeignkeyEdge:
-                    elif isinstance(diagramItem,ForeignKeyEdge):
+                    # elif diagramItem.type() is Item.ForeignkeyEdge:
+                    elif isinstance(diagramItem, ForeignKeyEdge):
                         show = self.fkInfo
                         show.updateData(diagramItem.foreignKey)
         else:
@@ -244,11 +273,11 @@ class BBInfoWidget(QtWidgets.QScrollArea):
                 # is going out of focus, before connecting new ones.
                 LOGGER.debug('Disconnecting from diagram: %s', self.diagram.name)
                 disconnect(self.diagram.selectionChanged, self.onDiagramSelectionChanged)
-                #disconnect(self.diagram.sgnUpdated, self.onDiagramUpdated)
+                # disconnect(self.diagram.sgnUpdated, self.onDiagramUpdated)
             # Attach the new view/diagram to the info widget.
             LOGGER.debug('Connecting to diagram: %s', subwindow.diagram.name)
             connect(subwindow.diagram.selectionChanged, self.onDiagramSelectionChanged)
-            #connect(subwindow.diagram.sgnUpdated, self.onDiagramUpdated)
+            # connect(subwindow.diagram.sgnUpdated, self.onDiagramUpdated)
             self.setDiagram(subwindow.diagram)
             self.stack(self.diagram)
         else:
@@ -259,9 +288,9 @@ class BBInfoWidget(QtWidgets.QScrollArea):
                 if self.diagram:
                     LOGGER.debug('Disconnecting from diagram: %s', self.diagram.name)
                     disconnect(self.diagram.selectionChanged, self.onDiagramSelectionChanged)
-                    #disconnect(self.diagram.sgnUpdated, self.onDiagramUpdated)
+                    # disconnect(self.diagram.sgnUpdated, self.onDiagramUpdated)
                 self.setDiagram(None)
-                #self.stack(None)
+                # self.stack(None)
 
     @QtCore.pyqtSlot()
     def onDiagramSelectionChanged(self):
@@ -274,7 +303,7 @@ class BBInfoWidget(QtWidgets.QScrollArea):
     def onSchemaChanged(self, schema):
         tables = schema.tables
         foreignKeys = schema.foreignKeys
-        self.schemaInfo.updateData(len(tables),len(foreignKeys))
+        self.schemaInfo.updateData(len(tables), len(foreignKeys))
         self.stack(schema)
 
     @QtCore.pyqtSlot(RelationalTable)
@@ -287,10 +316,10 @@ class BBInfoWidget(QtWidgets.QScrollArea):
         self.fkInfo.updateData(fk)
         self.stack(fk)
 
+
 #############################################
 #   INFO WIDGETS
 #################################
-
 
 class BBAbstractInfo(QtWidgets.QWidget):
     """
@@ -331,9 +360,10 @@ class BBAbstractInfo(QtWidgets.QWidget):
         """
         pass
 
+
 class SchemaInfo(BBAbstractInfo):
-    def __init__(self,session,parent=None):
-        super().__init__(session,parent)
+    def __init__(self, session, parent=None):
+        super().__init__(session, parent)
 
         self.header = BBHeader('Schema Info')
         self.header.setFont(Font('Roboto', 12))
@@ -352,8 +382,8 @@ class SchemaInfo(BBAbstractInfo):
 
         self.layout = QtWidgets.QFormLayout()
         self.layout.setSpacing(0)
-        self.layout.addRow(self.tableCountKey,self.tableCountField)
-        self.layout.addRow(self.fkCountKey,self.fkCountField)
+        self.layout.addRow(self.tableCountKey, self.tableCountField)
+        self.layout.addRow(self.fkCountKey, self.fkCountField)
 
         self.mainLayout = QtWidgets.QVBoxLayout(self)
         self.mainLayout.setAlignment(QtCore.Qt.AlignTop)
@@ -375,18 +405,19 @@ class SchemaInfo(BBAbstractInfo):
         self.tableCountField.setValue(str(tableCount))
         self.fkCountField.setValue(str(fkCount))
 
+
 class SimpleTableInfo(BBAbstractInfo):
-    def __init__(self,session,parent=None):
-        super().__init__(session,parent)
+    def __init__(self, session, parent=None):
+        super().__init__(session, parent)
 
         self.header = BBHeader('')
         self.header.setFont(Font('Roboto', 12))
 
-        self.tableWidget = QTableWidget(self)
+        self.tableWidget = QtWidgets.QTableWidget(self)
         self.tableWidget.setColumnCount(2)
         self.tableWidget.verticalHeader().setVisible(False)
         self.tableWidget.horizontalHeader().setVisible(False)
-        #self.tableWidget.resizeColumnsToContents()
+        # self.tableWidget.resizeColumnsToContents()
 
         self.mainLayout = QtWidgets.QVBoxLayout(self)
         self.mainLayout.setAlignment(QtCore.Qt.AlignTop)
@@ -411,7 +442,7 @@ class SimpleTableInfo(BBAbstractInfo):
 
         pkColNames = self.primaryKey.columns
 
-        self.header.setText('TABLE: '+self.tableName)
+        self.header.setText('TABLE: ' + self.tableName)
         self.tableWidget.setColumnCount(2)
         self.tableWidget.setRowCount(len(self.columns))
 
@@ -422,42 +453,41 @@ class SimpleTableInfo(BBAbstractInfo):
             if column.columnName in pkColNames:
                 nameStr = column.columnName
                 typeStr = column.columnType
-                self.tableWidget.setItem(rowIndex, 0, QTableWidgetItem(nameStr))
-                self.tableWidget.setItem(rowIndex, 1, QTableWidgetItem(typeStr))
-                rowIndex +=1
+                self.tableWidget.setItem(rowIndex, 0, QtWidgets.QTableWidgetItem(nameStr))
+                self.tableWidget.setItem(rowIndex, 1, QtWidgets.QTableWidgetItem(typeStr))
+                rowIndex += 1
             else:
                 notPkCols.append(column)
 
         for notPkCol in notPkCols:
             nameStr = notPkCol.columnName
             typeStr = notPkCol.columnType
-            self.tableWidget.setItem(rowIndex, 0, QTableWidgetItem(nameStr))
-            self.tableWidget.setItem(rowIndex, 1, QTableWidgetItem(typeStr))
+            self.tableWidget.setItem(rowIndex, 0, QtWidgets.QTableWidgetItem(nameStr))
+            self.tableWidget.setItem(rowIndex, 1, QtWidgets.QTableWidgetItem(typeStr))
             rowIndex += 1
 
-        #align text
+        # align text
         for row in range(self.tableWidget.rowCount()):
-            nameItem = self.tableWidget.item(row,0)
-            nameItem.setTextAlignment(Qt.AlignLeft)
-            nameItem.setTextAlignment(Qt.AlignVCenter)
-            typeItem = self.tableWidget.item(row,1)
-            typeItem.setTextAlignment(Qt.AlignRight)
-            typeItem.setTextAlignment(Qt.AlignVCenter)
-            if row<len(pkColNames):
-                nameItem.setForeground(QtGui.QBrush(Qt.red))
+            nameItem = self.tableWidget.item(row, 0)
+            nameItem.setTextAlignment(QtCore.Qt.AlignLeft)
+            nameItem.setTextAlignment(QtCore.Qt.AlignVCenter)
+            typeItem = self.tableWidget.item(row, 1)
+            typeItem.setTextAlignment(QtCore.Qt.AlignRight)
+            typeItem.setTextAlignment(QtCore.Qt.AlignVCenter)
+            if row < len(pkColNames):
+                nameItem.setForeground(QtGui.QBrush(QtCore.Qt.red))
             else:
-                nameItem.setForeground(QtGui.QBrush(Qt.black))
-            typeItem.setForeground(QtGui.QBrush(Qt.black))
+                nameItem.setForeground(QtGui.QBrush(QtCore.Qt.black))
+            typeItem.setForeground(QtGui.QBrush(QtCore.Qt.black))
 
-            #nameItem.setBackground(QtGui.QBrush(Qt.black))
-            #typeItem.setBackground(QtGui.QBrush(Qt.black))
+            # nameItem.setBackground(QtGui.QBrush(QtCore.Qt.black))
+            # typeItem.setBackground(QtGui.QBrush(QtCore.Qt.black))
 
-            nameItem.setBackground(QtGui.QBrush(QColor('#BBDEFB')))
-            typeItem.setBackground(QtGui.QBrush(QColor('#E3F2FD')))
+            nameItem.setBackground(QtGui.QBrush(QtGui.QColor('#BBDEFB')))
+            typeItem.setBackground(QtGui.QBrush(QtGui.QColor('#E3F2FD')))
 
             nameItem.setFlags(QtCore.Qt.ItemIsEnabled)
             typeItem.setFlags(QtCore.Qt.ItemIsEnabled)
-
 
         # Remove headers
         self.tableWidget.verticalHeader().setVisible(False)
@@ -466,17 +496,17 @@ class SimpleTableInfo(BBAbstractInfo):
 
         # Do the resize of the columns by content
         self.tableWidget.resizeColumnsToContents()
-        self.tableWidget.horizontalHeader().setSectionResizeMode(QHeaderView.Stretch)
+        self.tableWidget.horizontalHeader().setSectionResizeMode(QtWidgets.QHeaderView.Stretch)
 
 
 class TableInfo(BBAbstractInfo):
-    def __init__(self,session,parent=None):
-        super().__init__(session,parent)
+    def __init__(self, session, parent=None):
+        super().__init__(session, parent)
 
         self.header = BBHeader('')
         self.header.setFont(Font('Roboto', 12))
 
-        self.tableWidget = QTableWidget(self)
+        self.tableWidget = QtWidgets.QTableWidget(self)
         self.tableWidget.setColumnCount(6)
         self.tableWidget.verticalHeader().setVisible(False)
         self.tableWidget.horizontalHeader().setVisible(False)
@@ -551,28 +581,28 @@ class TableInfo(BBAbstractInfo):
 
             fkStr = " - "
             fks = []
-            for k,v in fkIndexToRowIndexes.items():
+            for k, v in fkIndexToRowIndexes.items():
                 if rowIndex in v:
                     fks.append(k)
-            if len(fks)>0:
-                fkIndexes = ",".join(map(str,fks))
+            if len(fks) > 0:
+                fkIndexes = ",".join(map(str, fks))
                 fkStr = "FK {}".format(fkIndexes)
 
             uqStr = " - "
             uqs = []
-            for k,v in uniqueIndexToRowIndexes.items():
+            for k, v in uniqueIndexToRowIndexes.items():
                 if rowIndex in v:
                     uqs.append(k)
-            if len(uqs)>0:
-                uqsIndexes = ",".join(map(str,uqs))
+            if len(uqs) > 0:
+                uqsIndexes = ",".join(map(str, uqs))
                 uqStr = "UQ {}".format(uqsIndexes)
 
-            self.tableWidget.setItem(rowIndex, 0, QTableWidgetItem(pkStr))
-            self.tableWidget.setItem(rowIndex, 1, QTableWidgetItem(fkStr))
-            self.tableWidget.setItem(rowIndex, 2, QTableWidgetItem(uqStr))
-            self.tableWidget.setItem(rowIndex, 3, QTableWidgetItem(nameStr))
-            self.tableWidget.setItem(rowIndex, 4, QTableWidgetItem(typeStr))
-            self.tableWidget.setItem(rowIndex, 5, QTableWidgetItem(nullStr))
+            self.tableWidget.setItem(rowIndex, 0, QtWidgets.QTableWidgetItem(pkStr))
+            self.tableWidget.setItem(rowIndex, 1, QtWidgets.QTableWidgetItem(fkStr))
+            self.tableWidget.setItem(rowIndex, 2, QtWidgets.QTableWidgetItem(uqStr))
+            self.tableWidget.setItem(rowIndex, 3, QtWidgets.QTableWidgetItem(nameStr))
+            self.tableWidget.setItem(rowIndex, 4, QtWidgets.QTableWidgetItem(typeStr))
+            self.tableWidget.setItem(rowIndex, 5, QtWidgets.QTableWidgetItem(nullStr))
 
         # Remove headers
         self.tableWidget.verticalHeader().setVisible(False)
@@ -581,9 +611,10 @@ class TableInfo(BBAbstractInfo):
         # Do the resize of the columns by content
         self.tableWidget.resizeColumnsToContents()
 
+
 class ForeignKeyInfo(BBAbstractInfo):
-    def __init__(self,session,parent=None):
-        super().__init__(session,parent)
+    def __init__(self, session, parent=None):
+        super().__init__(session, parent)
 
         self.header = BBHeader('')
         self.header.setFont(Font('Roboto', 12))
@@ -626,8 +657,8 @@ class ForeignKeyInfo(BBAbstractInfo):
 
         self.layout = QtWidgets.QFormLayout()
         self.layout.setSpacing(0)
-        #self.layout.addRow(self.fkNameKey,self.fkNameField)
-        self.layout.addRow(self.srcTableKey,self.srcTableField)
+        # self.layout.addRow(self.fkNameKey,self.fkNameField)
+        self.layout.addRow(self.srcTableKey, self.srcTableField)
         self.layout.addRow(self.srcColumnsKey, self.srcColumnsField)
         self.layout.addRow(self.tgtTableKey, self.tgtTableField)
         self.layout.addRow(self.tgtColumnsKey, self.tgtColumnsField)
@@ -650,7 +681,7 @@ class ForeignKeyInfo(BBAbstractInfo):
         :type tableCount: ForeignKeyConstraint
         """
         self.header.setText(fk.name)
-        #self.fkNameField.setValue(fk.name)
+        # self.fkNameField.setValue(fk.name)
         self.srcTableField.setValue(fk.srcTable)
         srcColumnsStr = ', '.join(map(str, fk.srcColumns))
         self.srcColumnsField.setValue(srcColumnsStr)
@@ -659,21 +690,22 @@ class ForeignKeyInfo(BBAbstractInfo):
         self.tgtColumnsField.setValue(tgtColumnsStr)
         self.axiomField.setValue(fk.axiomType)
 
+
 #############################################
 #   COMPONENTS
 #################################
-
 
 class BBHeader(QtWidgets.QLabel):
     """
     This class implements the header of properties section.
     """
+
     def __init__(self, *args):
         """
         Initialize the header.
         """
         super().__init__(*args)
-        self.setAlignment(QtCore.Qt.AlignLeft|QtCore.Qt.AlignVCenter)
+        self.setAlignment(QtCore.Qt.AlignLeft | QtCore.Qt.AlignVCenter)
         self.setFixedHeight(24)
 
 
@@ -681,6 +713,7 @@ class BBKey(QtWidgets.QLabel):
     """
     This class implements the key of an info field.
     """
+
     def __init__(self, *args):
         """
         Initialize the key.
@@ -693,7 +726,8 @@ class BBButton(QtWidgets.QPushButton):
     """
     This class implements the button to which associate a QtWidgets.QMenu instance of an info field.
     """
-    def __init__(self,  *args):
+
+    def __init__(self, *args):
         """
         Initialize the button.
         """
@@ -704,7 +738,8 @@ class BBInteger(IntegerField):
     """
     This class implements the integer value of an info field.
     """
-    def __init__(self,  *args):
+
+    def __init__(self, *args):
         """
         Initialize the field.
         """
@@ -716,7 +751,8 @@ class BBString(StringField):
     """
     This class implements the string value of an info field.
     """
-    def __init__(self,  *args):
+
+    def __init__(self, *args):
         """
         Initialize the field.
         """
@@ -728,7 +764,8 @@ class BBSelect(ComboBox):
     """
     This class implements the selection box of an info field.
     """
-    def __init__(self,  *args):
+
+    def __init__(self, *args):
         """
         Initialize the field.
         """

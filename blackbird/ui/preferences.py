@@ -1,8 +1,45 @@
+# -*- coding: utf-8 -*-
+
+##########################################################################
+#                                                                        #
+#  Eddy: a graphical editor for the specification of Graphol ontologies  #
+#  Copyright (C) 2015 Daniele Pantaleone <danielepantaleone@me.com>      #
+#                                                                        #
+#  This program is free software: you can redistribute it and/or modify  #
+#  it under the terms of the GNU General Public License as published by  #
+#  the Free Software Foundation, either version 3 of the License, or     #
+#  (at your option) any later version.                                   #
+#                                                                        #
+#  This program is distributed in the hope that it will be useful,       #
+#  but WITHOUT ANY WARRANTY; without even the implied warranty of        #
+#  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the          #
+#  GNU General Public License for more details.                          #
+#                                                                        #
+#  You should have received a copy of the GNU General Public License     #
+#  along with this program. If not, see <http://www.gnu.org/licenses/>.  #
+#                                                                        #
+#  #####################                          #####################  #
+#                                                                        #
+#  Graphol is developed by members of the DASI-lab group of the          #
+#  Dipartimento di Ingegneria Informatica, Automatica e Gestionale       #
+#  A.Ruberti at Sapienza University of Rome: http://www.dis.uniroma1.it  #
+#                                                                        #
+#     - Domenico Lembo <lembo@dis.uniroma1.it>                           #
+#     - Valerio Santarelli <santarelli@dis.uniroma1.it>                  #
+#     - Domenico Fabio Savo <savo@dis.uniroma1.it>                       #
+#     - Daniele Pantaleone <pantaleone@dis.uniroma1.it>                  #
+#     - Marco Console <console@dis.uniroma1.it>                          #
+#                                                                        #
+##########################################################################
+
+
 from enum import unique
 
-from PyQt5 import QtCore
-from PyQt5 import QtGui
-from PyQt5 import QtWidgets
+from PyQt5 import (
+    QtCore,
+    QtGui,
+    QtWidgets
+)
 
 from eddy import ORGANIZATION, APPNAME
 from eddy.core.common import HasWidgetSystem
@@ -12,21 +49,21 @@ from eddy.core.functions.signals import connect
 from eddy.ui.fields import ComboBox
 
 
-
 @unique
 class ClassMergeWithClassPolicy(IntEnum_):
     """
     This class list all the available options when merging tables representing classes whith a table representing a class.
     """
 
-    #NO MERGE AT ALL
+    # NO MERGE AT ALL
     NO_MERGE = 10001
 
-    #MERGE BY ADDING FLAG COLUMNS TO TARGET TABLE
+    # MERGE BY ADDING FLAG COLUMNS TO TARGET TABLE
     MERGE_FLAGS = 10002
 
     # MERGE BY ADDING TYPOLOGICAL TABLES TO CONSIDERED SCHEMA
     MERGE_TYPOLOGICAL = 10003
+
 
 @unique
 class ClassMergeWithClassPolicyLabels(Enum_):
@@ -34,10 +71,10 @@ class ClassMergeWithClassPolicyLabels(Enum_):
     This class list the labels associated to all the available options when merging tables representing classes whith a table representing a class.
     """
 
-    #NO MERGE AT ALL
+    # NO MERGE AT ALL
     NO_MERGE = 'No merge'
 
-    #MERGE BY ADDING FLAG COLUMNS TO TARGET TABLE
+    # MERGE BY ADDING FLAG COLUMNS TO TARGET TABLE
     MERGE_FLAGS = 'Merge By Flags'
 
     # MERGE BY ADDING TYPOLOGICAL TABLES TO CONSIDERED SCHEMA
@@ -50,11 +87,12 @@ class ObjectPropertyMergeWithClassPolicy(IntEnum_):
     This class list all the available options when merging tables representing object properties whith a table representing a class.
     """
 
-    #NO MERGE AT ALL
+    # NO MERGE AT ALL
     NO_MERGE = 20001
 
-    #MERGE THE OBJECT PROPERTIES WITH THE CLASS THEY ARE DEFINED ON
+    # MERGE THE OBJECT PROPERTIES WITH THE CLASS THEY ARE DEFINED ON
     MERGE_DEFINED = 20002
+
 
 @unique
 class ObjectPropertyMergeWithClassPolicyLabels(Enum_):
@@ -62,10 +100,10 @@ class ObjectPropertyMergeWithClassPolicyLabels(Enum_):
     This class list the labels associated to all the available options when merging tables representing object properties whith a table representing a class.
     """
 
-    #NO MERGE AT ALL
+    # NO MERGE AT ALL
     NO_MERGE = 'No merge'
 
-    #MERGE THE OBJECT PROPERTIES WITH THE CLASS THEY ARE DEFINED ON
+    # MERGE THE OBJECT PROPERTIES WITH THE CLASS THEY ARE DEFINED ON
     MERGE_DEFINED = 'Merge Defined'
 
 
@@ -75,7 +113,7 @@ class DataPropertyMergeWithClassPolicy(IntEnum_):
     This class list all the available options when merging tables representing data properties whith a table representing a class.
     """
 
-    #NO MERGE AT ALL
+    # NO MERGE AT ALL
     NO_MERGE = 30001
 
     # MERGE THE DATA PROPERTIES WITH THE CLASS THEY ARE DEFINED BY
@@ -84,13 +122,14 @@ class DataPropertyMergeWithClassPolicy(IntEnum_):
     # MERGE THE DATA PROPERTIES WITH THE CLASS THEY ARE TYPED ON
     MERGE_TYPED = 30003
 
+
 @unique
 class DataPropertyMergeWithClassPolicyLabels(Enum_):
     """
     This class list the labels associated to all the available options when merging tables representing data properties whith a table representing a class.
     """
 
-    #NO MERGE AT ALL
+    # NO MERGE AT ALL
     NO_MERGE = 'No merge'
 
     # MERGE THE DATA PROPERTIES WITH THE CLASS THEY ARE DEFINED BY
@@ -105,6 +144,7 @@ class BlackbirdPreferencesDialog(QtWidgets.QDialog, HasWidgetSystem):
     This class implements the 'Preferences' dialog.
     """
 
+    # noinspection PyArgumentList
     def __init__(self, session):
         """
         Initialize the Preferences dialog.
@@ -119,7 +159,7 @@ class BlackbirdPreferencesDialog(QtWidgets.QDialog, HasWidgetSystem):
         #################################
 
         ## TABLE MERGE POLICY GROUP
-        #CLASSES
+        # CLASSES
         prefix = QtWidgets.QLabel(self, objectName='class_merge_policy_prefix')
         prefix.setFont(Font('Roboto', 12))
         prefix.setText('Class Merge Policy')
@@ -131,7 +171,8 @@ class BlackbirdPreferencesDialog(QtWidgets.QDialog, HasWidgetSystem):
         combobox.setFocusPolicy(QtCore.Qt.StrongFocus)
         combobox.setScrollEnabled(False)
         combobox.addItems([x.value for x in ClassMergeWithClassPolicyLabels])
-        combobox.setCurrentText(settings.value('blackbird/merge/policy/class', ClassMergeWithClassPolicyLabels.NO_MERGE.value, str))
+        combobox.setCurrentText(
+            settings.value('blackbird/merge/policy/class', ClassMergeWithClassPolicyLabels.NO_MERGE.value, str))
         self.addWidget(combobox)
 
         # OBJECT PROPERTIES
@@ -147,7 +188,8 @@ class BlackbirdPreferencesDialog(QtWidgets.QDialog, HasWidgetSystem):
         combobox.setScrollEnabled(False)
         combobox.addItems([x.value for x in ObjectPropertyMergeWithClassPolicyLabels])
         combobox.setCurrentText(
-            settings.value('blackbird/merge/policy/objProps', ObjectPropertyMergeWithClassPolicyLabels.NO_MERGE.value, str))
+            settings.value('blackbird/merge/policy/objProps', ObjectPropertyMergeWithClassPolicyLabels.NO_MERGE.value,
+                           str))
         self.addWidget(combobox)
 
         # DATA PROPERTIES
@@ -169,8 +211,10 @@ class BlackbirdPreferencesDialog(QtWidgets.QDialog, HasWidgetSystem):
 
         formlayout = QtWidgets.QFormLayout()
         formlayout.addRow(self.widget('class_merge_policy_prefix'), self.widget('class_merge_policy_switch'))
-        formlayout.addRow(self.widget('object_properties_merge_policy_prefix'), self.widget('object_properties_merge_policy_switch'))
-        formlayout.addRow(self.widget('data_properties_merge_policy_prefix'), self.widget('data_properties_merge_policy_switch'))
+        formlayout.addRow(self.widget('object_properties_merge_policy_prefix'),
+                          self.widget('object_properties_merge_policy_switch'))
+        formlayout.addRow(self.widget('data_properties_merge_policy_prefix'),
+                          self.widget('data_properties_merge_policy_switch'))
         groupbox = QtWidgets.QGroupBox('Table Merge Policy', self, objectName='merge_policy_widget')
         groupbox.setLayout(formlayout)
         self.addWidget(groupbox)
@@ -184,8 +228,6 @@ class BlackbirdPreferencesDialog(QtWidgets.QDialog, HasWidgetSystem):
         widget.setLayout(layout)
         widget.setObjectName('general_widget')
         self.addWidget(widget)
-
-        
 
         #############################################
         # CONFIRMATION BOX
@@ -203,7 +245,8 @@ class BlackbirdPreferencesDialog(QtWidgets.QDialog, HasWidgetSystem):
         #################################
 
         widget = QtWidgets.QTabWidget(self, objectName='main_widget')
-        widget.addTab(self.widget('general_widget'), QtGui.QIcon(':/icons/24/ic_settings_black'), 'Schema Configuration')
+        widget.addTab(self.widget('general_widget'), QtGui.QIcon(':/icons/24/ic_settings_black'),
+                      'Schema Configuration')
         self.addWidget(widget)
         layout = QtWidgets.QVBoxLayout()
         layout.setContentsMargins(0, 0, 0, 0)
@@ -238,7 +281,6 @@ class BlackbirdPreferencesDialog(QtWidgets.QDialog, HasWidgetSystem):
         """
         Executed when the dialog is accepted.
         """
-
         settings = QtCore.QSettings(ORGANIZATION, APPNAME)
 
         #############################################
@@ -246,8 +288,10 @@ class BlackbirdPreferencesDialog(QtWidgets.QDialog, HasWidgetSystem):
         #################################
 
         settings.setValue('blackbird/merge/policy/class', self.widget('class_merge_policy_switch').currentText())
-        settings.setValue('blackbird/merge/policy/objProps', self.widget('object_properties_merge_policy_switch').currentText())
-        settings.setValue('blackbird/merge/policy/dataProps', self.widget('data_properties_merge_policy_switch').currentText())
+        settings.setValue('blackbird/merge/policy/objProps',
+                          self.widget('object_properties_merge_policy_switch').currentText())
+        settings.setValue('blackbird/merge/policy/dataProps',
+                          self.widget('data_properties_merge_policy_switch').currentText())
 
         #############################################
         # SAVE & EXIT

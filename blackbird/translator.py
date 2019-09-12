@@ -31,8 +31,8 @@ import zipfile
 from io import StringIO
 
 from PyQt5 import QtCore
-from eddy.core.functions.fsystem import fexists, isdir, fread, fwrite, fremove
 
+from eddy.core.functions.fsystem import fexists, isdir, fread, fwrite, fremove
 from eddy.core.functions.misc import first
 from eddy.core.functions.path import expandPath
 from eddy.core.functions.signals import connect
@@ -63,8 +63,8 @@ class BlackbirdProcess(QtCore.QProcess):
         # If we hava JAVA_HOME set then try to use the bundled java executable
         if isdir(javaHome):
             # For Java <= 1.8 we use the JDK's private jre path,
-            # this was done for compatibility with pyjnius that uses
-            # that fixes the path to libjvm at compile time.
+            # this was done for compatibility with pyjnius that
+            # fixes the path to libjvm at compile time.
             if fexists(os.path.join(javaHome, 'jre', 'bin', self.javaExe)):
                 self.javaExe = os.path.join(javaHome, 'jre', 'bin', self.javaExe)
             # For java > 1.8 there is no private JRE, so we use the standard path

@@ -30,6 +30,7 @@ from eddy.core.output import getLogger
 
 LOGGER = getLogger()
 
+
 @unique
 class EntityType(IntEnum_):
     """
@@ -64,7 +65,7 @@ class RelationalSchemaParser:
         schemaActions = list()
         schemaForeignKeys = list()
         schemaName = schema_json_data["schemaName"]
-        schemaId= schema_json_data["id"]
+        schemaId = schema_json_data["id"]
         jsonTables = schema_json_data["tables"]
         for jsonTable in jsonTables:
             table = RelationalSchemaParser.getTable(jsonTable, schemaActions, schemaForeignKeys)
@@ -77,7 +78,6 @@ class RelationalSchemaParser:
             fkNames.append(fk.name)
         LOGGER.debug('############# Size of fkNames={}'.format(len(fkNames)))
         fkNames.sort()
-
 
         LOGGER.debug('############# Printing schemaForeignKeys:')
         for index, fk in enumerate(fkNames):
@@ -180,7 +180,7 @@ class RelationalSchema:
         self._id = id
         self._tables = tables
         self._actions = actions
-        #self._foreignKeys = foreignKeys
+        # self._foreignKeys = foreignKeys
         self._foreignKeys = list()
         if self._tables:
             for table in self._tables:
@@ -266,7 +266,7 @@ class RelationalTable:
 
     @property
     def actions(self):
-        return  self._actions
+        return self._actions
 
     def getForeignKeyByName(self, fkName):
         if self._foreignKeys:
@@ -288,7 +288,7 @@ class RelationalTable:
         fkStr = "\n".join(map(str, self.foreignKeys))
         return '\tName: {}\n\tEntity: {}\n\tColumns: [\n{}\t]\n\t' \
                'PK: {}\n\tuniques: [{}\t]\n\tFKs: [{}\t]\n\tid: {}'.format(self.name, self.entity, columnsStr,
-                                                         self.primaryKey, uniquesStr, fkStr,self.id)
+                                                                           self.primaryKey, uniquesStr, fkStr, self.id)
 
 
 class RelationalColumn:
@@ -327,7 +327,7 @@ class RelationalColumn:
     def __str__(self):
         return '\t\tName: {}\n\t\tEntityIRI: {}\n\t\tColumnType: {}\n\t\t' \
                'Position: {}\n\t\tNullable: {}\n\t\tid:{}\n'.format(self.columnName, self.entityIRI, self.columnType,
-                                                   self.position, self.isNullable, self.id)
+                                                                    self.position, self.isNullable, self.id)
 
 
 class PrimaryKeyConstraint:
@@ -402,9 +402,9 @@ class ForeignKeyConstraint:
     def equals(self, other):
         if not self.__class__ == other.__class__:
             return False
-        if self.name!=other.name:
-            return  False
-        #TODO SCOMMENTA DOPO MODIFICA SU NOMI DI TABELLE DOPO AZIONI
+        if self.name != other.name:
+            return False
+        # TODO SCOMMENTA DOPO MODIFICA SU NOMI DI TABELLE DOPO AZIONI
         # if self.srcTable!=other.srcTable:
         #     return False
         # if len(self.srcColumns)!=len(other.srcColumns) or len(self.tgtColumns)!=len(other.tgtColumns):
@@ -417,14 +417,13 @@ class ForeignKeyConstraint:
         #         return False
         return True
 
-
     def __str__(self):
         srcColumnsStr = ",".join(map(str, self.srcColumns))
         tgtColumnsStr = ",".join(map(str, self.tgtColumns))
         return '\n\t\tName: {}\n\t\tSourceTable: {}\n\t\tSourceColumns: [{}]\n\t\t' \
                'TargetTable: {} \n\t\tTargetColumns: [{}] \n\t\t' \
                'AxiomType: {}\n'.format(self.name, self.srcTable, srcColumnsStr,
-                                                              self.tgtTable, tgtColumnsStr, self.axiomType)
+                                        self.tgtTable, tgtColumnsStr, self.axiomType)
 
 
 class RelationalTableOriginEntity:

@@ -30,8 +30,11 @@ from eddy.core.output import getLogger
 LOGGER = getLogger()
 
 
+# TODO: Do we really need this class or can its single method be moved elsewhere?
 class FileUtils:
-    #Utility class to deal with JSON files
+    """
+    This class contains a collection of utility methods to deal with JSON files.
+    """
 
     # ADD LOGGING TO ALL METHODS, MOVE EXCEPTION HANDLING OUTSIDE
 

@@ -1,19 +1,41 @@
+# -*- coding: utf-8 -*-
+
+##########################################################################
+#                                                                        #
+#  Blackbird: An ontology to relational schema translator                #
+#  Copyright (C) 2019 OBDA Systems                                       #
+#                                                                        #
+#  ####################################################################  #
+#                                                                        #
+#  This program is free software: you can redistribute it and/or modify  #
+#  it under the terms of the GNU General Public License as published by  #
+#  the Free Software Foundation, either version 3 of the License, or     #
+#  (at your option) any later version.                                   #
+#                                                                        #
+#  This program is distributed in the hope that it will be useful,       #
+#  but WITHOUT ANY WARRANTY; without even the implied warranty of        #
+#  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the          #
+#  GNU General Public License for more details.                          #
+#                                                                        #
+#  You should have received a copy of the GNU General Public License     #
+#  along with this program. If not, see <http://www.gnu.org/licenses/>.  #
+#                                                                        #
+##########################################################################
 
 
+from PyQt5 import (
+    QtCore,
+    QtWidgets
+)
 
-from operator import attrgetter
-
-from PyQt5 import QtCore
-from PyQt5 import QtGui
-from PyQt5 import QtWidgets
 from eddy.core.functions.misc import first
-
 
 
 class BBMenuFactory(QtCore.QObject):
     """
     This class can be used to produce diagram items contextual menus.
     """
+
     def __init__(self, plugin):
         self.plugin = plugin
         super().__init__(self.plugin.session)
@@ -43,7 +65,8 @@ class BBMenuFactory(QtCore.QObject):
     #############################################
     #   DIAGRAM
     #################################
-    #TODO IMPLEMENTA OPPORTUNAMENTE
+
+    # TODO IMPLEMENTA OPPORTUNAMENTE
     def buildDiagramMenu(self, diagram):
         """
         Build and return a QMenu instance for the given diagram.
@@ -58,7 +81,6 @@ class BBMenuFactory(QtCore.QObject):
         menu.addAction(self.session.action('diagram_properties'))
         self.session.action('diagram_properties').setData(diagram)
         return menu
-
 
     #############################################
     #   EDGES
@@ -100,9 +122,6 @@ class BBMenuFactory(QtCore.QObject):
             tableSchemaQtActions = self.plugin.tableNameToSchemaQtActions[tableName]
             for qtAction in tableSchemaQtActions:
                 menu.addAction(qtAction)
-        #else:
-        #    menu.addAction(self.plugin.action('empty_action'))
-
         return menu
 
     #############################################
@@ -131,7 +150,4 @@ class BBMenuFactory(QtCore.QObject):
         if item.isEdge():
             return self.buildForeignKeyEdgeMenu(diagram, item, pos)
 
-
         raise RuntimeError('could not create menu for {0}'.format(item))
-
-

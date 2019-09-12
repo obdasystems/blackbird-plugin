@@ -1,11 +1,37 @@
+# -*- coding: utf-8 -*-
 
-from PyQt5 import QtCore
-from PyQt5 import QtGui
-from PyQt5 import QtWidgets
+##########################################################################
+#                                                                        #
+#  Blackbird: An ontology to relational schema translator                #
+#  Copyright (C) 2019 OBDA Systems                                       #
+#                                                                        #
+#  ####################################################################  #
+#                                                                        #
+#  This program is free software: you can redistribute it and/or modify  #
+#  it under the terms of the GNU General Public License as published by  #
+#  the Free Software Foundation, either version 3 of the License, or     #
+#  (at your option) any later version.                                   #
+#                                                                        #
+#  This program is distributed in the hope that it will be useful,       #
+#  but WITHOUT ANY WARRANTY; without even the implied warranty of        #
+#  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the          #
+#  GNU General Public License for more details.                          #
+#                                                                        #
+#  You should have received a copy of the GNU General Public License     #
+#  along with this program. If not, see <http://www.gnu.org/licenses/>.  #
+#                                                                        #
+##########################################################################
+
+
+from PyQt5 import (
+    QtCore,
+    QtGui,
+    QtWidgets
+)
 
 from eddy.core.datatypes.qt import Font
 from eddy.core.functions.misc import first, natsorted
-from eddy.core.functions.signals import connect, disconnect
+from eddy.core.functions.signals import connect
 
 
 class BlackbirdProjectExplorerWidget(QtWidgets.QWidget):
@@ -251,6 +277,7 @@ class ProjectExplorerView(QtWidgets.QTreeView):
     """
     This class implements the project explorer tree view.
     """
+
     def __init__(self, widget):
         """
         Initialize the project explorer view.
@@ -344,6 +371,7 @@ class ProjectExplorerSortedProxyModel(QtCore.QSortFilterProxyModel):
     """
     This class implements the proxy model used to sort elements in the Project Explorer widget.
     """
+
     def __init__(self, *args, **kwargs):
         """
         Initialize the model.
