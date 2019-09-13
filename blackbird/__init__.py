@@ -39,7 +39,6 @@ from PyQt5 import (
 from eddy import ORGANIZATION, APPNAME, WORKSPACE
 from eddy.core.datatypes.graphol import Item
 from eddy.core.datatypes.owl import OWLAxiom, OWLSyntax
-from eddy.core.datatypes.qt import Font
 from eddy.core.diagram import Diagram
 from eddy.core.exporters.owl2 import OWLOntologyExporterWorker
 from eddy.core.functions.fsystem import fread, fexists
@@ -50,6 +49,10 @@ from eddy.core.items.edges.common.base import AbstractEdge
 from eddy.core.items.nodes.common.base import AbstractNode
 from eddy.core.output import getLogger
 from eddy.core.plugin import AbstractPlugin
+from eddy.ui.dialogs import DiagramSelectionDialog
+from eddy.ui.dock import DockWidget
+from eddy.ui.progress import BusyProgressDialog
+
 # noinspection PyUnresolvedReferences
 from eddy.plugins.blackbird import resources_rc
 # noinspection PyUnresolvedReferences
@@ -105,9 +108,6 @@ from eddy.plugins.blackbird.widgets.project_explorer import BlackbirdProjectExpl
 from eddy.plugins.blackbird.widgets.table_explorer import TableExplorerWidget
 # noinspection PyUnresolvedReferences
 from eddy.plugins.blackbird.widgets.actions import ActionTableExplorerWidget
-from eddy.ui.dialogs import DiagramSelectionDialog
-from eddy.ui.dock import DockWidget
-from eddy.ui.progress import BusyProgressDialog
 
 LOGGER = getLogger()
 
@@ -118,6 +118,7 @@ class BlackbirdPlugin(AbstractPlugin):
     """
     sgnStartTranslator = QtCore.pyqtSignal()
     sgnStopTranslator = QtCore.pyqtSignal()
+    sgnTranslatorReady = QtCore.pyqtSignal()
     sgnSchemaChanged = QtCore.pyqtSignal(RelationalSchema)
     sgnActionCorrectlyFinalized = QtCore.pyqtSignal()
     sgnUndoActionCorrectlyFinalized = QtCore.pyqtSignal()
@@ -238,6 +239,8 @@ class BlackbirdPlugin(AbstractPlugin):
                                          triggered=self.doExportSQLScript))
         self.addAction(QtWidgets.QAction('Export Schema Diagrams', self, objectName='export_schema_diagrams',
                                          triggered=self.doExportSchemaDiagrams))
+        self.addAction(QtWidgets.QAction('Blackbird Output', self, objectName='blackbird_output',
+                                         triggered=self.doShowTranslatorOutput))
         self.addAction(QtWidgets.QAction('Blackbird Log', self, objectName='blackbird_log',
                                          triggered=self.doShowTranslatorLog))
         self.addAction(QtWidgets.QAction(
@@ -303,6 +306,7 @@ class BlackbirdPlugin(AbstractPlugin):
         menu.addAction(self.action('export_sql'))
         # menu.addAction(self.action('export_diagrams'))
         menu.addSeparator()
+        menu.addAction(self.action('blackbird_output'))
         menu.addAction(self.action('blackbird_log'))
         menu.addSeparator()
         menu.addAction(self.action('about'))
@@ -491,7 +495,7 @@ class BlackbirdPlugin(AbstractPlugin):
 
         group = QtWidgets.QActionGroup(self, objectName='action_table_explorer_status_toggle')
         group.setExclusive(False)
-        #for status in tableExplorerWidget.status:
+        # for status in tableExplorerWidget.status:
         #    action = QtWidgets.QAction(status.value if status.value else 'Default', group,
         #                               objectName=status.name, checkable=True)
         #    action.setChecked(True)
@@ -814,9 +818,7 @@ class BlackbirdPlugin(AbstractPlugin):
         self.subwindowList = []
 
     def updateDiagrams(self):
-        copyList = []
-        for diagram in self.diagramList:
-            copyList.append(diagram)
+        copyList = self.diagramList[:]
         self.diagramList = []
 
         for diagram in copyList:
@@ -824,7 +826,7 @@ class BlackbirdPlugin(AbstractPlugin):
             self.diagramToWindowLabel.pop(diagram)
             if diagram in self.diagramToSubWindow:
                 subwindow = self.diagramToSubWindow[diagram]
-                subwindow.view.setScene(diagram)
+                subwindow.view.setScene(newDiagram)
                 subwindow.view.update()
                 LOGGER.debug('Changing content of open mdiSubwindow FROM diagram {} TO diagram {}'
                              .format(diagram.name, newDiagram.name))
@@ -1033,14 +1035,9 @@ class BlackbirdPlugin(AbstractPlugin):
             if reply.error() == QtNetwork.QNetworkReply.NoError:
                 self.owltext = str(reply.request().attribute(NetworkManager.OWL), encoding='utf-8')
                 schema = str(reply.readAll(), encoding='utf-8')
-                jsonSchema = json.loads(schema)
-                self.schema = RelationalSchemaParser.getSchema(jsonSchema)
+                self.jsonSchema = json.loads(schema)
+                self.schema = RelationalSchemaParser.getSchema(self.jsonSchema)
                 self.initializeOntologyEntityManager()
-                dialog = BlackbirdOutputDialog(self.owltext, json.dumps(json.loads(schema), indent=2),
-                                               self.schema, self.session)
-                dialog.show()
-                dialog.raise_()
-                LOGGER.debug(self.schema)
                 self.actionCounter = 0
                 self.action('undo_last_schema_action').setEnabled(False)
                 self.action('show_ontology').setEnabled(True)
@@ -1142,13 +1139,13 @@ class BlackbirdPlugin(AbstractPlugin):
             assert reply.isFinished()
             # noinspection PyArgumentList
             if reply.error() == QtNetwork.QNetworkReply.NoError:
-                owltext = str(reply.request().attribute(NetworkManager.OWL), encoding='utf-8')
+                self.owltext = str(reply.request().attribute(NetworkManager.OWL), encoding='utf-8')
                 schema = str(reply.readAll(), encoding='utf-8')
                 # AGGANCIATI QUI CON IL PARSER
-                jsonSchema = json.loads(schema)
-                self.schema = RelationalSchemaParser.getSchema(jsonSchema)
+                self.jsonSchema = json.loads(schema)
+                self.schema = RelationalSchemaParser.getSchema(self.jsonSchema)
                 self.initializeOntologyEntityManager()
-                dialog = BlackbirdOutputDialog(owltext, json.dumps(json.loads(schema), indent=2), self.schema,
+                dialog = BlackbirdOutputDialog(self.owltext, json.dumps(json.loads(schema), indent=2), self.schema,
                                                self.session)
                 dialog.show()
                 dialog.raise_()
@@ -1171,14 +1168,10 @@ class BlackbirdPlugin(AbstractPlugin):
             # noinspection PyArgumentList
             if reply.error() == QtNetwork.QNetworkReply.NoError:
                 schema = str(reply.readAll(), encoding='utf-8')
-                jsonSchema = json.loads(schema)
-                self.schema = RelationalSchemaParser.getSchema(jsonSchema)
+                self.jsonSchema = json.loads(schema)
+                self.schema = RelationalSchemaParser.getSchema(self.jsonSchema)
                 # self.initializeOntologyEntityManager()
                 self.actionCounter += 1
-                dialog = BlackbirdOutputDialog('', json.dumps(json.loads(schema), indent=2), self.schema, self.session)
-                dialog.show()
-                dialog.raise_()
-
                 self.sgnSchemaChanged.emit(self.schema)
                 self.updateDiagrams()
                 self.initSchemaTableActions()
@@ -1211,9 +1204,9 @@ class BlackbirdPlugin(AbstractPlugin):
                 dialog = BlackbirdOutputDialog('', json.dumps(json.loads(schema), indent=2), self.session)
                 dialog.show()
                 dialog.raise_()
-                jsonSchema = json.loads(schema)
+                self.jsonSchema = json.loads(schema)
                 self.actionCounter += 1
-                self.schema = RelationalSchemaParser.getSchema(jsonSchema)
+                self.schema = RelationalSchemaParser.getSchema(self.jsonSchema)
                 self.sgnActionCorrectlyFinalized.emit()
                 self.sgnSchemaChanged.emit(self.schema)
                 self.updateDiagrams()  # TODO sostistuisci con updateDiagramsFromUndo (DISEGNA A PARTIRE DA DIAGRAMMA CORRENTE + DIAGRAMMA PRECEDENTE AD AZIONE CHE VIENE ANNULLATA DA UNDO)
@@ -1449,10 +1442,20 @@ class BlackbirdPlugin(AbstractPlugin):
     @QtCore.pyqtSlot()
     def doShowTranslatorLog(self):
         """
-        Shows the output of the translator.
+        Shows the output log of the translator.
         """
         if self.translator:
             dialog = BlackbirdLogDialog(self.translator.buffer, self.session)
+            dialog.exec_()
+
+    @QtCore.pyqtSlot()
+    def doShowTranslatorOutput(self):
+        """
+        Shows the output of the last executed generation.
+        """
+        if self.translator:
+            dialog = BlackbirdOutputDialog(self.owltext, json.dumps(self.jsonSchema, indent=2),
+                                           self.schema, self.session)
             dialog.exec_()
 
     @QtCore.pyqtSlot()
@@ -1467,6 +1470,7 @@ class BlackbirdPlugin(AbstractPlugin):
                 self.translator.waitForStarted(100)
                 QtWidgets.QApplication.processEvents()
                 if self.translator.state() == QtCore.QProcess.Running:
+                    self.sgnTranslatorReady.emit()
                     break
                 attempt += 1
 
@@ -1667,7 +1671,7 @@ class BlackbirdPlugin(AbstractPlugin):
         LOGGER.debug('After processing of FKs {} nodes of old diagram {} have not been copied to new diagram {} '
                      .format(len(remOldNodes), oldDiagram.name, newDiagram.name))
         LOGGER.debug('After processing of FKs {} fks of new schema have not been drawn into new diagram {} '
-            .format(len(remSchemaFKs), oldDiagram.name, newDiagram.name))
+                     .format(len(remSchemaFKs), oldDiagram.name, newDiagram.name))
         LOGGER.debug('After processing of FKs {} tables of new schema have not been drawn into new diagram {} '
                      .format(len(remSchemaTables), oldDiagram.name, newDiagram.name))
 
