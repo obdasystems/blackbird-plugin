@@ -2,8 +2,10 @@
 
 ##########################################################################
 #                                                                        #
-#  Eddy: a graphical editor for the specification of Graphol ontologies  #
-#  Copyright (C) 2015 Daniele Pantaleone <danielepantaleone@me.com>      #
+#  Blackbird: An ontology to relational schema translator                #
+#  Copyright (C) 2019 OBDA Systems                                       #
+#                                                                        #
+#  ####################################################################  #
 #                                                                        #
 #  This program is free software: you can redistribute it and/or modify  #
 #  it under the terms of the GNU General Public License as published by  #
@@ -18,18 +20,6 @@
 #  You should have received a copy of the GNU General Public License     #
 #  along with this program. If not, see <http://www.gnu.org/licenses/>.  #
 #                                                                        #
-#  #####################                          #####################  #
-#                                                                        #
-#  Graphol is developed by members of the DASI-lab group of the          #
-#  Dipartimento di Ingegneria Informatica, Automatica e Gestionale       #
-#  A.Ruberti at Sapienza University of Rome: http://www.dis.uniroma1.it  #
-#                                                                        #
-#     - Domenico Lembo <lembo@dis.uniroma1.it>                           #
-#     - Valerio Santarelli <santarelli@dis.uniroma1.it>                  #
-#     - Domenico Fabio Savo <savo@dis.uniroma1.it>                       #
-#     - Daniele Pantaleone <pantaleone@dis.uniroma1.it>                  #
-#     - Marco Console <console@dis.uniroma1.it>                          #
-#                                                                        #
 ##########################################################################
 
 
@@ -39,7 +29,10 @@ import sys
 import pkg_resources
 import pytest
 
-from PyQt5 import QtCore, QtWidgets
+from PyQt5 import (
+    QtCore,
+    QtWidgets
+)
 
 import eddy
 from eddy import APPNAME, ORGANIZATION
@@ -48,13 +41,12 @@ from eddy.core.datatypes.system import File
 from eddy.core.functions.fsystem import fread
 from eddy.core.jvm import findJavaHome, addJVMClasspath, addJVMOptions
 from eddy.core.output import getLogger
+from eddy.core.plugin import PluginManager
 
 
 #############################################
 # APPLICATION FIXTURES
 #################################
-from eddy.core.plugin import PluginManager
-
 
 @pytest.fixture(scope="session")
 def qapp_args():
