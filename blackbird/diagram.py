@@ -23,7 +23,10 @@
 ##########################################################################
 
 
-from PyQt5 import QtCore
+from PyQt5 import (
+    QtCore,
+    QtWidgets
+)
 
 from eddy.core.commands.labels import CommandLabelMove
 from eddy.core.commands.nodes import CommandNodeMove
@@ -349,7 +352,8 @@ class BlackBirdDiagram(Diagram):
                 menu = self.plugin.mf.create(self, items, mousePos)
                 menu.exec_(mouseEvent.screenPos())
 
-        super().mouseReleaseEvent(mouseEvent)
+
+        mouseEvent.accept()
 
         self.mo_Node = None
         self.mp_Data = None
