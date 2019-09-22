@@ -226,11 +226,11 @@ class BlackBirdProjectExporter(AbstractProjectExporter):
             for relAction in relTable.actions:
                 action = self.document.createElement('action')
                 subjTable = self.document.createElement('subject')
-                subjTable.appendChild(self.document.createTextNode(relAction.actionSubjectTableName))
+                subjTable.appendChild(self.document.createTextNode(relAction.actionMasterTableName))
                 type = self.document.createElement('type')
                 type.appendChild(self.document.createTextNode(relAction.actionType))
                 objTables = self.document.createElement('objects')
-                for relObjTable in relTable.actionObjectsNames:
+                for relObjTable in relTable.actionSlaveTableNames:
                     objTable = self.document.createElement('object')
                     objTable.appendChild(self.document.createTextNode(relObjTable))
                     objTables.appendChild(objTable)

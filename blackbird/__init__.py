@@ -1073,9 +1073,9 @@ class BlackbirdPlugin(AbstractPlugin):
         self.tableNameToSchemaQtActions = {}
         bbActions = self.schema.actions
         for bbAction in bbActions:
-            subj = bbAction.actionSubjectTableName
+            subj = bbAction.actionMasterTableName
             type = bbAction.actionType
-            objs = bbAction.actionObjectsNames
+            objs = bbAction.actionSlaveTableNames
             if len(objs) > 1:
                 objectsString = ','.join(map(str, objs))
             else:

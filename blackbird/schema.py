@@ -168,9 +168,9 @@ class RelationalSchemaParser:
 
     @staticmethod
     def getTableAction(jsonAction):
-        subjectName = jsonAction["actionSubjectTableName"]
+        subjectName = jsonAction["actionMasterTableName"]
         actionType = jsonAction["actionType"]
-        objectsNames = jsonAction["actionObjectsNames"]
+        objectsNames = jsonAction["actionSlaveTableNames"]
         return RelationalTableAction(subjectName, actionType, objectsNames)
 
 
@@ -455,12 +455,12 @@ class RelationalTableOriginEntity:
 
 class RelationalTableAction:
     def __init__(self, subject_table, action_type, object_tables):
-        self.actionSubjectTableName = subject_table
+        self.actionMasterTableName = subject_table
         self.actionType = action_type
-        self.actionObjectsNames = object_tables
+        self.actionSlaveTableNames = object_tables
 
     # @property
-    # def actionSubjectTableName(self):
+    # def actionMasterTableName(self):
     #     return self._actionSubjectTableName
     #
     # @property
@@ -468,10 +468,10 @@ class RelationalTableAction:
     #     return self._actionType
     #
     # @property
-    # def actionObjectsNames(self):
+    # def actionSlaveTableNames(self):
     #     return self._actionObjectsNames
 
     def __str__(self):
-        objectTablesStr = ",".join(map(str, self.actionObjectsNames))
-        return 'actionSubjectTableName: {} \nActionType: {} \n' \
-               'actionObjectsNames: [{}]'.format(self.actionSubjectTableName, self.actionType, objectTablesStr)
+        objectTablesStr = ",".join(map(str, self.actionSlaveTableNames))
+        return 'actionMasterTableName: {} \nActionType: {} \n' \
+               'actionSlaveTableNames: [{}]'.format(self.actionMasterTableName, self.actionType, objectTablesStr)

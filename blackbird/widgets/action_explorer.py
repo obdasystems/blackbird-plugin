@@ -369,9 +369,9 @@ class ActionInfo(BBAbstractInfo):
 
         if len(actions) > 0:
             for index, action in enumerate(actions):
-                subj = action.actionSubjectTableName
+                subj = action.actionMasterTableName
                 type = action.actionType
-                objs = action.actionObjectsNames
+                objs = action.actionSlaveTableNames
 
                 header = BBHeader('Action {}'.format(index))
                 header.setFont(Font('Roboto', 12))
