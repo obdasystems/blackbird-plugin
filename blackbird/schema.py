@@ -404,17 +404,16 @@ class ForeignKeyConstraint:
             return False
         if self.name != other.name:
             return False
-        # TODO SCOMMENTA DOPO MODIFICA SU NOMI DI TABELLE DOPO AZIONI
-        # if self.srcTable!=other.srcTable:
-        #     return False
-        # if len(self.srcColumns)!=len(other.srcColumns) or len(self.tgtColumns)!=len(other.tgtColumns):
-        #     return False
-        # for col in self.srcColumns:
-        #     if not col in other.srcColumns:
-        #         return False
-        # for col in self.tgtColumns:
-        #     if not col in other.tgtColumns:
-        #         return False
+        if self.srcTable!=other.srcTable:
+            return False
+        if len(self.srcColumns)!=len(other.srcColumns) or len(self.tgtColumns)!=len(other.tgtColumns):
+           return False
+        for col in self.srcColumns:
+           if not col in other.srcColumns:
+               return False
+        for col in self.tgtColumns:
+            if not col in other.tgtColumns:
+                return False
         return True
 
     def __str__(self):

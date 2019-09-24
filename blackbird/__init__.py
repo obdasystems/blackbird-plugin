@@ -1595,6 +1595,8 @@ class BlackbirdPlugin(AbstractPlugin):
             remOldNodes.append(node)
 
         for fk in self.schema.foreignKeys:
+            if fk.name =='FK_editedBy_1_Editor_0':
+                print("FOUND")
             for oldFkEdge in oldFkEdges:
                 if fk.equals(oldFkEdge.foreignKey):
                     oldSrc = oldFkEdge.source
@@ -1675,6 +1677,9 @@ class BlackbirdPlugin(AbstractPlugin):
         LOGGER.debug('After processing of FKs {} tables of new schema have not been drawn into new diagram {} '
                      .format(len(remSchemaTables), oldDiagram.name, newDiagram.name))
 
+
+
+
         for remOldNode in remOldNodes:
             newNodeRelTable = self.schema.getTableByEntityIRI(remOldNode.relationalTable)
             if newNodeRelTable:
@@ -1694,6 +1699,28 @@ class BlackbirdPlugin(AbstractPlugin):
                 LOGGER.debug('Copy of node {} (corresponding to table {}) to diagram {} by direct '
                              'old node inspection was not possible'
                              .format(remOldNode, remOldNode.relationalTable.name, newDiagram.name))
+
+        for remFK in remSchemaFKs:
+            srcOccurences = []
+            tgtOccurrences = []
+            for node in newDiagram.nodes():
+                if remFK.srcTable==node.relationalTable.name:
+                    srcOccurences.append(node)
+                if remFK.tgtTable==node.relationalTable.name:
+                    tgtOccurrences.append(node)
+            for srcNode in srcOccurences:
+                for tgtNode in tgtOccurrences:
+                    fkEdge = ForeignKeyEdge(foreign_key=fk, source=srcNode, target=tgtNode, diagram=newDiagram)
+                    newDiagram.addItem(fkEdge)
+                    self.sgnEdgeAdded.emit(newDiagram, fkEdge)
+                    fkEdge.source.addEdge(fkEdge)
+                    fkEdge.target.addEdge(fkEdge)
+                    fkEdge.updateEdge(visible=True)
+
+
+            #fkEdge.source.setAnchor(fkEdge, QtCore.QPointF(fkVisualElement.src.anchor(edge)))
+            #fkEdge.target.setAnchor(fkEdge, QtCore.QPointF(fkVisualElement.tgt.anchor(edge)))
+
 
         return newDiagram
 

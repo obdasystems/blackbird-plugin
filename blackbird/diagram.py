@@ -351,9 +351,10 @@ class BlackBirdDiagram(Diagram):
                 self.mp_Pos = mousePos
                 menu = self.plugin.mf.create(self, items, mousePos)
                 menu.exec_(mouseEvent.screenPos())
+                mouseEvent.accept()
 
 
-        mouseEvent.accept()
+
 
         self.mo_Node = None
         self.mp_Data = None
