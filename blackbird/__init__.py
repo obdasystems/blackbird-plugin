@@ -836,6 +836,7 @@ class BlackbirdPlugin(AbstractPlugin):
                 # self.subWindowToDiagram[subwindow] = newDiagram
 
                 self.project.removeDiagram(diagram)
+                self.sgnFocusDiagram.emit(newDiagram)
                 self.doFocusDiagram(newDiagram)
 
     #############################################

@@ -300,6 +300,8 @@ class BlackBirdDiagram(Diagram):
         mouseModifiers = mouseEvent.modifiers()
         mouseButton = mouseEvent.button()
         mousePos = mouseEvent.scenePos()
+        eventAccepted = False
+
 
         if mouseButton == QtCore.Qt.LeftButton:
             if self.mode is DiagramMode.LabelMove:
@@ -352,9 +354,10 @@ class BlackBirdDiagram(Diagram):
                 menu = self.plugin.mf.create(self, items, mousePos)
                 menu.exec_(mouseEvent.screenPos())
                 mouseEvent.accept()
+                eventAccepted = True
 
-
-
+        if not eventAccepted:
+            super().mouseReleaseEvent(mouseEvent)
 
         self.mo_Node = None
         self.mp_Data = None
