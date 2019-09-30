@@ -1036,6 +1036,9 @@ class BlackbirdPlugin(AbstractPlugin):
             if reply.error() == QtNetwork.QNetworkReply.NoError:
                 self.owltext = str(reply.request().attribute(NetworkManager.OWL), encoding='utf-8')
                 schema = str(reply.readAll(), encoding='utf-8')
+                print('##############')
+                print(schema)
+                print('##############')
                 self.jsonSchema = json.loads(schema)
                 self.schema = RelationalSchemaParser.getSchema(self.jsonSchema)
                 self.initializeOntologyEntityManager()

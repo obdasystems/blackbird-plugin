@@ -49,24 +49,9 @@ from eddy.core.functions.signals import connect
 from eddy.ui.fields import ComboBox
 
 
-@unique
-class ClassMergeWithClassPolicy(IntEnum_):
-    """
-    This class list all the available options when merging tables representing classes whith a table representing a class.
-    """
-
-    # NO MERGE AT ALL
-    NO_MERGE = 10001
-
-    # MERGE BY ADDING FLAG COLUMNS TO TARGET TABLE
-    MERGE_FLAGS = 10002
-
-    # MERGE BY ADDING TYPOLOGICAL TABLES TO CONSIDERED SCHEMA
-    MERGE_TYPOLOGICAL = 10003
-
 
 @unique
-class ClassMergeWithClassPolicyLabels(Enum_):
+class ClassMergeWithClassDefaultLabels(Enum_):
     """
     This class list the labels associated to all the available options when merging tables representing classes whith a table representing a class.
     """
@@ -75,27 +60,39 @@ class ClassMergeWithClassPolicyLabels(Enum_):
     NO_MERGE = 'No merge'
 
     # MERGE BY ADDING FLAG COLUMNS TO TARGET TABLE
+    MERGE_SUB_CLASSES = 'Merge Subclass Hierarchies'
+
+    @staticmethod
+    def getIntValue(label):
+        if label==ClassMergeWithClassDefaultLabels.NO_MERGE.value:
+            return 0
+        elif label==ClassMergeWithClassDefaultLabels.MERGE_SUB_CLASSES.value:
+            return 1
+        return -1
+
+@unique
+class ClassMergeWithClassPolicyLabels(Enum_):
+    """
+    This class list the labels associated to all the available options when merging tables representing classes whith a table representing a class.
+    """
+
+    # MERGE BY ADDING FLAG COLUMNS TO TARGET TABLE
     MERGE_FLAGS = 'Merge By Flags'
 
     # MERGE BY ADDING TYPOLOGICAL TABLES TO CONSIDERED SCHEMA
     MERGE_TYPOLOGICAL = 'Merge By Typological'
 
-
-@unique
-class ObjectPropertyMergeWithClassPolicy(IntEnum_):
-    """
-    This class list all the available options when merging tables representing object properties whith a table representing a class.
-    """
-
-    # NO MERGE AT ALL
-    NO_MERGE = 20001
-
-    # MERGE THE OBJECT PROPERTIES WITH THE CLASS THEY ARE DEFINED ON
-    MERGE_DEFINED = 20002
+    @staticmethod
+    def getIntValue(label):
+        if label==ClassMergeWithClassPolicyLabels.MERGE_FLAGS.value:
+            return 0
+        elif label==ClassMergeWithClassPolicyLabels.MERGE_TYPOLOGICAL.value:
+            return 1
+        return -1
 
 
 @unique
-class ObjectPropertyMergeWithClassPolicyLabels(Enum_):
+class ObjectPropertyMergeWithClassDefaultLabels(Enum_):
     """
     This class list the labels associated to all the available options when merging tables representing object properties whith a table representing a class.
     """
@@ -106,25 +103,18 @@ class ObjectPropertyMergeWithClassPolicyLabels(Enum_):
     # MERGE THE OBJECT PROPERTIES WITH THE CLASS THEY ARE DEFINED ON
     MERGE_DEFINED = 'Merge Defined'
 
+    @staticmethod
+    def getIntValue(label):
+        if label==ObjectPropertyMergeWithClassDefaultLabels.NO_MERGE.value:
+            return 0
+        elif label==ObjectPropertyMergeWithClassDefaultLabels.MERGE_DEFINED.value:
+            return 1
+        return -1
 
-@unique
-class DataPropertyMergeWithClassPolicy(IntEnum_):
-    """
-    This class list all the available options when merging tables representing data properties whith a table representing a class.
-    """
-
-    # NO MERGE AT ALL
-    NO_MERGE = 30001
-
-    # MERGE THE DATA PROPERTIES WITH THE CLASS THEY ARE DEFINED BY
-    MERGE_DEFINED = 30002
-
-    # MERGE THE DATA PROPERTIES WITH THE CLASS THEY ARE TYPED ON
-    MERGE_TYPED = 30003
 
 
 @unique
-class DataPropertyMergeWithClassPolicyLabels(Enum_):
+class DataPropertyMergeWithClassDefaultLabels(Enum_):
     """
     This class list the labels associated to all the available options when merging tables representing data properties whith a table representing a class.
     """
@@ -137,6 +127,16 @@ class DataPropertyMergeWithClassPolicyLabels(Enum_):
 
     # MERGE THE DATA PROPERTIES WITH THE CLASS THEY ARE TYPED ON
     MERGE_TYPED = 'Merge Typed'
+
+    @staticmethod
+    def getIntValue(label):
+        if label == DataPropertyMergeWithClassDefaultLabels.NO_MERGE.value:
+            return 0
+        elif label == DataPropertyMergeWithClassDefaultLabels.MERGE_TYPED.value:
+            return 1
+        elif label == DataPropertyMergeWithClassDefaultLabels.MERGE_DEFINED.value:
+            return 2
+        return -1
 
 
 class BlackbirdPreferencesDialog(QtWidgets.QDialog, HasWidgetSystem):
@@ -172,13 +172,30 @@ class BlackbirdPreferencesDialog(QtWidgets.QDialog, HasWidgetSystem):
         combobox.setScrollEnabled(False)
         combobox.addItems([x.value for x in ClassMergeWithClassPolicyLabels])
         combobox.setCurrentText(
-            settings.value('blackbird/merge/policy/class', ClassMergeWithClassPolicyLabels.NO_MERGE.value, str))
+            settings.value('blackbird/merge/policy/class', ClassMergeWithClassPolicyLabels.MERGE_FLAGS.value, str))
         self.addWidget(combobox)
+
+        prefix = QtWidgets.QLabel(self, objectName='class_merge_default_prefix')
+        prefix.setFont(Font('Roboto', 12))
+        prefix.setText('Class Merge Default')
+        self.addWidget(prefix)
+
+        combobox = ComboBox(objectName='class_merge_default_switch')
+        combobox.setEditable(False)
+        combobox.setFont(Font('Roboto', 12))
+        combobox.setFocusPolicy(QtCore.Qt.StrongFocus)
+        combobox.setScrollEnabled(False)
+        combobox.addItems([x.value for x in ClassMergeWithClassDefaultLabels])
+        combobox.setCurrentText(
+            settings.value('blackbird/merge/default/class', ClassMergeWithClassDefaultLabels.NO_MERGE.value, str))
+        self.addWidget(combobox)
+
+
 
         # OBJECT PROPERTIES
         prefix = QtWidgets.QLabel(self, objectName='object_properties_merge_policy_prefix')
         prefix.setFont(Font('Roboto', 12))
-        prefix.setText('Object Properties Merge Policy')
+        prefix.setText('Object Properties Merge Default')
         self.addWidget(prefix)
 
         combobox = ComboBox(objectName='object_properties_merge_policy_switch')
@@ -186,16 +203,16 @@ class BlackbirdPreferencesDialog(QtWidgets.QDialog, HasWidgetSystem):
         combobox.setFont(Font('Roboto', 12))
         combobox.setFocusPolicy(QtCore.Qt.StrongFocus)
         combobox.setScrollEnabled(False)
-        combobox.addItems([x.value for x in ObjectPropertyMergeWithClassPolicyLabels])
+        combobox.addItems([x.value for x in ObjectPropertyMergeWithClassDefaultLabels])
         combobox.setCurrentText(
-            settings.value('blackbird/merge/policy/objProps', ObjectPropertyMergeWithClassPolicyLabels.NO_MERGE.value,
+            settings.value('blackbird/merge/default/objProps', ObjectPropertyMergeWithClassDefaultLabels.NO_MERGE.value,
                            str))
         self.addWidget(combobox)
 
         # DATA PROPERTIES
         prefix = QtWidgets.QLabel(self, objectName='data_properties_merge_policy_prefix')
         prefix.setFont(Font('Roboto', 12))
-        prefix.setText('Data Properties Merge Policy')
+        prefix.setText('Data Properties Merge Default')
         self.addWidget(prefix)
 
         combobox = ComboBox(objectName='data_properties_merge_policy_switch')
@@ -203,14 +220,17 @@ class BlackbirdPreferencesDialog(QtWidgets.QDialog, HasWidgetSystem):
         combobox.setFont(Font('Roboto', 12))
         combobox.setFocusPolicy(QtCore.Qt.StrongFocus)
         combobox.setScrollEnabled(False)
-        combobox.addItems([x.value for x in DataPropertyMergeWithClassPolicyLabels])
+        combobox.addItems([x.value for x in DataPropertyMergeWithClassDefaultLabels])
         combobox.setCurrentText(
-            settings.value('blackbird/merge/policy/dataProps', DataPropertyMergeWithClassPolicyLabels.NO_MERGE.value,
+            settings.value('blackbird/merge/default/dataProps', DataPropertyMergeWithClassDefaultLabels.NO_MERGE.value,
                            str))
         self.addWidget(combobox)
 
         formlayout = QtWidgets.QFormLayout()
         formlayout.addRow(self.widget('class_merge_policy_prefix'), self.widget('class_merge_policy_switch'))
+
+        formlayout.addRow(self.widget('class_merge_default_prefix'), self.widget('class_merge_default_switch'))
+
         formlayout.addRow(self.widget('object_properties_merge_policy_prefix'),
                           self.widget('object_properties_merge_policy_switch'))
         formlayout.addRow(self.widget('data_properties_merge_policy_prefix'),
@@ -287,11 +307,27 @@ class BlackbirdPreferencesDialog(QtWidgets.QDialog, HasWidgetSystem):
         # GENERAL TAB
         #################################
 
-        settings.setValue('blackbird/merge/policy/class', self.widget('class_merge_policy_switch').currentText())
-        settings.setValue('blackbird/merge/policy/objProps',
-                          self.widget('object_properties_merge_policy_switch').currentText())
-        settings.setValue('blackbird/merge/policy/dataProps',
-                          self.widget('data_properties_merge_policy_switch').currentText())
+        class_merge_policy = self.widget('class_merge_policy_switch').currentText()
+        class_merge_policy_INT = ClassMergeWithClassPolicyLabels.getIntValue(class_merge_policy)
+
+        class_merge_default = self.widget('class_merge_default_switch').currentText()
+        class_merge_default_INT = ClassMergeWithClassDefaultLabels.getIntValue(class_merge_default)
+
+        object_properties_merge_default = self.widget('object_properties_merge_policy_switch').currentText()
+        object_properties_merge_default_INT = ObjectPropertyMergeWithClassDefaultLabels.getIntValue(object_properties_merge_default)
+
+        data_properties_merge_default = self.widget('data_properties_merge_policy_switch').currentText()
+        data_properties_merge_default_INT = DataPropertyMergeWithClassDefaultLabels.getIntValue(data_properties_merge_default)
+
+        settings.setValue('blackbird/merge/policy/class', class_merge_policy)
+        settings.setValue('blackbird/merge/default/class', class_merge_default)
+        settings.setValue('blackbird/merge/default/objProps', object_properties_merge_default)
+        settings.setValue('blackbird/merge/default/dataProps', data_properties_merge_default)
+
+        settings.setValue('blackbird/merge/policy/class/INT', class_merge_policy_INT)
+        settings.setValue('blackbird/merge/default/class/INT', class_merge_default_INT)
+        settings.setValue('blackbird/merge/default/objProps/INT', object_properties_merge_default_INT)
+        settings.setValue('blackbird/merge/default/dataProps/INT', data_properties_merge_default_INT)
 
         #############################################
         # SAVE & EXIT

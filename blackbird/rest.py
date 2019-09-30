@@ -34,6 +34,7 @@ from PyQt5 import (
 
 from eddy.core.datatypes.common import Enum_
 from eddy.core.output import getLogger
+from eddy import ORGANIZATION, APPNAME
 
 # noinspection PyUnresolvedReferences
 from eddy.plugins.blackbird.schema import RelationalTableAction
@@ -81,6 +82,20 @@ class NetworkManager(QtNetwork.QNetworkAccessManager):
         :rtype: QNetworkReply
         """
         url = QtCore.QUrl(Resources.Schema.value)
+        urlQuery = QtCore.QUrlQuery()
+
+        settings = QtCore.QSettings(ORGANIZATION, APPNAME)
+
+        classMergePolicy = settings.value('blackbird/merge/policy/class/INT', "-1", str)
+        classMergeDefault = settings.value('blackbird/merge/default/class/INT', "-1", str)
+        objPropMergeDefault = settings.value('blackbird/merge/default/objProps/INT', "-1", str)
+        dtPropMergeDefault = settings.value('blackbird/merge/default/dataProps/INT', "-1", str)
+
+        urlQuery.addQueryItem("subClassMergeStrategy", classMergePolicy)
+        urlQuery.addQueryItem("subClassMergeDefault", classMergeDefault)
+        urlQuery.addQueryItem("dataPropertyMergeDefault", dtPropMergeDefault )
+        urlQuery.addQueryItem("objectPropertyMergeDefault", objPropMergeDefault)
+        url.setQuery(urlQuery)
         request = QtNetwork.QNetworkRequest(url)
         request.setHeader(QtNetwork.QNetworkRequest.ContentTypeHeader, 'text/plain;charset=utf-8')
         request.setAttribute(self.OWL, owl)
