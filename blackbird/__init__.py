@@ -732,8 +732,9 @@ class BlackbirdPlugin(AbstractPlugin):
             fkToDiagramElements = diagramToForeignKeysDict[ontDiagram]
             for fk, fkVisualElementList in fkToDiagramElements.items():
                 for innerList in fkVisualElementList:
-                    for fkVisualElement in innerList:
-                        self.addFkEdgeToDiagram(fk, fkVisualElement, bbDiagram, ontNodeToBBNodeDict)
+                    if innerList:
+                        for fkVisualElement in innerList:
+                            self.addFkEdgeToDiagram(fk, fkVisualElement, bbDiagram, ontNodeToBBNodeDict)
 
     def addFkEdgeToDiagram(self, fk, fkVisualElement, bbDiagram, ontNodeToBBNodeDict):
         """

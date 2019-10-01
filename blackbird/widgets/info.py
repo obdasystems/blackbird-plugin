@@ -197,6 +197,10 @@ class BBInfoWidget(QtWidgets.QScrollArea):
                 self.redraw()
         return super().eventFilter(source, event)
 
+    def resizeEvent(self, a0: QtGui.QResizeEvent):
+        self.redraw()
+        super().resizeEvent(a0)
+
     #############################################
     #   INTERFACE
     #################################
@@ -419,6 +423,7 @@ class SimpleTableInfo(BBAbstractInfo):
         self.tableWidget.horizontalHeader().setVisible(False)
         # self.tableWidget.resizeColumnsToContents()
 
+        #prova
         self.mainLayout = QtWidgets.QVBoxLayout(self)
         self.mainLayout.setAlignment(QtCore.Qt.AlignTop)
         self.mainLayout.setContentsMargins(0, 0, 0, 0)
