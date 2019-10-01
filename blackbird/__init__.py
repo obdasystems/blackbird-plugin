@@ -1599,7 +1599,7 @@ class BlackbirdPlugin(AbstractPlugin):
             remOldNodes.append(node)
 
         for fk in self.schema.foreignKeys:
-            if fk.name =='FK_editedBy_1_Editor_0':
+            if fk.name =='FK_Edition_0_hasEdition_1':
                 print("FOUND")
             for oldFkEdge in oldFkEdges:
                 if fk.equals(oldFkEdge.foreignKey):
@@ -1685,7 +1685,7 @@ class BlackbirdPlugin(AbstractPlugin):
 
 
         for remOldNode in remOldNodes:
-            newNodeRelTable = self.schema.getTableByEntityIRI(remOldNode.relationalTable)
+            newNodeRelTable = self.schema.getTableByEntityIRI(remOldNode.relationalTable.entity.fullIRI)
             if newNodeRelTable:
                 relNode = TableNode(remOldNode.width(), remOldNode.height(),
                                     remaining_characters=newNodeRelTable.name,
@@ -1696,7 +1696,9 @@ class BlackbirdPlugin(AbstractPlugin):
                 self.sgnNodeAdded.emit(newDiagram, relNode)
                 if len(newNodeRelTable.actions) > 0:
                     self.sgnActionNodeAdded.emit(newDiagram, relNode)
-                remSchemaTables.remove(newNodeRelTable)
+
+                if newNodeRelTable in remSchemaTables:
+                    remSchemaTables.remove(newNodeRelTable)
                 LOGGER.debug('Node {} (corresponding to table {}) added to diagram {} by direct old node inspection '
                              .format(remOldNode, newNodeRelTable.name, newDiagram.name))
             else:
