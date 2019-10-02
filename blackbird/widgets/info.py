@@ -219,7 +219,8 @@ class BBInfoWidget(QtWidgets.QScrollArea):
             sizeHint = widget.sizeHint()
             height = sizeHint.height()
             self.stacked.setFixedWidth(width)
-            self.stacked.setFixedHeight(clamp(height, 0))
+            #clampHeight = clamp(height, 0)
+            #self.stacked.setFixedHeight(clampHeight)
 
     def setDiagram(self, diagram):
         """
