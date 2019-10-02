@@ -171,6 +171,9 @@ class BlackbirdOntologyEntityManager(QtCore.QObject):
         return res
 
     def buildDictionaries(self):
+        #Store foreign keys that have not been represented in any of the available diagrams
+        remainingFKs = self._foreignKeys[:]
+
         LOGGER.info('########## Starting mapping schema objects to diagrams\' visual elements ##########')
         for ontDiagram in self._ontologyDiagrams:
             LOGGER.info('\n##### DIAGRAM {} #####'.format(ontDiagram.name))
@@ -350,14 +353,43 @@ class BlackbirdOntologyEntityManager(QtCore.QObject):
                                     currVisualEls.append(self.getEntityIsaEntityVEs(srcOccurrencesInDiagram,
                                                                                     tgtOccurrencesInDiagram,
                                                                                     ontDiagram))
-                        if currVisualEls:
+                        if currVisualEls and len(currVisualEls)>0 and self.containsAtLeastOneNonEmptyList(currVisualEls):
                             currDiagramToForeignKeyDict[fk] = currVisualEls
+                            if fk in remainingFKs:
+                                remainingFKs.remove(fk)
                             fksStr = ",".join(map(str, currVisualEls))
                             LOGGER.info('{} --> [{}]'.format(fk.name, fksStr))
                 else:
                     LOGGER.debug('FK skipped as diagram does not contain visual elements for srcTable ({}) or for '
                                  'tgtTable ({})'.format(srcTable.entity.shortIRI, tgtTable.entity.shortIRI))
             self._diagramToForeignKeys[ontDiagram] = currDiagramToForeignKeyDict
+
+        if len(remainingFKs)>0:
+            for ontDiagram in self._ontologyDiagrams:
+                for fk in remainingFKs:
+                    currVisualEls = list()
+                    srcTableName = fk.srcTable
+                    srcTable = self._relationalSchema.getTableByName(srcTableName)
+                    tgtTableName = fk.tgtTable
+                    tgtTable = self._relationalSchema.getTableByName(tgtTableName)
+                    if srcTable in self._diagramToTables[ontDiagram] and tgtTable in self._diagramToTables[ontDiagram]:
+                        currInnerList = list()
+                        srcOccurrencesInDiagram = self._diagramToTables[ontDiagram][srcTable]
+                        tgtOccurrencesInDiagram = self._diagramToTables[ontDiagram][tgtTable]
+                        for srcNode in srcOccurrencesInDiagram:
+                            for tgtNode in tgtOccurrencesInDiagram:
+                                currInnerList.append(ForeignKeyVisualElements(srcNode, tgtNode, [], []))
+                        if len(currInnerList)>0:
+                            currVisualEls.append(currInnerList)
+                    if len(currVisualEls)>0:
+                        self._diagramToForeignKeys[ontDiagram][fk] = currVisualEls
+
+
+    def containsAtLeastOneNonEmptyList(self, listToCheck):
+        for lizt in listToCheck:
+            if lizt and isinstance(lizt,list) and len(lizt)>0:
+                return True
+        return False
 
     # A-->B, R-->P, U1-->U2
     # SOLVED

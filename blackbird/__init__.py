@@ -732,7 +732,7 @@ class BlackbirdPlugin(AbstractPlugin):
             fkToDiagramElements = diagramToForeignKeysDict[ontDiagram]
             for fk, fkVisualElementList in fkToDiagramElements.items():
                 for innerList in fkVisualElementList:
-                    if innerList:
+                    if innerList and len(innerList)>0:
                         for fkVisualElement in innerList:
                             self.addFkEdgeToDiagram(fk, fkVisualElement, bbDiagram, ontNodeToBBNodeDict)
 
@@ -748,7 +748,15 @@ class BlackbirdPlugin(AbstractPlugin):
         tgt = ontNodeToBBNodeDict[fkVisualElement.tgt]
         edges = fkVisualElement.edges
         invertBreakpoints = fkVisualElement.invertBreakpoints
-        if len(edges) == 1:
+
+        if len(edges) == 0:
+            fkEdge = ForeignKeyEdge(foreign_key=fk, source=src, target=tgt, diagram=bbDiagram)
+            bbDiagram.addItem(fkEdge)
+            self.sgnEdgeAdded.emit(bbDiagram, fkEdge)
+            fkEdge.source.addEdge(fkEdge)
+            fkEdge.target.addEdge(fkEdge)
+            fkEdge.updateEdge(visible=True)
+        elif len(edges) == 1:
             edge = edges[0]
 
             if invertBreakpoints and edge in invertBreakpoints:
