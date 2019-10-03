@@ -64,11 +64,12 @@ class RelationalSchemaParser:
         tables = list()
         schemaActions = list()
         schemaForeignKeys = list()
+        schemaAssertions = list()
         schemaName = schema_json_data["schemaName"]
         schemaId = schema_json_data["id"]
         jsonTables = schema_json_data["tables"]
         for jsonTable in jsonTables:
-            table = RelationalSchemaParser.getTable(jsonTable, schemaActions, schemaForeignKeys)
+            table = RelationalSchemaParser.getTable(jsonTable, schemaActions, schemaForeignKeys, schemaAssertions)
             tables.append(table)
 
         LOGGER.debug('############# Size of schemaForeignKeys={}'.format(len(schemaForeignKeys)))
@@ -83,10 +84,10 @@ class RelationalSchemaParser:
         for index, fk in enumerate(fkNames):
             LOGGER.debug('[{}] {}'.format(index, fk))
 
-        return RelationalSchema(schemaName, schemaId, tables, schemaActions)
+        return RelationalSchema(schemaName, schemaId, tables, schemaActions, schemaAssertions)
 
     @staticmethod
-    def getTable(jsonTable, schemaActions, schemaForeignKeys):
+    def getTable(jsonTable, schemaActions, schemaForeignKeys, schemaAssertions):
         tableName = jsonTable["tableName"]
         LOGGER.debug('############# Parsing table {}'.format(tableName))
         entity = RelationalSchemaParser.getOriginEntity(jsonTable["entity"])
@@ -125,7 +126,26 @@ class RelationalSchemaParser:
                 action = RelationalSchemaParser.getTableAction(tableAction)
                 actions.append(action)
                 schemaActions.append(action)
-        return RelationalTable(tableName, entity, columns, primaryKey, uniques, foreignKeys, tableId, actions)
+
+        jsonIntraTableAssertions = jsonTable['intraTableAssertions']
+        intraTableAssertions = list()
+        if jsonIntraTableAssertions:
+            for tableAssertion in jsonIntraTableAssertions:
+                assertion = RelationalSchemaParser.getIntraTableAssertion(tableAssertion)
+                intraTableAssertions.append(assertion)
+                schemaAssertions.append(assertion)
+
+        return RelationalTable(tableName, entity, columns, primaryKey, uniques, foreignKeys, tableId, actions, intraTableAssertions)
+
+    @staticmethod
+    def getIntraTableAssertion(jsonAssertion):
+        tableName = jsonAssertion['tableName']
+        ifColumns = jsonAssertion['ifColumns']
+        ifValues = jsonAssertion['ifValues']
+        thenColumns = jsonAssertion['thenColumns']
+        thenValues = jsonAssertion['thenValues']
+        return IntraTableAssertion(tableName,ifColumns,ifValues,thenColumns,thenValues)
+
 
     @staticmethod
     def getColumn(jsonColumn):
@@ -175,13 +195,14 @@ class RelationalSchemaParser:
 
 
 class RelationalSchema:
-    def __init__(self, name, id, tables, actions):
+    def __init__(self, name, id, tables, actions, assertions):
         self._name = name
         self._id = id
         self._tables = tables
         self._actions = actions
         # self._foreignKeys = foreignKeys
         self._foreignKeys = list()
+        self._assertions = assertions
         if self._tables:
             for table in self._tables:
                 if table.foreignKeys:
@@ -204,6 +225,10 @@ class RelationalSchema:
         return self._actions
 
     @property
+    def assertions(self):
+        return self._assertions
+
+    @property
     def foreignKeys(self):
         return self._foreignKeys
 
@@ -221,12 +246,13 @@ class RelationalSchema:
 
     def __str__(self):
         tablesStr = "\n\n".join(map(str, self.tables))
-        actionsStr = "\n".join(map(str, self.actions))
-        return 'Name: {}\nID: {}\nTables: [\n{}\n]\nActions: [{}]'.format(self.name, self.id, tablesStr, actionsStr)
+        actionsStr = "\n\t".join(map(str, self.actions))
+        assertionsStr = '\n'.join(map(str,self.assertions))
+        return 'Name: {}\nID: {}\nTables: [\n{}\n]\nActions: [{}\t]\nAssertions: [{}\t]'.format(self.name, self.id, tablesStr, actionsStr,assertionsStr)
 
 
 class RelationalTable:
-    def __init__(self, name, entity, columns, primary_key, uniques, foreign_keys, id, actions):
+    def __init__(self, name, entity, columns, primary_key, uniques, foreign_keys, id, actions, assertions):
         self._name = name
         self._entity = entity
         self._columns = columns
@@ -235,6 +261,7 @@ class RelationalTable:
         self._foreignKeys = foreign_keys
         self._id = id
         self._actions = actions
+        self._assertions = assertions
 
     @property
     def name(self):
@@ -268,6 +295,10 @@ class RelationalTable:
     def actions(self):
         return self._actions
 
+    @property
+    def assertions(self):
+        return self._assertions
+
     def getForeignKeyByName(self, fkName):
         if self._foreignKeys:
             for fk in self._foreignKeys:
@@ -286,9 +317,12 @@ class RelationalTable:
         columnsStr = "\n".join(map(str, self.columns))
         uniquesStr = "\n".join(map(str, self.uniques))
         fkStr = "\n".join(map(str, self.foreignKeys))
+        assertionsStr = '';
+        if self.assertions:
+            assertionsStr = '\n'.join(map(str, self.assertions))
         return '\tName: {}\n\tEntity: {}\n\tColumns: [\n{}\t]\n\t' \
-               'PK: {}\n\tuniques: [{}\t]\n\tFKs: [{}\t]\n\tid: {}'.format(self.name, self.entity, columnsStr,
-                                                                           self.primaryKey, uniquesStr, fkStr, self.id)
+               'PK: {}\n\tuniques: [{}\t]\n\tFKs: [{}\t] \n\tAssertions: [{}\t]\n\tid: {}'.format(self.name, self.entity, columnsStr,
+                                                                           self.primaryKey, uniquesStr, fkStr, assertionsStr, self.id)
 
 
 class RelationalColumn:
@@ -474,3 +508,66 @@ class RelationalTableAction:
         objectTablesStr = ",".join(map(str, self.actionSlaveTableNames))
         return 'actionMasterTableName: {} \nActionType: {} \n' \
                'actionSlaveTableNames: [{}]'.format(self.actionMasterTableName, self.actionType, objectTablesStr)
+
+
+class IntraTableAssertion:
+    def __init__(self,tableName, ifColumns, ifValues, thenColumns, thenValues):
+        self._tableName = tableName
+        self._ifColumns = ifColumns
+        self._ifValues = ifValues
+        self._thenColumns = thenColumns
+        self._thenValues = thenValues
+
+    @property
+    def tableName(self):
+        return self._tableName
+
+    @property
+    def ifColumns(self):
+        return self._ifColumns
+
+    @property
+    def ifValues(self):
+        return self._ifValues
+
+    @property
+    def thenColumns(self):
+        return self._thenColumns
+
+    @property
+    def thenValues(self):
+        return self._thenValues
+
+    def getStringWithoutTableName(self):
+        ifLength = len(self._ifColumns)
+        ifPartString = ' IF '
+        for index, item in enumerate(self._ifColumns):
+            currStr = ' {}={} '.format(item, self._ifValues[index])
+            if index < (ifLength - 1):
+                currStr += ' AND '
+            ifPartString += currStr
+        thenLength = len(self._thenColumns)
+        thenpartString = ' THEN '
+        for index, item in enumerate(self._thenColumns):
+            currStr = ' {}={} '.format(item, self._thenValues[index])
+            if index < (thenLength - 1):
+                currStr += ' AND '
+            thenpartString += currStr
+        return '{} {}'.format(ifPartString, thenpartString)
+
+    def __str__(self):
+        ifLength = len(self._ifColumns)
+        ifPartString = ' IF '
+        for index, item in enumerate(self._ifColumns):
+            currStr = ' {}={} '.format(item,self._ifValues[index])
+            if index<(ifLength-1):
+                currStr += ' AND '
+            ifPartString += currStr
+        thenLength = len(self._thenColumns)
+        thenpartString = ' THEN '
+        for index, item in enumerate(self._thenColumns):
+            currStr = ' {}={} '.format(item, self._thenValues[index])
+            if index < (thenLength - 1):
+                currStr += ' AND '
+            thenpartString += currStr
+        return 'In table {} {} {}'.format(self._tableName,ifPartString,thenpartString)

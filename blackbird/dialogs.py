@@ -346,6 +346,7 @@ class TableInfoDialog(QtWidgets.QDialog, HasWidgetSystem):
         primaryKey = self.relationalTable.primaryKey
         uniques = self.relationalTable.uniques
         foreignKeys = self.relationalTable.foreignKeys
+        assertions = self.relationalTable.assertions
 
         #############################################
         # COLUMNS TAB
@@ -528,6 +529,42 @@ class TableInfoDialog(QtWidgets.QDialog, HasWidgetSystem):
         self.addWidget(widget)
 
         #############################################
+        # ASSERTIONS TAB
+        #################################
+
+        rowCount = 0
+        if assertions:
+            rowCount = len(assertions)
+        table = QtWidgets.QTableWidget(rowCount, 1, self, objectName='assertions_table')
+        table.setHorizontalHeaderLabels(['Intra table assertions'])
+        table.setFont(Font('Roboto', 12))
+        table.setSelectionMode(QtWidgets.QAbstractItemView.NoSelection)
+        table.setFocusPolicy(QtCore.Qt.NoFocus)
+        self.addWidget(table)
+
+        header = table.horizontalHeader()
+        header.setSectionResizeMode(0, QtWidgets.QHeaderView.Stretch)
+        header.setSectionsClickable(False)
+        header.setSectionsMovable(False)
+        header.hide()
+        header = table.verticalHeader()
+        header.setSectionResizeMode(QtWidgets.QHeaderView.Fixed)
+
+
+        if assertions:
+            for row, assertion in enumerate(assertions):
+                item = QtWidgets.QTableWidgetItem(assertion.getStringWithoutTableName())
+                item.setTextAlignment(QtCore.Qt.AlignLeft | QtCore.Qt.AlignVCenter)
+                item.setFlags(item.flags() ^ QtCore.Qt.ItemIsEditable)
+                table.setItem(row, 0, item)
+
+        layout = QtWidgets.QVBoxLayout()
+        layout.addWidget(self.widget('assertions_table'), 1)
+        widget = QtWidgets.QWidget(objectName='assertions_widget')
+        widget.setLayout(layout)
+        self.addWidget(widget)
+
+        #############################################
         # CONFIRMATION BOX
         #################################
 
@@ -547,6 +584,7 @@ class TableInfoDialog(QtWidgets.QDialog, HasWidgetSystem):
         widget.addTab(self.widget('pk_widget'), QtGui.QIcon(':/icons/24/ic_settings_black'), 'Primary Key')
         widget.addTab(self.widget('uniques_widget'), QtGui.QIcon(':/icons/24/ic_settings_black'), 'Uniques')
         widget.addTab(self.widget('fk_widget'), QtGui.QIcon(':/icons/24/ic_settings_black'), 'Foreign Keys')
+        widget.addTab(self.widget('assertions_widget'), QtGui.QIcon(':/icons/24/ic_settings_black'), 'Assertions')
         self.addWidget(widget)
         layout = QtWidgets.QVBoxLayout()
         layout.setContentsMargins(0, 0, 0, 0)

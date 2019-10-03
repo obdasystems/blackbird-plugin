@@ -245,7 +245,7 @@ class BBInfoWidget(QtWidgets.QScrollArea):
                 selected = infoItem.selectedItems()
                 if not selected or len(selected) > 1:
                     show = self.schemaInfo
-                    show.updateData(len(infoItem.schema.tables), len(infoItem.schema.foreignKeys))
+                    show.updateData(len(infoItem.schema.tables), len(infoItem.schema.foreignKeys), len(infoItem.schema.assertions))
                 else:
                     diagramItem = first(selected)
                     # if diagramItem.type() is Item.TableNode:
@@ -308,7 +308,7 @@ class BBInfoWidget(QtWidgets.QScrollArea):
     def onSchemaChanged(self, schema):
         tables = schema.tables
         foreignKeys = schema.foreignKeys
-        self.schemaInfo.updateData(len(tables), len(foreignKeys))
+        self.schemaInfo.updateData(len(tables), len(foreignKeys), len(schema.assertions))
         self.stack(schema)
 
     @QtCore.pyqtSlot(RelationalTable)
@@ -373,22 +373,29 @@ class SchemaInfo(BBAbstractInfo):
         self.header = BBHeader('Schema Info')
         self.header.setFont(Font('Roboto', 12))
 
-        self.tableCountKey = BBKey('Tables count')
+        self.tableCountKey = BBKey('Tables')
         self.tableCountKey.setFont(Font('Roboto', 12))
         self.tableCountField = BBInteger(self)
         self.tableCountField.setFont(Font('Roboto', 12))
         self.tableCountField.setReadOnly(True)
 
-        self.fkCountKey = BBKey('FKs count')
+        self.fkCountKey = BBKey('FKs')
         self.fkCountKey.setFont(Font('Roboto', 12))
         self.fkCountField = BBInteger(self)
         self.fkCountField.setFont(Font('Roboto', 12))
         self.fkCountField.setReadOnly(True)
 
+        self.assertionCountKey = BBKey('Assertions')
+        self.assertionCountKey.setFont(Font('Roboto', 12))
+        self.assertionCountField = BBInteger(self)
+        self.assertionCountField.setFont(Font('Roboto', 12))
+        self.assertionCountField.setReadOnly(True)
+
         self.layout = QtWidgets.QFormLayout()
         self.layout.setSpacing(0)
         self.layout.addRow(self.tableCountKey, self.tableCountField)
         self.layout.addRow(self.fkCountKey, self.fkCountField)
+        self.layout.addRow(self.assertionCountKey, self.assertionCountField)
 
         self.mainLayout = QtWidgets.QVBoxLayout(self)
         self.mainLayout.setAlignment(QtCore.Qt.AlignTop)
@@ -401,14 +408,16 @@ class SchemaInfo(BBAbstractInfo):
     #   INTERFACE
     #################################
 
-    def updateData(self, tableCount, fkCount):
+    def updateData(self, tableCount, fkCount, assCount):
         """
         Fetch new information and fill the widget with data.
         :type tableCount: int
         :type fkCount: int
+        :type assCount: int
         """
         self.tableCountField.setValue(str(tableCount))
         self.fkCountField.setValue(str(fkCount))
+        self.assertionCountField.setValue(str(assCount))
 
 
 class SimpleTableInfo(BBAbstractInfo):
