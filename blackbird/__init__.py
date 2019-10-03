@@ -269,8 +269,13 @@ class BlackbirdPlugin(AbstractPlugin):
             triggered=self.onSchemaActionUndo))
 
         # SHOW OWL ONTOLOGY
+        #self.addAction(QtWidgets.QAction(
+         #   QtGui.QIcon(':/blackbird/icons/128/ic_blackbird'), 'Show referenced ontology', self,
+          #  objectName='show_ontology', toolTip='Show referenced ontology',
+           # triggered=self.showOntologyDialog))
+
         self.addAction(QtWidgets.QAction(
-            QtGui.QIcon(':/blackbird/icons/128/ic_blackbird'), 'Show referenced ontology', self,
+            'BB\nOWL', self,
             objectName='show_ontology', toolTip='Show referenced ontology',
             triggered=self.showOntologyDialog))
 
