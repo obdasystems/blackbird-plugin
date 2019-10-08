@@ -90,11 +90,13 @@ class NetworkManager(QtNetwork.QNetworkAccessManager):
         classMergeDefault = settings.value('blackbird/merge/default/class/INT', "-1", str)
         objPropMergeDefault = settings.value('blackbird/merge/default/objProps/INT', "-1", str)
         dtPropMergeDefault = settings.value('blackbird/merge/default/dataProps/INT', "-1", str)
+        considerDisjointness = settings.value('blackbird/axioms/disjointness/INT', "-1", str)
 
         urlQuery.addQueryItem("subClassMergeStrategy", classMergePolicy)
         urlQuery.addQueryItem("subClassMergeDefault", classMergeDefault)
         urlQuery.addQueryItem("dataPropertyMergeDefault", dtPropMergeDefault )
         urlQuery.addQueryItem("objectPropertyMergeDefault", objPropMergeDefault)
+        urlQuery.addQueryItem("takeIntoAccountDisjointnessAxioms", considerDisjointness)
         url.setQuery(urlQuery)
         request = QtNetwork.QNetworkRequest(url)
         request.setHeader(QtNetwork.QNetworkRequest.ContentTypeHeader, 'text/plain;charset=utf-8')

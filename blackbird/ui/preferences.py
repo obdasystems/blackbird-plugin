@@ -138,6 +138,22 @@ class DataPropertyMergeWithClassDefaultLabels(Enum_):
             return 2
         return -1
 
+@unique
+class TakeIntoAccountDisjointnessAxiomsDefaultLabels(Enum_):
+
+    YES = 'Yes'
+
+    NO = 'No'
+
+
+    @staticmethod
+    def getIntValue(label):
+        if label == TakeIntoAccountDisjointnessAxiomsDefaultLabels.NO.value:
+            return 0
+        elif label == TakeIntoAccountDisjointnessAxiomsDefaultLabels.YES.value:
+            return 1
+        return -1
+
 
 class BlackbirdPreferencesDialog(QtWidgets.QDialog, HasWidgetSystem):
     """
@@ -239,11 +255,36 @@ class BlackbirdPreferencesDialog(QtWidgets.QDialog, HasWidgetSystem):
         groupbox.setLayout(formlayout)
         self.addWidget(groupbox)
 
+        ## AXIOMS GROUP
+        #DISJOINTNESS
+        prefix = QtWidgets.QLabel(self, objectName='consider_disjointness_prefix')
+        prefix.setFont(Font('Roboto', 12))
+        prefix.setText('Take into account disjointness axioms')
+        self.addWidget(prefix)
+
+        combobox = ComboBox(objectName='consider_disjointness_switch')
+        combobox.setEditable(False)
+        combobox.setFont(Font('Roboto', 12))
+        combobox.setFocusPolicy(QtCore.Qt.StrongFocus)
+        combobox.setScrollEnabled(False)
+        combobox.addItems([x.value for x in TakeIntoAccountDisjointnessAxiomsDefaultLabels])
+        combobox.setCurrentText(
+            settings.value('blackbird/axioms/disjointness', TakeIntoAccountDisjointnessAxiomsDefaultLabels.NO.value, str))
+        self.addWidget(combobox)
+
+        formlayout = QtWidgets.QFormLayout()
+        formlayout.addRow(self.widget('consider_disjointness_prefix'), self.widget('consider_disjointness_switch'))
+
+        groupbox = QtWidgets.QGroupBox('Ontology Axioms', self, objectName='ontology_axioms_widget')
+        groupbox.setLayout(formlayout)
+        self.addWidget(groupbox)
+
         ## GENERAL TAB LAYOUT CONFIGURATION
 
         layout = QtWidgets.QVBoxLayout()
         layout.setAlignment(QtCore.Qt.AlignTop)
         layout.addWidget(self.widget('merge_policy_widget'), 0, QtCore.Qt.AlignTop)
+        layout.addWidget(self.widget('ontology_axioms_widget'), 0, QtCore.Qt.AlignTop)
         widget = QtWidgets.QWidget()
         widget.setLayout(layout)
         widget.setObjectName('general_widget')
@@ -319,15 +360,20 @@ class BlackbirdPreferencesDialog(QtWidgets.QDialog, HasWidgetSystem):
         data_properties_merge_default = self.widget('data_properties_merge_policy_switch').currentText()
         data_properties_merge_default_INT = DataPropertyMergeWithClassDefaultLabels.getIntValue(data_properties_merge_default)
 
+        consider_disjointness_default = self.widget('consider_disjointness_switch').currentText()
+        consider_disjointness_default_INT = TakeIntoAccountDisjointnessAxiomsDefaultLabels.getIntValue(consider_disjointness_default)
+
         settings.setValue('blackbird/merge/policy/class', class_merge_policy)
         settings.setValue('blackbird/merge/default/class', class_merge_default)
         settings.setValue('blackbird/merge/default/objProps', object_properties_merge_default)
         settings.setValue('blackbird/merge/default/dataProps', data_properties_merge_default)
+        settings.setValue('blackbird/axioms/disjointness', consider_disjointness_default)
 
         settings.setValue('blackbird/merge/policy/class/INT', class_merge_policy_INT)
         settings.setValue('blackbird/merge/default/class/INT', class_merge_default_INT)
         settings.setValue('blackbird/merge/default/objProps/INT', object_properties_merge_default_INT)
         settings.setValue('blackbird/merge/default/dataProps/INT', data_properties_merge_default_INT)
+        settings.setValue('blackbird/axioms/disjointness/INT', consider_disjointness_default_INT)
 
         #############################################
         # SAVE & EXIT
