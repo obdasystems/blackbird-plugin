@@ -31,6 +31,8 @@ from PyQt5 import (
     QtGui,
     QtWidgets
 )
+from PyQt5.QtCore import QFile, QTextStream, QIODevice
+from PyQt5.QtWidgets import QFileDialog
 
 from eddy.core.common import HasWidgetSystem
 from eddy.core.datatypes.qt import Font
@@ -324,6 +326,7 @@ class BlackbirdOntologyDialog(QtWidgets.QDialog):
             owl = self.findChild(QtWidgets.QTextEdit, 'owl_text').toPlainText()
             fwrite(owl, os.path.join(directory, 'ontology.owl'))
             openPath(directory)
+
 
 
 class TableInfoDialog(QtWidgets.QDialog, HasWidgetSystem):
@@ -620,3 +623,101 @@ class TableInfoDialog(QtWidgets.QDialog, HasWidgetSystem):
         Executed when the dialog is accepted.
         """
         super().accept()
+
+
+class SQLScriptDialog(QtWidgets.QDialog):
+    """
+    Subclass of QtWidgets.QDialog that shows the sql script to create current schema.
+    """
+
+    def __init__(self, sql, schemaName, parent=None, **kwargs):
+        """
+        Initialize the dialog.
+        """
+        super().__init__(parent, **kwargs)
+
+        #############################################
+        # TEXT AREA
+        #################################
+
+        self.schemaName = schemaName
+
+        sqlLabel = QtWidgets.QLabel('SQL', self)
+
+        headerLayout = QtWidgets.QHBoxLayout(self)
+        headerLayout.addWidget(sqlLabel, 1, QtCore.Qt.AlignLeading)
+
+        headerWidget = QtWidgets.QWidget(self)
+        headerWidget.setLayout(headerLayout)
+
+        sqlText = QtWidgets.QTextEdit(self)
+        sqlText.setFont(Font('Roboto', 14))
+        sqlText.setObjectName('sql_text')
+        sqlText.setReadOnly(True)
+        sqlText.setText(sql)
+
+        innerLayout = QtWidgets.QHBoxLayout(self)
+        innerLayout.setContentsMargins(8, 0, 8, 8)
+        innerLayout.addWidget(sqlText)
+
+        textWidget = QtWidgets.QWidget(self)
+        textWidget.setLayout(innerLayout)
+
+        #############################################
+        # CONFIRMATION AREA
+        #################################
+
+        confirmation = QtWidgets.QDialogButtonBox(QtCore.Qt.Horizontal, self, objectName='confirmation_widget')
+        confirmation.addButton(QtWidgets.QDialogButtonBox.Save)
+        confirmation.addButton(QtWidgets.QDialogButtonBox.Cancel)
+        buttonLayout = QtWidgets.QHBoxLayout(self)
+        buttonLayout.setContentsMargins(10, 0, 10, 10)
+        buttonLayout.addWidget(confirmation)
+
+        buttonWidget = QtWidgets.QWidget(self)
+        buttonWidget.setLayout(buttonLayout)
+
+        #############################################
+        # SETUP DIALOG LAYOUT
+        #################################
+
+        mainLayout = QtWidgets.QVBoxLayout()
+        mainLayout.addWidget(headerWidget)
+        mainLayout.addWidget(textWidget)
+        mainLayout.addWidget(buttonWidget, 0, QtCore.Qt.AlignRight)
+
+        self.setWindowTitle("SQL Script")
+        self.setModal(True)
+        self.setLayout(mainLayout)
+        self.setMinimumSize(1024, 480)
+
+        connect(confirmation.accepted, self.accept)
+        connect(confirmation.rejected, self.reject)
+
+    #############################################
+    #   SLOTS
+    #################################
+
+    @QtCore.pyqtSlot()
+    def accept(self):
+        """
+        Executed when the dialog is accepted.
+        """
+
+
+        options = QFileDialog.Options()
+        options |= QFileDialog.DontUseNativeDialog
+        fileName, _ = QFileDialog.getSaveFileName(self, "Save SQL script", "",
+                                                  "All Files (*);;", options=options)
+
+        print(fileName)
+        if fileName:
+            file = QFile(fileName)
+            if file.open(QIODevice.WriteOnly):
+                stream = QTextStream(file)
+                stream << self.findChild(QtWidgets.QTextEdit, 'sql_text').toPlainText()
+
+        self.close()
+
+
+

@@ -47,6 +47,7 @@ class Resources(Enum_):
     Endpoint = 'http://localhost:8080/bbe'
     Schema = '{}/schema'.format(Endpoint)
     SchemaByName = '{}/{}'.format(Schema, '{}')
+    SchemaScriptByName = '{}/script'.format(SchemaByName)
     SchemaHistoryByName = '{}/history'.format(SchemaByName)
     SchemaApplyActionByName = '{}/action'.format(SchemaByName)
     SchemaUndoByName = '{}/undo'.format(SchemaApplyActionByName)
@@ -113,6 +114,19 @@ class NetworkManager(QtNetwork.QNetworkAccessManager):
         if not schemaName:
             raise BlackbirdRequestError('Schema name must not be empty')
         url = QtCore.QUrl(Resources.Schema.value.format(schemaName))
+        request = QtNetwork.QNetworkRequest(url)
+        reply = self.get(request)
+        return reply
+
+    def getSQLCreateDatabaseScript(self, schemaName, dbmsName):
+        if not schemaName:
+            raise BlackbirdRequestError('Schema name must not be empty')
+        if not dbmsName:
+            raise BlackbirdRequestError('Target DBMS name must be specified')
+        url = QtCore.QUrl(Resources.SchemaScriptByName.value.format(schemaName))
+        urlQuery = QtCore.QUrlQuery()
+        urlQuery.addQueryItem("dbmsName", dbmsName)
+        url.setQuery(urlQuery)
         request = QtNetwork.QNetworkRequest(url)
         reply = self.get(request)
         return reply

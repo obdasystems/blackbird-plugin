@@ -64,7 +64,8 @@ from eddy.plugins.blackbird.dialogs import (
     BlackbirdLogDialog,
     BlackbirdOutputDialog,
     BlackbirdOntologyDialog,
-    TableInfoDialog
+    TableInfoDialog,
+    SQLScriptDialog
 )
 # noinspection PyUnresolvedReferences
 from eddy.plugins.blackbird.factory import BBMenuFactory
@@ -153,6 +154,7 @@ class BlackbirdPlugin(AbstractPlugin):
         self.actionCounter = 0
         self.tableNameToSchemaQtActions = {}
         self.tableNameToDescriptionQtAction = {}
+        self.schema= None
 
     #############################################
     #   HOOKS
@@ -318,6 +320,14 @@ class BlackbirdPlugin(AbstractPlugin):
         self.addMenu(menu)
         # Add blackbird menu to session's menu bar
         self.session.menuBar().insertMenu(self.session.menu('window').menuAction(), self.menu('menubar_menu'))
+        if not self.schema:
+            self.action('export_sql').setEnabled(False)
+            self.action('export_mappings').setEnabled(False)
+            self.action('blackbird_output').setEnabled(False)
+
+
+
+
 
     # noinspection PyArgumentList
     def initToolBars(self):
@@ -1059,9 +1069,41 @@ class BlackbirdPlugin(AbstractPlugin):
                 self.actionCounter = 0
                 self.action('undo_last_schema_action').setEnabled(False)
                 self.action('show_ontology').setEnabled(True)
+                self.action('export_sql').setEnabled(True)
+                self.action('blackbird_output').setEnabled(True)
                 self.sgnSchemaChanged.emit(self.schema)
                 self.initDiagrams()
                 self.initSchemaTableActions()
+            else:
+                self.session.addNotification('Error generating schema: {}'.format(reply.errorString()))
+                LOGGER.error('Error generating schema: {}'.format(reply.errorString()))
+        finally:
+            self.widget('progress').hide()
+
+    @QtCore.pyqtSlot()
+    def onSQLScriptGenerationCompleted(self):
+        """
+        Executed when the schema generation completes.
+        """
+        try:
+            reply = self.sender()
+            reply.deleteLater()
+            assert reply.isFinished()
+
+            # noinspection PyArgumentList
+            if reply.error() == QtNetwork.QNetworkReply.NoError:
+                script = str(reply.readAll(), encoding='utf-8')
+                jsonScript = json.loads(script)
+                createString = jsonScript['scriptContent']
+                print('############## SCRIPT RECEIVED')
+                print(createString)
+                print('##############')
+
+                dialog = SQLScriptDialog(createString, self.schema.name)
+                dialog.exec_()
+
+
+                self.action('export_mappings').setEnabled(True)
             else:
                 self.session.addNotification('Error generating schema: {}'.format(reply.errorString()))
                 LOGGER.error('Error generating schema: {}'.format(reply.errorString()))
@@ -1400,7 +1442,20 @@ class BlackbirdPlugin(AbstractPlugin):
         """
         Export the SQL script generated for the current project.
         """
-        pass
+        print('doExportSQLScript')
+        try:
+            schemaName = self.schema.name
+            dbmsName = 'PostgreSql'
+            reply = self.nmanager.getSQLCreateDatabaseScript(schemaName,dbmsName)
+            # We deal with network errors in the slot connected to the finished()
+            # signal since it always follows the error() signal
+            connect(reply.finished, self.onSQLScriptGenerationCompleted)
+        except Exception as e:
+            self.widget('progress').hide()
+            self.session.addNotification(dedent("""\
+                <b><font color="#7E0B17">ERROR</font></b>: Could not connect to Blackbird Engine.<br/>
+                <p>{}</p>""".format(e)))
+            LOGGER.exception(e)
 
     @QtCore.pyqtSlot()
     def doExportSchemaDiagrams(self):
