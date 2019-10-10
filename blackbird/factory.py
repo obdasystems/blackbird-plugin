@@ -29,6 +29,10 @@ from PyQt5 import (
 )
 
 from eddy.core.functions.misc import first
+# noinspection PyUnresolvedReferences
+from eddy.plugins.blackbird.schema import (
+    EntityType
+)
 
 
 class BBMenuFactory(QtCore.QObject):
@@ -115,13 +119,59 @@ class BBMenuFactory(QtCore.QObject):
         """
         menu = QtWidgets.QMenu()
         tableName = node.relationalTable.name
-
+        tableType = node.relationalTable.entity.entityType
         menu.addAction(self.plugin.tableNameToDescriptionQtAction[tableName])
-        menu.addSeparator()
-        if tableName in self.plugin.tableNameToSchemaQtActions:
-            tableSchemaQtActions = self.plugin.tableNameToSchemaQtActions[tableName]
-            for qtAction in tableSchemaQtActions:
-                menu.addAction(qtAction)
+
+        if tableType==EntityType.Class:
+            menu.addSeparator()
+            classInnerMenu = menu.addMenu('Class merge')   #QtWidgets.QMenu('Class merge',objectName='class_merge_{}'.format(tableName))
+            if tableName in self.plugin.classToHierarchyTableNameToSchemaQtActions or tableName in self.plugin.classToClassTableNameToSchemaQtActions:
+                if tableName in self.plugin.classToHierarchyTableNameToSchemaQtActions:
+                    tableSchemaQtActions = self.plugin.classToHierarchyTableNameToSchemaQtActions[tableName]
+                    for qtAction in tableSchemaQtActions:
+                        classInnerMenu.addAction(qtAction)
+                    classInnerMenu.addSeparator()
+                if tableName in self.plugin.classToClassTableNameToSchemaQtActions:
+                    tableSchemaQtActions = self.plugin.classToClassTableNameToSchemaQtActions[tableName]
+                    for qtAction in tableSchemaQtActions:
+                        classInnerMenu.addAction(qtAction)
+            else:
+                classInnerMenu.setEnabled(False)
+
+            objPropInnerMenu = menu.addMenu('ObjProp merge')
+            if tableName in self.plugin.classToObjPropTableNameToSchemaQtActions:
+                tableSchemaQtActions = self.plugin.classToObjPropTableNameToSchemaQtActions[tableName]
+                for qtAction in tableSchemaQtActions:
+                    objPropInnerMenu.addAction(qtAction)
+            else:
+                objPropInnerMenu.setEnabled(False)
+
+            dtPropInnerMenu = menu.addMenu('DataProp merge')
+            if tableName in self.plugin.classToDtPropTableNameToSchemaQtActions:
+                tableSchemaQtActions = self.plugin.classToDtPropTableNameToSchemaQtActions[tableName]
+                for qtAction in tableSchemaQtActions:
+                    dtPropInnerMenu.addAction(qtAction)
+            else:
+                dtPropInnerMenu.setEnabled(False)
+        elif tableType==EntityType.ObjectProperty:
+            menu.addSeparator()
+            classInnerMenu = menu.addMenu('Class merge')
+            if tableName in self.plugin.objPropToClassTableNameToSchemaQtActions:
+                tableSchemaQtActions = self.plugin.objPropToClassTableNameToSchemaQtActions[tableName]
+                for qtAction in tableSchemaQtActions:
+                    classInnerMenu.addAction(qtAction)
+            else:
+                classInnerMenu.setEnabled(False)
+        elif tableType==EntityType.DataProperty:
+            print()
+
+
+        #menu.addAction(self.plugin.tableNameToDescriptionQtAction[tableName])
+        #menu.addSeparator()
+        #if tableName in self.plugin.tableNameToSchemaQtActions:
+        #    tableSchemaQtActions = self.plugin.tableNameToSchemaQtActions[tableName]
+        #    for qtAction in tableSchemaQtActions:
+        #        menu.addAction(qtAction)
         return menu
 
     #############################################

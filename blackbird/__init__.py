@@ -152,7 +152,19 @@ class BlackbirdPlugin(AbstractPlugin):
         self.subWindowToDiagram = {}
         self.diagramToWindowLabel = {}
         self.actionCounter = 0
-        self.tableNameToSchemaQtActions = {}
+
+
+        #self.tableNameToSchemaQtActions = {}
+
+        self.classToClassTableNameToSchemaQtActions = {}
+        self.classToHierarchyTableNameToSchemaQtActions = {}
+        self.classToObjPropTableNameToSchemaQtActions = {}
+        self.classToDtPropTableNameToSchemaQtActions = {}
+
+        self.objPropToClassTableNameToSchemaQtActions = {}
+        self.objPropToObjPropTableNameToSchemaQtActions = {}
+
+        self.dtPropTableNameToSchemaQtActions = {}
         self.tableNameToDescriptionQtAction = {}
         self.schema= None
 
@@ -1126,7 +1138,126 @@ class BlackbirdPlugin(AbstractPlugin):
             qtAction.setData(table)
             self.addAction(qtAction)
             self.tableNameToDescriptionQtAction[table.name] = qtAction
+        ################
+        ################
+        for tableName, qtActionList in self.classToClassTableNameToSchemaQtActions.items():
+            for qtAction in qtActionList:
+                self.removeAction(qtAction)
+        for tableName, qtActionList in self.classToHierarchyTableNameToSchemaQtActions.items():
+            for qtAction in qtActionList:
+                self.removeAction(qtAction)
+        for tableName, qtActionList in self.classToObjPropTableNameToSchemaQtActions.items():
+            for qtAction in qtActionList:
+                self.removeAction(qtAction)
+        for tableName, qtActionList in self.classToDtPropTableNameToSchemaQtActions.items():
+            for qtAction in qtActionList:
+                self.removeAction(qtAction)
+        self.classToClassTableNameToSchemaQtActions = {}
+        self.classToHierarchyTableNameToSchemaQtActions = {}
+        self.classToObjPropTableNameToSchemaQtActions = {}
+        self.classToDtPropTableNameToSchemaQtActions = {}
 
+        for tableName, qtActionList in self.objPropToClassTableNameToSchemaQtActions.items():
+            for qtAction in qtActionList:
+                self.removeAction(qtAction)
+        for tableName, qtActionList in self.objPropToObjPropTableNameToSchemaQtActions.items():
+            for qtAction in qtActionList:
+                self.removeAction(qtAction)
+        self.objPropToClassTableNameToSchemaQtActions = {}
+        self.objPropToObjPropTableNameToSchemaQtActions = {}
+
+        for tableName, qtActionList in self.dtPropTableNameToSchemaQtActions.items():
+            for qtAction in qtActionList:
+                self.removeAction(qtAction)
+        self.dtPropTableNameToSchemaQtActions = {}
+
+        for relTable in self.schema.tables:
+            tableName = relTable.name
+            tableType = relTable.entity.entityType
+            if tableType==EntityType.Class:
+                for bbAction in relTable.actions:
+                    actionType = bbAction.actionType
+                    objs = bbAction.actionSlaveTableNames
+                    if actionType=='SUB_CLASS_HIERARCHY_MERGE_ACTION':
+                        objectString = 'all subclasses'
+                        qtActionLabel = 'Merge {}'.format(objectString)
+                        qtActionName = 'apply_action_{}_{}'.format(tableName, objectString)
+                        qtAction = QtWidgets.QAction(qtActionLabel, self, objectName=qtActionName,
+                                                     triggered=self.doApplySchemaAction)
+                        qtAction.setData(bbAction)
+                        self.addAction(qtAction)
+                        if tableName in self.classToHierarchyTableNameToSchemaQtActions:
+                            self.classToHierarchyTableNameToSchemaQtActions[tableName].append(qtAction)
+                        else:
+                            qtActionList = [qtAction]
+                            self.classToHierarchyTableNameToSchemaQtActions[tableName] = qtActionList
+                    elif actionType=='SUB_CLASS_MERGE_ACTION':
+                        objectString = objs[0]
+                        qtActionLabel = 'Merge {}'.format(objectString)
+                        qtActionName = 'apply_action_{}_{}'.format(tableName, objectString)
+                        qtAction = QtWidgets.QAction(qtActionLabel, self, objectName=qtActionName,
+                                                     triggered=self.doApplySchemaAction)
+                        qtAction.setData(bbAction)
+                        self.addAction(qtAction)
+                        if tableName in self.classToClassTableNameToSchemaQtActions:
+                            self.classToClassTableNameToSchemaQtActions[tableName].append(qtAction)
+                        else:
+                            qtActionList = [qtAction]
+                            self.classToClassTableNameToSchemaQtActions[tableName] = qtActionList
+                    elif actionType=='DEFINED_DOMAIN_OBJECT_PROPERTY_MERGE_ACTION' or actionType=='DEFINED_RANGE_OBJECT_PROPERTY_MERGE_ACTION':
+                        objectString = objs[0]
+                        qtActionLabel = 'Merge {}'.format(objectString)
+                        qtActionName = 'apply_action_{}_{}'.format(tableName, objectString)
+                        qtAction = QtWidgets.QAction(qtActionLabel, self, objectName=qtActionName,
+                                                     triggered=self.doApplySchemaAction)
+                        qtAction.setData(bbAction)
+                        self.addAction(qtAction)
+                        if tableName in self.classToObjPropTableNameToSchemaQtActions:
+                            self.classToObjPropTableNameToSchemaQtActions[tableName].append(qtAction)
+                        else:
+                            qtActionList = [qtAction]
+                            self.classToObjPropTableNameToSchemaQtActions[tableName] = qtActionList
+                    elif actionType=='TYPED_DATA_PROPERTY_MERGE_ACTION' or actionType=='DEFINED_DATA_PROPERTY_MERGE_ACTION':
+                        objectString = objs[0]
+                        qtActionLabel = 'Merge {}'.format(objectString)
+                        qtActionName = 'apply_action_{}_{}'.format(tableName, objectString)
+                        qtAction = QtWidgets.QAction(qtActionLabel, self, objectName=qtActionName,
+                                                     triggered=self.doApplySchemaAction)
+                        qtAction.setData(bbAction)
+                        self.addAction(qtAction)
+                        if tableName in self.classToDtPropTableNameToSchemaQtActions:
+                            self.classToDtPropTableNameToSchemaQtActions[tableName].append(qtAction)
+                        else:
+                            qtActionList = [qtAction]
+                            self.classToDtPropTableNameToSchemaQtActions[tableName] = qtActionList
+            elif tableType==EntityType.ObjectProperty:
+                for bbAction in relTable.actions:
+                    actionType = bbAction.actionType
+                    objs = bbAction.actionSlaveTableNames
+                    if actionType=='DEFINED_DOMAIN_AND_RANGE_OBJECT_PROPERTY_MERGE_ACTION':
+                        if len(objs) > 1:
+                            objectsString = ','.join(map(str, objs))
+                        else:
+                            objectsString = objs[0]
+                        qtActionLabel = 'Merge {}'.format(objectsString)
+                        qtActionName = 'apply_action_{}_{}'.format(tableName, objectsString)
+                        qtAction = QtWidgets.QAction(qtActionLabel, self, objectName=qtActionName,
+                                                     triggered=self.doApplySchemaAction)
+                        qtAction.setData(bbAction)
+                        self.addAction(qtAction)
+                        if tableName in self.objPropToClassTableNameToSchemaQtActions:
+                            self.objPropToClassTableNameToSchemaQtActions[tableName].append(qtAction)
+                        else:
+                            qtActionList = [qtAction]
+                            self.objPropToClassTableNameToSchemaQtActions[tableName] = qtActionList
+            elif tableType==EntityType.DataProperty:
+                for bbAction in relTable.actions:
+                    print()
+
+
+        ###############
+        ###############
+        '''
         for tableName, qtActionList in self.tableNameToSchemaQtActions.items():
             for qtAction in qtActionList:
                 self.removeAction(qtAction)
@@ -1153,6 +1284,7 @@ class BlackbirdPlugin(AbstractPlugin):
                 else:
                     qtActionList = [qtAction]
                     self.tableNameToSchemaQtActions[subj] = qtActionList
+        '''
 
     @QtCore.pyqtSlot()
     def doNothing(self):
