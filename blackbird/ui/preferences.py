@@ -141,7 +141,7 @@ class DataPropertyMergeWithClassDefaultLabels(Enum_):
 @unique
 class TakeIntoAccountDisjointnessAxiomsDefaultLabels(Enum_):
 
-    YES = 'Yes'
+    YES = 'Yes (Schema generation and loading may require a long processing time)'
 
     NO = 'No'
 

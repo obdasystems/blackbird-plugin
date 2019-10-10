@@ -1136,22 +1136,23 @@ class BlackbirdPlugin(AbstractPlugin):
             subj = bbAction.actionMasterTableName
             type = bbAction.actionType
             objs = bbAction.actionSlaveTableNames
-            if len(objs) > 1:
-                objectsString = ','.join(map(str, objs))
-            else:
-                objectsString = objs[0]
-            qtActionLabel = 'Merge {}'.format(objectsString)
-            qtActionName = 'apply_action_{}_{}'.format(subj, objectsString)
-            # noinspection PyArgumentList
-            qtAction = QtWidgets.QAction(qtActionLabel, self, objectName=qtActionName,
-                                         triggered=self.doApplySchemaAction)
-            qtAction.setData(bbAction)
-            self.addAction(qtAction)
-            if subj in self.tableNameToSchemaQtActions:
-                self.tableNameToSchemaQtActions[subj].append(qtAction)
-            else:
-                qtActionList = [qtAction]
-                self.tableNameToSchemaQtActions[subj] = qtActionList
+            if not (type=='SUB_CLASS_HIERARCHY_MERGE_ACTION' and len(objs) <= 1):
+                if len(objs) > 1:
+                    objectsString = ','.join(map(str, objs))
+                else:
+                    objectsString = objs[0]
+                qtActionLabel = 'Merge {}'.format(objectsString)
+                qtActionName = 'apply_action_{}_{}'.format(subj, objectsString)
+                # noinspection PyArgumentList
+                qtAction = QtWidgets.QAction(qtActionLabel, self, objectName=qtActionName,
+                                             triggered=self.doApplySchemaAction)
+                qtAction.setData(bbAction)
+                self.addAction(qtAction)
+                if subj in self.tableNameToSchemaQtActions:
+                    self.tableNameToSchemaQtActions[subj].append(qtAction)
+                else:
+                    qtActionList = [qtAction]
+                    self.tableNameToSchemaQtActions[subj] = qtActionList
 
     @QtCore.pyqtSlot()
     def doNothing(self):

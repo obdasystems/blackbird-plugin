@@ -388,6 +388,7 @@ class ProjectExplorerSortedProxyModel(QtCore.QSortFilterProxyModel):
         data1 = self.sourceModel().data(index1)
         data2 = self.sourceModel().data(index2)
         items = natsorted([data1, data2])
+        items = [data1,data2]
         try:
             return items.index(data1) < items.index(data2)
         except IndexError:
