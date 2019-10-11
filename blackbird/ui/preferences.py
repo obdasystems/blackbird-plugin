@@ -154,6 +154,14 @@ class TakeIntoAccountDisjointnessAxiomsDefaultLabels(Enum_):
             return 1
         return -1
 
+@unique
+class AvailableDBMSServerLabels(Enum_):
+
+    POSTGRESQL = 'PostgreSql'
+
+    MYSQL = 'MySQL'
+
+
 
 class BlackbirdPreferencesDialog(QtWidgets.QDialog, HasWidgetSystem):
     """
@@ -279,12 +287,38 @@ class BlackbirdPreferencesDialog(QtWidgets.QDialog, HasWidgetSystem):
         groupbox.setLayout(formlayout)
         self.addWidget(groupbox)
 
+        ## TARGET DBMS GROUP
+        prefix = QtWidgets.QLabel(self, objectName='target_dbms_prefix')
+        prefix.setFont(Font('Roboto', 12))
+        prefix.setText('Target DBMS Server')
+        self.addWidget(prefix)
+
+        combobox = ComboBox(objectName='target_dbms_switch')
+        combobox.setEditable(False)
+        combobox.setFont(Font('Roboto', 12))
+        combobox.setFocusPolicy(QtCore.Qt.StrongFocus)
+        combobox.setScrollEnabled(False)
+        combobox.addItems([x.value for x in AvailableDBMSServerLabels])
+        combobox.setCurrentText(
+            settings.value('blackbird/dbms/target', AvailableDBMSServerLabels.POSTGRESQL,
+                           str))
+        self.addWidget(combobox)
+
+        formlayout = QtWidgets.QFormLayout()
+        formlayout.addRow(self.widget('target_dbms_prefix'), self.widget('target_dbms_switch'))
+
+        groupbox = QtWidgets.QGroupBox('Target DBMS', self, objectName='target_dbms_widget')
+        groupbox.setLayout(formlayout)
+        self.addWidget(groupbox)
+
+
         ## GENERAL TAB LAYOUT CONFIGURATION
 
         layout = QtWidgets.QVBoxLayout()
         layout.setAlignment(QtCore.Qt.AlignTop)
         layout.addWidget(self.widget('merge_policy_widget'), 0, QtCore.Qt.AlignTop)
         layout.addWidget(self.widget('ontology_axioms_widget'), 0, QtCore.Qt.AlignTop)
+        layout.addWidget(self.widget('target_dbms_widget'), 0, QtCore.Qt.AlignTop)
         widget = QtWidgets.QWidget()
         widget.setLayout(layout)
         widget.setObjectName('general_widget')
@@ -360,14 +394,17 @@ class BlackbirdPreferencesDialog(QtWidgets.QDialog, HasWidgetSystem):
         data_properties_merge_default = self.widget('data_properties_merge_policy_switch').currentText()
         data_properties_merge_default_INT = DataPropertyMergeWithClassDefaultLabels.getIntValue(data_properties_merge_default)
 
-        consider_disjointness_default = self.widget('consider_disjointness_switch').currentText()
+        consider_disjointness_default = self.widget('target_dbms_switch').currentText()
         consider_disjointness_default_INT = TakeIntoAccountDisjointnessAxiomsDefaultLabels.getIntValue(consider_disjointness_default)
+
+        target_dbms_server = self.widget('consider_disjointness_switch').currentText()
 
         settings.setValue('blackbird/merge/policy/class', class_merge_policy)
         settings.setValue('blackbird/merge/default/class', class_merge_default)
         settings.setValue('blackbird/merge/default/objProps', object_properties_merge_default)
         settings.setValue('blackbird/merge/default/dataProps', data_properties_merge_default)
         settings.setValue('blackbird/axioms/disjointness', consider_disjointness_default)
+        settings.setValue('blackbird/dbms/target', target_dbms_server)
 
         settings.setValue('blackbird/merge/policy/class/INT', class_merge_policy_INT)
         settings.setValue('blackbird/merge/default/class/INT', class_merge_default_INT)

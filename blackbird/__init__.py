@@ -1578,8 +1578,7 @@ class BlackbirdPlugin(AbstractPlugin):
         print('doExportSQLScript')
         try:
             schemaName = self.schema.name
-            dbmsName = 'PostgreSql'
-            reply = self.nmanager.getSQLCreateDatabaseScript(schemaName,dbmsName)
+            reply = self.nmanager.getSQLCreateDatabaseScript(schemaName)
             # We deal with network errors in the slot connected to the finished()
             # signal since it always follows the error() signal
             connect(reply.finished, self.onSQLScriptGenerationCompleted)
