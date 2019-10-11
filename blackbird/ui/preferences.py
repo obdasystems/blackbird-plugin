@@ -299,9 +299,7 @@ class BlackbirdPreferencesDialog(QtWidgets.QDialog, HasWidgetSystem):
         combobox.setFocusPolicy(QtCore.Qt.StrongFocus)
         combobox.setScrollEnabled(False)
         combobox.addItems([x.value for x in AvailableDBMSServerLabels])
-        combobox.setCurrentText(
-            settings.value('blackbird/dbms/target', AvailableDBMSServerLabels.POSTGRESQL,
-                           str))
+        combobox.setCurrentText(settings.value('blackbird/dbms/target', AvailableDBMSServerLabels.POSTGRESQL.value,str))
         self.addWidget(combobox)
 
         formlayout = QtWidgets.QFormLayout()
@@ -394,10 +392,10 @@ class BlackbirdPreferencesDialog(QtWidgets.QDialog, HasWidgetSystem):
         data_properties_merge_default = self.widget('data_properties_merge_policy_switch').currentText()
         data_properties_merge_default_INT = DataPropertyMergeWithClassDefaultLabels.getIntValue(data_properties_merge_default)
 
-        consider_disjointness_default = self.widget('target_dbms_switch').currentText()
+        consider_disjointness_default = self.widget('consider_disjointness_switch').currentText()
         consider_disjointness_default_INT = TakeIntoAccountDisjointnessAxiomsDefaultLabels.getIntValue(consider_disjointness_default)
 
-        target_dbms_server = self.widget('consider_disjointness_switch').currentText()
+        target_dbms_server = self.widget('target_dbms_switch').currentText()
 
         settings.setValue('blackbird/merge/policy/class', class_merge_policy)
         settings.setValue('blackbird/merge/default/class', class_merge_default)
