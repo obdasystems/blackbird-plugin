@@ -59,15 +59,25 @@ class ClassMergeWithClassDefaultLabels(Enum_):
     # NO MERGE AT ALL
     NO_MERGE = 'No merge'
 
-    # MERGE BY ADDING FLAG COLUMNS TO TARGET TABLE
-    MERGE_SUB_CLASSES = 'Merge Subclass Hierarchies'
+    # MERGE HIERARCHIES
+    MERGE_CLASS_HIERARCHIES = 'Merge Subclass Hierarchies'
+
+    # MERGE DIRECT SUB CLASSES
+    MERGE_DIRECT_SUB_CLASSES = 'Merge Direct Subclasses'
+
+    # MERGE ALL
+    MERGE_ALL_SUBCLASSES = 'Merge Hierarchies and Direct Subclasses'
 
     @staticmethod
     def getIntValue(label):
         if label==ClassMergeWithClassDefaultLabels.NO_MERGE.value:
             return 0
-        elif label==ClassMergeWithClassDefaultLabels.MERGE_SUB_CLASSES.value:
+        elif label==ClassMergeWithClassDefaultLabels.MERGE_CLASS_HIERARCHIES.value:
             return 1
+        elif label==ClassMergeWithClassDefaultLabels.MERGE_DIRECT_SUB_CLASSES.value:
+            return 2
+        elif label==ClassMergeWithClassDefaultLabels.MERGE_ALL_SUBCLASSES.value:
+            return 3
         return -1
 
 @unique

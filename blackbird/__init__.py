@@ -42,7 +42,7 @@ from eddy.core.datatypes.owl import OWLAxiom, OWLSyntax
 from eddy.core.diagram import Diagram
 from eddy.core.exporters.owl2 import OWLOntologyExporterWorker
 from eddy.core.functions.fsystem import fread, fexists
-from eddy.core.functions.misc import first
+from eddy.core.functions.misc import first, format_exception
 from eddy.core.functions.path import expandPath
 from eddy.core.functions.signals import connect, disconnect
 from eddy.core.items.edges.common.base import AbstractEdge
@@ -110,6 +110,17 @@ from eddy.plugins.blackbird.widgets.table_explorer import TableExplorerWidget
 # noinspection PyUnresolvedReferences
 from eddy.plugins.blackbird.widgets.actions import ActionTableExplorerWidget
 
+
+# noinspection PyUnresolvedReferences
+from eddy.plugins.blackbird.project import BlackbirdProject
+# noinspection PyUnresolvedReferences
+from eddy.plugins.blackbird.settings import BlackbirdSettings
+# noinspection PyUnresolvedReferences
+from eddy.plugins.blackbird.settings import BlackbirdSettings
+
+# noinspection PyUnresolvedReferences
+from eddy.plugins.blackbird.exporter import BlackBirdProjectExporter
+
 LOGGER = getLogger()
 
 
@@ -153,20 +164,18 @@ class BlackbirdPlugin(AbstractPlugin):
         self.diagramToWindowLabel = {}
         self.actionCounter = 0
 
-
-        #self.tableNameToSchemaQtActions = {}
-
         self.classToClassTableNameToSchemaQtActions = {}
         self.classToHierarchyTableNameToSchemaQtActions = {}
         self.classToObjPropTableNameToSchemaQtActions = {}
         self.classToDtPropTableNameToSchemaQtActions = {}
-
         self.objPropToClassTableNameToSchemaQtActions = {}
         self.objPropToObjPropTableNameToSchemaQtActions = {}
-
         self.dtPropTableNameToSchemaQtActions = {}
         self.tableNameToDescriptionQtAction = {}
+
         self.schema= None
+        self.bbProject = None
+        self.settings = None
 
     #############################################
     #   HOOKS
@@ -237,7 +246,7 @@ class BlackbirdPlugin(AbstractPlugin):
         #################################
         self.addAction(QtWidgets.QAction('Open', self, objectName='open', triggered=self.doOpen))
         self.addAction(QtWidgets.QAction('Save', self, objectName='save', triggered=self.doSave))
-        self.addAction(QtWidgets.QAction('Save as', self, objectName='save_as', triggered=self.doSaveAs))
+        #self.addAction(QtWidgets.QAction('Save as', self, objectName='save_as', triggered=self.doSaveAs))
         self.addAction(QtWidgets.QAction('Settings', self, objectName='settings', triggered=self.doOpenSettings))
         self.addAction(QtWidgets.QAction('Ontology Analysis', self, objectName='open_ontology_analysis',
                                          triggered=self.doOpenOntologyAnalysis))
@@ -332,10 +341,16 @@ class BlackbirdPlugin(AbstractPlugin):
         self.addMenu(menu)
         # Add blackbird menu to session's menu bar
         self.session.menuBar().insertMenu(self.session.menu('window').menuAction(), self.menu('menubar_menu'))
+
+        self.action('export_mappings').setEnabled(False)
+        self.action('open_ontology_analysis').setEnabled(False)
+        self.action('open_entity_filter').setEnabled(False)
+        self.action('open_schema_selections').setEnabled(False)
+
         if not self.schema:
             self.action('export_sql').setEnabled(False)
-            self.action('export_mappings').setEnabled(False)
             self.action('blackbird_output').setEnabled(False)
+            self.action('save').setEnabled(False)
 
 
 
@@ -763,6 +778,10 @@ class BlackbirdPlugin(AbstractPlugin):
                         for fkVisualElement in innerList:
                             self.addFkEdgeToDiagram(fk, fkVisualElement, bbDiagram, ontNodeToBBNodeDict)
 
+    def initBlackbirdProject(self):
+        self.initSettings()
+        self.bbProject = BlackbirdProject(self.project,self.owltext,self.schema,self.diagramList,self.settings)
+
     def addFkEdgeToDiagram(self, fk, fkVisualElement, bbDiagram, ontNodeToBBNodeDict):
         """
         Add to diagram the FK corresponding to the fkVisualElement based on the dictionary ontNodeToBBNodeDict
@@ -874,6 +893,17 @@ class BlackbirdPlugin(AbstractPlugin):
                 self.project.removeDiagram(diagram)
                 self.sgnFocusDiagram.emit(newDiagram)
                 self.doFocusDiagram(newDiagram)
+
+    def initSettings(self):
+        settings = QtCore.QSettings(ORGANIZATION, APPNAME)
+        classMergePolicy = settings.value('blackbird/merge/policy/class/INT', "-1", str)
+        classMergeDefault = settings.value('blackbird/merge/default/class/INT', "-1", str)
+        objPropMergeDefault = settings.value('blackbird/merge/default/objProps/INT', "-1", str)
+        dtPropMergeDefault = settings.value('blackbird/merge/default/dataProps/INT', "-1", str)
+        considerDisjointness = settings.value('blackbird/axioms/disjointness/INT', "-1", str)
+        targetDBMS = settings.value('blackbird/dbms/target', "PostgreSql", str)
+        self.settings = BlackbirdSettings(classMergePolicy,classMergeDefault,objPropMergeDefault,dtPropMergeDefault,considerDisjointness,targetDBMS)
+
 
     #############################################
     #   EVENTS
@@ -1082,10 +1112,12 @@ class BlackbirdPlugin(AbstractPlugin):
                 self.action('undo_last_schema_action').setEnabled(False)
                 self.action('show_ontology').setEnabled(True)
                 self.action('export_sql').setEnabled(True)
+                self.action('save').setEnabled(True)
                 self.action('blackbird_output').setEnabled(True)
                 self.sgnSchemaChanged.emit(self.schema)
                 self.initDiagrams()
                 self.initSchemaTableActions()
+                #self.initBlackbirdProject()
             else:
                 self.session.addNotification('Error generating schema: {}'.format(reply.errorString()))
                 LOGGER.error('Error generating schema: {}'.format(reply.errorString()))
@@ -1114,8 +1146,7 @@ class BlackbirdPlugin(AbstractPlugin):
                 dialog = SQLScriptDialog(createString, self.schema.name)
                 dialog.exec_()
 
-
-                self.action('export_mappings').setEnabled(True)
+                #self.action('export_mappings').setEnabled(True)
             else:
                 self.session.addNotification('Error generating schema: {}'.format(reply.errorString()))
                 LOGGER.error('Error generating schema: {}'.format(reply.errorString()))
@@ -1368,6 +1399,7 @@ class BlackbirdPlugin(AbstractPlugin):
                 self.sgnSchemaChanged.emit(self.schema)
                 self.updateDiagrams()
                 self.initSchemaTableActions()
+                self.initBlackbirdProject()
                 self.sgnActionCorrectlyFinalized.emit()
             else:
                 self.session.addNotification('Error applying action: {}'.format(reply.errorString()))
@@ -1404,6 +1436,7 @@ class BlackbirdPlugin(AbstractPlugin):
                 self.sgnSchemaChanged.emit(self.schema)
                 self.updateDiagrams()  # TODO sostistuisci con updateDiagramsFromUndo (DISEGNA A PARTIRE DA DIAGRAMMA CORRENTE + DIAGRAMMA PRECEDENTE AD AZIONE CHE VIENE ANNULLATA DA UNDO)
                 self.initSchemaTableActions()
+                self.initBlackbirdProject()
                 self.sgnUndoActionCorrectlyFinalized.emit()
             else:
                 self.session.addNotification('Error undoing action: {}'.format(reply.errorString()))
@@ -1526,6 +1559,23 @@ class BlackbirdPlugin(AbstractPlugin):
         """
         Save the current project.
         """
+
+        try:
+            worker = BlackBirdProjectExporter(self.project,self.bbProject,self.session)
+            worker.run()
+        except Exception as e:
+            msgbox = QtWidgets.QMessageBox(self)
+            msgbox.setDetailedText(format_exception(e))
+            msgbox.setIconPixmap(QtGui.QIcon(':/icons/48/ic_error_outline_black').pixmap(48))
+            msgbox.setStandardButtons(QtWidgets.QMessageBox.Close)
+            msgbox.setText('Eddy could not save the current blackbird project!')
+            msgbox.setWindowIcon(QtGui.QIcon(':/blackbird/icons/128/ic_blackbird'))
+            msgbox.setWindowTitle('Save failed!')
+            msgbox.exec_()
+        else:
+            LOGGER.debug('Project Saved!')
+            #self.undostack.setClean()
+            #self.sgnProjectSaved.emit()
         pass
 
     @QtCore.pyqtSlot()

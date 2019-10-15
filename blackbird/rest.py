@@ -23,7 +23,6 @@
 ##########################################################################
 
 
-import urllib
 from enum import unique
 from json import JSONEncoder
 
@@ -31,6 +30,7 @@ from PyQt5 import (
     QtCore,
     QtNetwork
 )
+from PyQt5.QtCore import QUrl
 
 from eddy.core.datatypes.common import Enum_
 from eddy.core.output import getLogger
@@ -236,7 +236,9 @@ class NetworkManager(QtNetwork.QNetworkAccessManager):
         return reply
 
     def encodeUrl(self, url, safe):
-        return urllib.parse.quote(url, safe)
+        urlS = QUrl.toPercentEncoding(url)
+        return str(urlS,encoding='UTF-8')
+        #return urllib.parse.quote(url, safe)
 
 
 # A specialised JSONEncoder that encodes RelationalTableAction objects as JSON

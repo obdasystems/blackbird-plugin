@@ -363,14 +363,15 @@ class TableInfoDialog(QtWidgets.QDialog, HasWidgetSystem):
         self.addWidget(table)
 
         header = table.horizontalHeader()
-        header.setSectionResizeMode(0, QtWidgets.QHeaderView.Stretch)
-        header.setSectionResizeMode(1, QtWidgets.QHeaderView.Fixed)
-        header.setSectionResizeMode(2, QtWidgets.QHeaderView.Stretch)
+        header.setSectionResizeMode(0, QtWidgets.QHeaderView.Interactive)
+        header.setSectionResizeMode(1, QtWidgets.QHeaderView.Interactive)
+        header.setSectionResizeMode(2, QtWidgets.QHeaderView.Interactive)
         header.setSectionResizeMode(3, QtWidgets.QHeaderView.Stretch)
-        header.setSectionResizeMode(4, QtWidgets.QHeaderView.Fixed)
-        header.setSectionResizeMode(5, QtWidgets.QHeaderView.Fixed)
+        header.setSectionResizeMode(4, QtWidgets.QHeaderView.Stretch)
+        header.setSectionResizeMode(5, QtWidgets.QHeaderView.Stretch)
         header.setSectionsClickable(False)
         header.setSectionsMovable(False)
+
         header = table.verticalHeader()
         header.setSectionResizeMode(QtWidgets.QHeaderView.Fixed)
 
@@ -425,7 +426,7 @@ class TableInfoDialog(QtWidgets.QDialog, HasWidgetSystem):
         self.addWidget(table)
 
         header = table.horizontalHeader()
-        header.setSectionResizeMode(0, QtWidgets.QHeaderView.Stretch)
+        header.setSectionResizeMode(0, QtWidgets.QHeaderView.Interactive)
         header.setSectionResizeMode(1, QtWidgets.QHeaderView.Stretch)
         header.setSectionsClickable(False)
         header.setSectionsMovable(False)
@@ -461,7 +462,7 @@ class TableInfoDialog(QtWidgets.QDialog, HasWidgetSystem):
         self.addWidget(table)
 
         header = table.horizontalHeader()
-        header.setSectionResizeMode(0, QtWidgets.QHeaderView.Stretch)
+        header.setSectionResizeMode(0, QtWidgets.QHeaderView.Interactive)
         header.setSectionResizeMode(1, QtWidgets.QHeaderView.Stretch)
         header.setSectionsClickable(False)
         header.setSectionsMovable(False)
@@ -498,9 +499,9 @@ class TableInfoDialog(QtWidgets.QDialog, HasWidgetSystem):
         self.addWidget(table)
 
         header = table.horizontalHeader()
-        header.setSectionResizeMode(0, QtWidgets.QHeaderView.Stretch)
+        header.setSectionResizeMode(0, QtWidgets.QHeaderView.Interactive)
         header.setSectionResizeMode(1, QtWidgets.QHeaderView.Stretch)
-        header.setSectionResizeMode(2, QtWidgets.QHeaderView.Stretch)
+        header.setSectionResizeMode(2, QtWidgets.QHeaderView.Interactive)
         header.setSectionsClickable(False)
         header.setSectionsMovable(False)
         header = table.verticalHeader()
@@ -546,7 +547,7 @@ class TableInfoDialog(QtWidgets.QDialog, HasWidgetSystem):
         self.addWidget(table)
 
         header = table.horizontalHeader()
-        header.setSectionResizeMode(0, QtWidgets.QHeaderView.Stretch)
+        header.setSectionResizeMode(0, QtWidgets.QHeaderView.Interactive)
         header.setSectionsClickable(False)
         header.setSectionsMovable(False)
         header.hide()
